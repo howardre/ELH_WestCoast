@@ -1,7 +1,11 @@
-### Exploration of hake and sanddab data
-### Date: 12/08/2021
-### Author: Rebecca Howard
+---
+title: "Data Exploration"
+author: "Rebecca Howard"
+date: "4/18/2022"
+output: html_document
+---
 
+```{r setup, include = FALSE}
 ### Load libraries
 library(readxl)
 library(plyr)
@@ -9,8 +13,12 @@ library(tibble)
 library(here)
 library(ggplot2)
 library(lubridate)
+library(date)
+```
 
-### Functions
+
+Functions
+```{r}
 # Get data into appropriate format
 clean_data <- function(data_list, i){
   data_frame <- as.data.frame(data_list[[i]])
@@ -52,7 +60,16 @@ plot_variables <- function(data){
        xlab = 'Catch') 
 }
 
-### Load data
+merge_data <- function(data1, data2){
+  merge(data1, data2,
+        by.x = c("cruise", "haul_no"),
+        by.y = c("cruise", "haul_no"),
+        all.x = F, all.y = T)
+}
+```
+
+Load data
+```{r}
 exl_data <- here('data', 'hake_dabs.xlsx')
 excel_sheets(path = exl_data) # view the worksheets
 tab_names <- excel_sheets(path = exl_data)
@@ -60,19 +77,44 @@ tab_names <- excel_sheets(path = exl_data)
 data_list <- lapply(tab_names, function(x) read_excel(path = exl_data, sheet = x))
 
 ### Clean data
-yoy_hake <- clean_data(data_list, 1)
-yoy_dab <- clean_data(data_list, 2)
-adult_dab <- clean_data(data_list, 3)
+yoy_hake_catch <- clean_data(data_list, 1)
+yoy_dab_catch <- clean_data(data_list, 2)
+adult_dab_catch <- clean_data(data_list, 3)
+yoy_hake_sp <- as.data.frame(data_list[[4]])
+yoy_dab_sp <- as.data.frame(data_list[[5]])
+adult_dab_sp <- as.data.frame(data_list[[6]])
+```
 
-### Basic information
+Match specimen data to catch data
+```{r}
+yoy_hake <- merge_data(yoy_hake_catch, yoy_hake_sp)
+yoy_dab <- merge_data(yoy_dab_catch, yoy_dab_sp)
+adult_dab <- merge_data(adult_dab_catch, adult_dab_sp)
+```
+
+Basic information
+```{r}
 # Hake
 par(mfrow = c(2, 3))
 plot_variables(yoy_hake)
+```
 
+```{r}
 # Sanddab
 par(mfrow = c(2, 3))
 plot_variables(yoy_dab)
 
 par(mfrow = c(2, 3))
 plot_variables(adult_dab)
+```
+
+```{r}
+# Look at pattern of days by latitude
+ggplot(yoy_hake) +
+  geom_point(aes(day, lat))
+ggplot(yoy_dab) +
+  geom_point(aes(day, lat))
+ggplot(adult_dab) +
+  geom_point(aes(day, lat))
+```
 
