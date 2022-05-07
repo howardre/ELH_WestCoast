@@ -1,0 +1,128 @@
+---
+title: "Model Exploration"
+author: "Rebecca Howard"
+date: "5/6/2022"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+### Load libraries
+library(readxl)
+library(plyr)
+library(tibble)
+library(here)
+library(ggplot2)
+library(lubridate)
+library(date)
+library(dplyr)
+library(maps)
+library(mapdata)
+library(mgcv)
+```
+
+```{r, include = FALSE, echo = FALSE}
+CPUE_hist <- function(species_subset){
+  windows()
+  par(mfrow = c(1,2))
+  hist(species_subset$lncatch,
+       xlab = "log(catch + 1)",
+       main = "Raw Data")
+  sum(1 * (species_subset$lncatch == 0)) / nrow(species_subset)
+  hist(species_subset$lncatch[species_subset$lncatch > 0],
+    xlab = "log(catch + 1)",
+    main = "Normalized Data")
+}
+
+catch_GAMs <- function(species_subset){
+  year_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy),
+                  data = species_subset[species_subset$lncatch > 0,])
+  pdo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(PDO),
+                  data = species_subset[species_subset$lncatch > 0,])
+  npgo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(NPGO),
+                  data = species_subset[species_subset$lncatch > 0,])
+  oni_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(ONI),
+                  data = species_subset[species_subset$lncatch > 0,])
+  pdo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(lat, lon, by = PDO_mean),
+                  data = species_subset[species_subset$lncatch > 0,])
+  npgo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(lat, lon, by = NPGO_mean),
+                  data = species_subset[species_subset$lncatch > 0,])
+  oni_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(lat, lon, by = ONI_mean),
+                  data = species_subset[species_subset$lncatch > 0,])
+  gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
+  best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
+                                         function(x) min(gam_list[[x]]$aic)))]] # would like to also select by AIC
+  return_list <- list(gam_list, best_gam)
+} 
+```
+
+```{r, include = FALSE, echo = FALSE}
+# Load data
+readRDS(yoy_hake_catch, file = "../data/yoy_hake_catch.Rdata")
+readRDS(yoy_dab_catch, file = "../data/yoy_dab_catch.Rdata")
+readRDS(adult_dab_catch, file = "../data/adult_dab_catch.Rdata")
+readRDS(yoy_hake_sp, file = "../data/yoy_hake_sp.Rdata")
+readRDS(yoy_dab_sp, file = "../data/yoy_dab_sp.Rdata")
+readRDS(adult_dab_sp, file = "../data/adult_dab_sp.Rdata")
+```
+
+#### YOY Hake
+```{r}
+# Base GAM
+hake_base <- gam(lncatch ~ factor(year) +
+                  s(doy) +
+                  s(lat, lon) +
+                  s(bottom_depth),
+                data = yoy_hake_catch)
+
+gam.check(hake_base)
+plot(hake_base)
+summary(hake_base)
+
+# Select best GAM
+hake_gam <- catch_GAMs(yoy_hake_catch)
+summary(hake_gam[[2]])
+gam.check(hake_gam[[2]])
+plot(hake_gam[[2]])
+```
+
+#### YOY Sanddab
+```{r}
+# Base GAM
+yoy_dab_base <- gam(lncatch ~ factor(year) +
+                  s(doy) +
+                  s(lat, lon) +
+                  s(bottom_depth),
+                data = yoy_dab_catch)
+
+gam.check(yoy_dab_base)
+plot(yoy_dab_base)
+summary(yoy_dab_base)
+
+# Select best GAM
+yoy_dab_gam <- catch_GAMs(yoy_dab_catch)
+summary(yoy_dab_gam[[2]])
+gam.check(yoy_dab_gam[[2]])
+plot(yoy_dab_gam[[2]])
+```
+
+
+#### Adult Sanddab
+```{r}
+# Base GAM
+adult_dab_base <- gam(lncatch ~ factor(year) +
+                  s(doy) +
+                  s(lat, lon) +
+                  s(bottom_depth),
+                data = adult_dab_catch)
+
+gam.check(adult_dab_base)
+plot(adult_dab_base)
+summary(adult_dab_base)
+
+# Select best GAM
+adult_dab_gam <- catch_GAMs(adult_dab_catch)
+summary(adult_dab_gam[[2]])
+gam.check(adult_dab_gam[[2]])
+plot(adult_dab_gam[[2]])
+```
+
