@@ -1,0 +1,82 @@
+---
+title: "sdmTMB Practice"
+author: "Rebecca Howard"
+date: "4/20/2022"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+### Load libraries
+library(readxl)
+library(plyr)
+library(tibble)
+library(here)
+library(ggplot2)
+library(lubridate)
+library(date)
+library(dplyr)
+library(maps)
+library(mapdata)
+library(gridExtra)
+library(grid)
+library(sdmTMB)
+```
+
+```{r, include = FALSE, echo = FALSE}
+# Get data into appropriate format
+clean_data <- function(data_list, i){
+  data_frame <- as.data.frame(data_list[[i]])
+  data_frame <- mutate(data_frame,
+                     year = lubridate::year(haul_date),
+                     month = lubridate::month(haul_date),
+                     day = lubridate::day(haul_date))
+  data_frame$doy <- as.numeric(mdy.date(data_frame$month, data_frame$day, 1960))
+  data_frame$lat <- data_frame$net_in_lat * 0.01
+  data_frame$lon <- data_frame$net_in_lon * -0.01
+  return(data_frame)
+}
+```
+
+
+```{r, include = FALSE, echo = FALSE}
+# Load data
+exl_data <- here('data', 'hake_dabs.xlsx')
+tab_names <- excel_sheets(path = exl_data)
+
+data_list <- lapply(tab_names, function(x) read_excel(path = exl_data, sheet = x))
+
+### Clean data
+yoy_hake_catch <- clean_data(data_list, 1)
+yoy_dab_catch <- clean_data(data_list, 2)
+adult_dab_catch <- clean_data(data_list, 3)
+yoy_hake_sp <- as.data.frame(data_list[[4]])
+yoy_dab_sp <- as.data.frame(data_list[[5]])
+adult_dab_sp <- as.data.frame(data_list[[6]])
+
+# Add UTM coordinates
+yoy_dab_catch <- add_utm_columns(yoy_dab_catch, c("lon", "lat"))
+```
+
+```{r}
+# Make mesh object with matrices
+yoy_dab_mesh <- make_mesh(yoy_dab_catch, xy_cols = c("X", "Y"), cutoff = 10)
+plot(yoy_dab_mesh)
+```
+
+```{r}
+fit_yoy_dab <- sdmTMB(catch ~ s(bottom_depth, k = 5) +
+                        s(doy, k = 5),
+                      data = yoy_dab_catch,
+                      mesh = yoy_dab_mesh,
+                      family = tweedie(link = "log"),
+                      spatial = "on")
+fit_yoy_dab
+```
+
+```{r}
+tidy(fit_yoy_dab)
+tidy(fit_yoy_dab, effect = "ran_pars", conf.int = T)
+plot_smooth(fit_yoy_dab, ggplot = T)
+```
+
+
