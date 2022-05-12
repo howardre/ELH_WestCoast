@@ -22,36 +22,14 @@ library(grid)
 library(sdmTMB)
 ```
 
-```{r, include = FALSE, echo = FALSE}
-# Get data into appropriate format
-clean_data <- function(data_list, i){
-  data_frame <- as.data.frame(data_list[[i]])
-  data_frame <- mutate(data_frame,
-                     year = lubridate::year(haul_date),
-                     month = lubridate::month(haul_date),
-                     day = lubridate::day(haul_date))
-  data_frame$doy <- as.numeric(mdy.date(data_frame$month, data_frame$day, 1960))
-  data_frame$lat <- data_frame$net_in_lat * 0.01
-  data_frame$lon <- data_frame$net_in_lon * -0.01
-  return(data_frame)
-}
-```
-
-
-```{r, include = FALSE, echo = FALSE}
+```{r}
 # Load data
-exl_data <- here('data', 'hake_dabs.xlsx')
-tab_names <- excel_sheets(path = exl_data)
-
-data_list <- lapply(tab_names, function(x) read_excel(path = exl_data, sheet = x))
-
-### Clean data
-yoy_hake_catch <- clean_data(data_list, 1)
-yoy_dab_catch <- clean_data(data_list, 2)
-adult_dab_catch <- clean_data(data_list, 3)
-yoy_hake_sp <- as.data.frame(data_list[[4]])
-yoy_dab_sp <- as.data.frame(data_list[[5]])
-adult_dab_sp <- as.data.frame(data_list[[6]])
+yoy_hake_catch <- readRDS(file = "../data/yoy_hake_catch.Rdata")
+yoy_dab_catch <- readRDS(file = "../data/yoy_dab_catch.Rdata")
+adult_dab_catch <- readRDS(file = "../data/adult_dab_catch.Rdata")
+yoy_hake_sp <- readRDS(file = "../data/yoy_hake_sp.Rdata")
+yoy_dab_sp <- readRDS(file = "../data/yoy_dab_sp.Rdata")
+adult_dab_sp <- readRDS(file = "../data/adult_dab_sp.Rdata")
 
 # Add UTM coordinates
 yoy_dab_catch <- add_utm_columns(yoy_dab_catch, c("lon", "lat"))
