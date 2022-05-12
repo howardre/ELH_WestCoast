@@ -18,6 +18,7 @@ library(dplyr)
 library(maps)
 library(mapdata)
 library(mgcv)
+library(fields)
 source("functions/vis_gam_COLORS.R")
 ```
 
@@ -108,8 +109,8 @@ plot_variable <- function(gam, covariate, bounds, variable, ylabel, yvalues){
        yaxt = yvalues,
        seWithMean = T,
        scale = 0,
-       cex.axis = 1.5,
-       cex.lab = 1.5,
+       cex.axis = 3,
+       cex.lab = 3,
        family = "serif",
        lwd = 2)
 }
@@ -126,14 +127,14 @@ location_plot <- function(gam, species_subset) {
             contour.col = contour_col,
             color = "jet" ,
             type = 'response',
-            xlim = c(-125.7,-123.6),
+            xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
             xlab = "Longitude",
             ylab = "Latitude",
             main = " ",
-            cex.lab = 1.5,
-            cex.axis =  1.5)
+            cex.lab = 2.5,
+            cex.axis =  2.5)
   maps::map('worldHires',
             add = T,
             col = 'antiquewhite4',
@@ -290,16 +291,41 @@ plot_variable(hake_gam_t,
               "Depth", 
               "Species Abundance Anomalies", 
               "s")
+dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_depth.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
 
+```{r}
 plot_variable(hake_gam_t, 
               3, 
               c(-2.5, 4), 
               "Day of Year", 
-              "Species Abundance Anomalies", 
+              "", 
               "s")
+dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_doy.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
 
+```{r}
 location_plot(hake_gam_t,
               yoy_hake_catch)
+image.plot(legend.only = T,
+           col = jet.colors(100),
+           legend.shrink = 0.2,
+           smallplot = c(.28, .31, .11, .24),
+           legend.cex = 1.3,
+           axis.args = list(cex.axis = 1.8),
+           legend.width = 0.8,
+           legend.mar = 6,
+           zlim = c(min(hake_gam_t[[2]]$fitted.values), 
+                    max(hake_gam_t[[2]]$fitted.values)),
+           legend.args = list("Count",
+                              side = 2, cex = 2))
+dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_distribution.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
 ```
 
 
@@ -334,6 +360,49 @@ par(mfrow = c(2, 2))
 plot(yoy_dab_gam_t[[2]])
 ```
 
+```{r}
+plot_variable(yoy_dab_gam_t, 
+              2, 
+              c(-2.5, 1), 
+              "Depth", 
+              "Species Abundance Anomalies", 
+              "s")
+dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_depth.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+plot_variable(yoy_dab_gam_t, 
+              3, 
+              c(-2.5, 1), 
+              "Day of Year", 
+              "", 
+              "s")
+dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_doy.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+location_plot(yoy_dab_gam_t,
+              yoy_dab_catch)
+image.plot(legend.only = T,
+           col = jet.colors(100),
+           legend.shrink = 0.2,
+           smallplot = c(.28, .31, .11, .24),
+           legend.cex = 1.3,
+           axis.args = list(cex.axis = 1.8),
+           legend.width = 0.8,
+           legend.mar = 6,
+           zlim = c(min(yoy_dab_gam_t[[2]]$fitted.values), 
+                    max(yoy_dab_gam_t[[2]]$fitted.values)),
+           legend.args = list("Count",
+                              side = 2, cex = 2))
+dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_distribution.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
 
 ## Adult Sanddab
 ```{r}
@@ -363,4 +432,48 @@ gam.check(adult_dab_gam_t[[2]])
 
 par(mfrow = c(2, 2))
 plot(adult_dab_gam_t[[2]])
+```
+
+```{r}
+plot_variable(adult_dab_gam_t, 
+              2, 
+              c(-1.5, 0.5), 
+              "Depth", 
+              "Species Abundance Anomalies", 
+              "s")
+dev.copy(jpeg, here('results/adult_dab_preliminary', 'adult_dab_depth.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+plot_variable(adult_dab_gam_t, 
+              3, 
+              c(-1.5, 0.5), 
+              "Day of Year", 
+              "", 
+              "s")
+dev.copy(jpeg, here('results/adult_dab_preliminary', 'adult_dab_doy.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+location_plot(adult_dab_gam_t,
+              adult_dab_catch)
+image.plot(legend.only = T,
+           col = jet.colors(100),
+           legend.shrink = 0.2,
+           smallplot = c(.28, .31, .11, .24),
+           legend.cex = 1.3,
+           axis.args = list(cex.axis = 1.8),
+           legend.width = 0.8,
+           legend.mar = 6,
+           zlim = c(min(adult_dab_gam_t[[2]]$fitted.values), 
+                    max(adult_dab_gam_t[[2]]$fitted.values)),
+           legend.args = list("Count",
+                              side = 2, cex = 2))
+dev.copy(jpeg, here('results/adult_dab_preliminary', 'adult_dab_distribution.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
 ```
