@@ -18,9 +18,11 @@ library(dplyr)
 library(maps)
 library(mapdata)
 library(mgcv)
+source("functions/vis_gam_COLORS.R")
 ```
 
 ```{r, include = FALSE, echo = FALSE}
+# Histogram of catches
 CPUE_hist <- function(species_subset){
   par(mfrow = c(1,2))
   hist(species_subset$lncatch,
@@ -32,6 +34,7 @@ CPUE_hist <- function(species_subset){
     main = "Normalized Data")
 }
 
+# Gaussian GAMs
 catch_GAMs <- function(species_subset){
   year_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy),
                   data = species_subset[species_subset$lncatch > 0,])
@@ -52,6 +55,94 @@ catch_GAMs <- function(species_subset){
                                          function(x) min(gam_list[[x]]$aic)))]] # would like to also select by AIC
   return_list <- list(gam_list, best_gam)
 } 
+
+# Tweedie GAMs
+tweedie_GAMs <- function(species_subset){
+  year_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  pdo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(PDO, k = 4),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  npgo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(NPGO, k = 4),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  oni_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(ONI, k = 4),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  pdo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = PDO_mean),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  npgo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_mean),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  oni_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = ONI_mean),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
+  best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
+                                         function(x) min(gam_list[[x]]$aic)))]] # would like to also select by AIC
+  return_list <- list(gam_list, best_gam)
+} 
+
+# Plot smooth terms
+plot_variable <- function(gam, covariate, bounds, variable, ylabel, yvalues){
+  par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
+      oma = c(1, 1, 1, 1),
+      mgp = c(5, 2, 0))
+  plot(gam[[2]],
+       pages = 0,
+       select = covariate, # 1 = year/PDO/NPGO, 2 = lat/lon, 3 = depth, 4 = julian, 5 = temp
+       shade = T,
+       shade.col = "lemonchiffon3",
+       ylim = bounds,
+       xlab = variable,
+       ylab = ylabel,
+       yaxt = yvalues,
+       seWithMean = T,
+       scale = 0,
+       cex.axis = 1.5,
+       cex.lab = 1.5,
+       family = "serif",
+       lwd = 2)
+}
+
+# Plot distribution
+location_plot <- function(gam, species_subset) {
+  par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
+      oma = c(1, 1, 1, 1),
+      mgp = c(5, 2, 0))
+  myvis_gam(gam[[2]],
+            view = c('lon', 'lat'),
+            too.far = 0.03,
+            plot.type = 'contour',
+            contour.col = contour_col,
+            color = "jet" ,
+            type = 'response',
+            xlim = c(-125.7,-123.6),
+            ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
+            family = "serif",
+            xlab = "Longitude",
+            ylab = "Latitude",
+            main = " ",
+            cex.lab = 1.5,
+            cex.axis =  1.5)
+  maps::map('worldHires',
+            add = T,
+            col = 'antiquewhite4',
+            fill = T)
+}
+
+contour_col <- rgb(0, 0, 255, max = 255, alpha = 0, names = "white")
+jet.colors <- colorRampPalette(rev(c("#b2182b", "#d6604d", "#f4a582", "#fddbc7",
+                                 "#f7f7f7", "#d1e5f0", "#92c5de", "#4393c3", "#2166ac" )))
 ```
 
 ```{r}
@@ -74,63 +165,202 @@ CPUE_hist(adult_dab_catch)
 
 
 #### YOY Hake
+### Gaussian on positive catches
+## YOY Hake
 ```{r}
 # Base GAM
 hake_base <- gam(lncatch ~ factor(year) +
-                  s(doy) +
-                  s(lat, lon) +
-                  s(bottom_depth, k = 4),
-                data = yoy_hake_catch)
-
-gam.check(hake_base)
-plot(hake_base)
+                   s(doy) +
+                   s(lat, lon) +
+                   s(bottom_depth, k = 4),
+                 data = yoy_hake_catch[yoy_hake_catch$lncatch > 0,])
 summary(hake_base)
+
+par(mfrow = c(2, 2))
+gam.check(hake_base)
+
+par(mfrow = c(2, 2))
+plot(hake_base)
+
 
 # Select best GAM
 hake_gam <- catch_GAMs(yoy_hake_catch)
 summary(hake_gam[[2]])
+
+par(mfrow = c(2, 2))
 gam.check(hake_gam[[2]])
+
+par(mfrow = c(2, 2))
 plot(hake_gam[[2]])
 ```
 
-#### YOY Sanddab
+## YOY Sanddab
 ```{r}
 # Base GAM
 yoy_dab_base <- gam(lncatch ~ factor(year) +
-                  s(doy) +
-                  s(lat, lon) +
-                  s(bottom_depth, k = 4),
-                data = yoy_dab_catch)
-
-gam.check(yoy_dab_base)
-plot(yoy_dab_base)
+                      s(doy) +
+                      s(lat, lon) +
+                      s(bottom_depth, k = 4),
+                    data = yoy_dab_catch[yoy_dab_catch$lncatch > 0,])
 summary(yoy_dab_base)
+
+par(mfrow = c(2, 2))
+gam.check(yoy_dab_base)
+
+par(mfrow = c(2, 2))
+plot(yoy_dab_base)
+
 
 # Select best GAM
 yoy_dab_gam <- catch_GAMs(yoy_dab_catch)
 summary(yoy_dab_gam[[2]])
+
+par(mfrow = c(2, 2))
 gam.check(yoy_dab_gam[[2]])
+
+par(mfrow = c(2, 2))
 plot(yoy_dab_gam[[2]])
 ```
 
 
-#### Adult Sanddab
+## Adult Sanddab
 ```{r}
 # Base GAM
 adult_dab_base <- gam(lncatch ~ factor(year) +
-                  s(doy) +
-                  s(lat, lon) +
-                  s(bottom_depth, k = 4),
-                data = adult_dab_catch)
-
-gam.check(adult_dab_base)
-plot(adult_dab_base)
+                        s(doy) +
+                        s(lat, lon) +
+                        s(bottom_depth, k = 4),
+                      data = adult_dab_catch[adult_dab_catch$lncatch > 0,])
 summary(adult_dab_base)
+
+par(mfrow = c(2, 2))
+gam.check(adult_dab_base)
+
+par(mfrow = c(2, 2))
+plot(adult_dab_base)
+
 
 # Select best GAM
 adult_dab_gam <- catch_GAMs(adult_dab_catch)
 summary(adult_dab_gam[[2]])
+
+par(mfrow = c(2, 2))
 gam.check(adult_dab_gam[[2]])
+
+par(mfrow = c(2, 2))
 plot(adult_dab_gam[[2]])
 ```
 
+
+### Tweedie on counts
+## YOY Hake
+```{r}
+# Base GAM
+hake_base_t <- gam(catch + 1 ~ factor(year) +
+                   s(doy) +
+                   s(lat, lon) +
+                   s(bottom_depth, k = 4),
+                 family = tw(link = "log"),
+                 method = 'REML',
+                 data = yoy_hake_catch)
+summary(hake_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(hake_base_t)
+
+par(mfrow = c(2, 2))
+plot(hake_base_t)
+
+
+# Select best GAM
+hake_gam_t <- tweedie_GAMs(yoy_hake_catch)
+summary(hake_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(hake_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+plot(hake_gam_t[[2]])
+```
+
+```{r}
+plot_variable(hake_gam_t, 
+              2, 
+              c(-2.5, 4), 
+              "Depth", 
+              "Species Abundance Anomalies", 
+              "s")
+
+plot_variable(hake_gam_t, 
+              3, 
+              c(-2.5, 4), 
+              "Day of Year", 
+              "Species Abundance Anomalies", 
+              "s")
+
+location_plot(hake_gam_t,
+              yoy_hake_catch)
+```
+
+
+
+## YOY Sanddab
+```{r}
+# Base GAM
+yoy_dab_base_t <- gam(catch + 1 ~ factor(year) +
+                      s(doy) +
+                      s(lat, lon) +
+                      s(bottom_depth, k = 4),
+                    family = tw(link = "log"),
+                    method = 'REML',
+                    data = yoy_dab_catch)
+summary(yoy_dab_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(yoy_dab_base_t)
+
+par(mfrow = c(2, 2))
+plot(yoy_dab_base_t)
+
+
+# Select best GAM
+yoy_dab_gam_t <- tweedie_GAMs(yoy_dab_catch)
+summary(yoy_dab_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(yoy_dab_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+plot(yoy_dab_gam_t[[2]])
+```
+
+
+## Adult Sanddab
+```{r}
+# Base GAM
+adult_dab_base_t <- gam(catch + 1 ~ factor(year) +
+                        s(doy) +
+                        s(lat, lon) +
+                        s(bottom_depth, k = 4),
+                      family = tw(link = "log"),
+                      method = 'REML',
+                      data = adult_dab_catch)
+summary(adult_dab_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(adult_dab_base_t)
+
+par(mfrow = c(2, 2))
+plot(adult_dab_base_t)
+
+
+# Select best GAM
+adult_dab_gam_t <- tweedie_GAMs(adult_dab_catch)
+summary(adult_dab_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(adult_dab_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+plot(adult_dab_gam_t[[2]])
+```
