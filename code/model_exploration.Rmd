@@ -22,7 +22,6 @@ library(mgcv)
 
 ```{r, include = FALSE, echo = FALSE}
 CPUE_hist <- function(species_subset){
-  windows()
   par(mfrow = c(1,2))
   hist(species_subset$lncatch,
        xlab = "log(catch + 1)",
@@ -34,19 +33,19 @@ CPUE_hist <- function(species_subset){
 }
 
 catch_GAMs <- function(species_subset){
-  year_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy),
+  year_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy),
                   data = species_subset[species_subset$lncatch > 0,])
-  pdo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(PDO),
+  pdo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(PDO, k = 4),
                   data = species_subset[species_subset$lncatch > 0,])
-  npgo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(NPGO),
+  npgo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(NPGO, k = 4),
                   data = species_subset[species_subset$lncatch > 0,])
-  oni_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(ONI),
+  oni_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(ONI, k = 4),
                   data = species_subset[species_subset$lncatch > 0,])
-  pdo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(lat, lon, by = PDO_mean),
+  pdo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = PDO_mean),
                   data = species_subset[species_subset$lncatch > 0,])
-  npgo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(lat, lon, by = NPGO_mean),
+  npgo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_mean),
                   data = species_subset[species_subset$lncatch > 0,])
-  oni_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth) + s(doy) + s(lat, lon, by = ONI_mean),
+  oni_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = ONI_mean),
                   data = species_subset[species_subset$lncatch > 0,])
   gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
@@ -55,15 +54,24 @@ catch_GAMs <- function(species_subset){
 } 
 ```
 
-```{r, include = FALSE, echo = FALSE}
+```{r}
 # Load data
-readRDS(yoy_hake_catch, file = "../data/yoy_hake_catch.Rdata")
-readRDS(yoy_dab_catch, file = "../data/yoy_dab_catch.Rdata")
-readRDS(adult_dab_catch, file = "../data/adult_dab_catch.Rdata")
-readRDS(yoy_hake_sp, file = "../data/yoy_hake_sp.Rdata")
-readRDS(yoy_dab_sp, file = "../data/yoy_dab_sp.Rdata")
-readRDS(adult_dab_sp, file = "../data/adult_dab_sp.Rdata")
+yoy_hake_catch <- readRDS(file = "../data/yoy_hake_catch.Rdata")
+yoy_dab_catch <- readRDS(file = "../data/yoy_dab_catch.Rdata")
+adult_dab_catch <- readRDS(file = "../data/adult_dab_catch.Rdata")
+yoy_hake_sp <- readRDS(file = "../data/yoy_hake_sp.Rdata")
+yoy_dab_sp <- readRDS(file = "../data/yoy_dab_sp.Rdata")
+adult_dab_sp <- readRDS(file = "../data/adult_dab_sp.Rdata")
 ```
+
+
+```{r}
+CPUE_hist(yoy_hake_catch)
+CPUE_hist(yoy_dab_catch)
+CPUE_hist(adult_dab_catch)
+```
+
+
 
 #### YOY Hake
 ```{r}
@@ -71,7 +79,7 @@ readRDS(adult_dab_sp, file = "../data/adult_dab_sp.Rdata")
 hake_base <- gam(lncatch ~ factor(year) +
                   s(doy) +
                   s(lat, lon) +
-                  s(bottom_depth),
+                  s(bottom_depth, k = 4),
                 data = yoy_hake_catch)
 
 gam.check(hake_base)
@@ -91,7 +99,7 @@ plot(hake_gam[[2]])
 yoy_dab_base <- gam(lncatch ~ factor(year) +
                   s(doy) +
                   s(lat, lon) +
-                  s(bottom_depth),
+                  s(bottom_depth, k = 4),
                 data = yoy_dab_catch)
 
 gam.check(yoy_dab_base)
@@ -112,7 +120,7 @@ plot(yoy_dab_gam[[2]])
 adult_dab_base <- gam(lncatch ~ factor(year) +
                   s(doy) +
                   s(lat, lon) +
-                  s(bottom_depth),
+                  s(bottom_depth, k = 4),
                 data = adult_dab_catch)
 
 gam.check(adult_dab_base)
