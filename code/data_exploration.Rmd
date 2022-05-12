@@ -18,6 +18,7 @@ library(maps)
 library(mapdata)
 library(gridExtra)
 library(grid)
+library(reshape2)
 ```
 
 ```{r, include = FALSE, echo = FALSE}
@@ -31,6 +32,7 @@ clean_data <- function(data_list, i){
   data_frame$doy <- as.numeric(mdy.date(data_frame$month, data_frame$day, 1960))
   data_frame$lat <- data_frame$net_in_lat * 0.01
   data_frame$lon <- data_frame$net_in_lon * -0.01
+  data_frame$lncatch <- log(data_frame$catch + 1)
   return(data_frame)
 }
 
@@ -78,7 +80,7 @@ climate_match <- function(data){
                 by.x = c("year", "month"),
                 by.y = c("year", "month"),
                 all.x = T, all.y = F)
-  data <- subset(data, select = -c(Date, day.y))
+  data <- subset(data, select = -c(Date))
   data <- merge(data, oni_matrix,
                 by.x = c("year", "month"),
                 by.y = c("year", "month"),
@@ -121,8 +123,7 @@ pdo_index <- read.csv("../data/pdo_timeseries_ersstv5.csv")
 pdo_index$Date <- as.Date(pdo_index$Date, "%Y-%m-%d")
 pdo_index <- mutate(pdo_index,
                     year = lubridate::year(Date),
-                    month = lubridate::month(Date),
-                    day = lubridate::day(Date))
+                    month = lubridate::month(Date))
 
 # ONI
 oni_index <- read.table("../data/oni_data.txt",
