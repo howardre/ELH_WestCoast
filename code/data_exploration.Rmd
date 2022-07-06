@@ -30,8 +30,6 @@ clean_data <- function(data_list, i){
                      month = lubridate::month(haul_date),
                      day = lubridate::day(haul_date))
   data_frame$doy <- as.numeric(mdy.date(data_frame$month, data_frame$day, 1960))
-  data_frame$lat <- data_frame$net_in_lat * 0.01
-  data_frame$lon <- data_frame$net_in_lon * -0.01
   data_frame$lncatch <- log(data_frame$catch + 1)
   return(data_frame)
 }
@@ -244,6 +242,7 @@ adult_dab %>%
 ```{r, include = FALSE, echo = FALSE}
 # Filter out outliers
 yoy_dab <- filter(yoy_dab, std_length < 65)
+yoy_dab <- yoy_dab[!is.na(yoy_dab$bottom_depth), ]
 adult_dab <- filter(adult_dab, bottom_depth < 300)
 ```
 
@@ -273,7 +272,7 @@ yoy_hake %>%
         axis.text.x = element_text(angle = 45, vjust = 0.7))
 
 yoy_dab %>%
-  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 3500, by = 250))) %>% 
+  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 3750, by = 250))) %>% 
   ggplot() +
   geom_boxplot(aes(depth_cut, std_length),
                fill = "darkseagreen3", 
@@ -285,7 +284,7 @@ yoy_dab %>%
                               "1000-1250", "1250-1500", "1500-1750",
                               "1750-2000", "2000-2250", "2250-2500",
                               "2500-2750", "2750-3000", "3000-3250",
-                              "3250-3500")) +
+                              "3250-3500", "3500-3750")) +
   theme_classic() +
   theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
         axis.line = element_blank(),
