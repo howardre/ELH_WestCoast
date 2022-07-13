@@ -1,0 +1,102 @@
+{
+  "main": {
+    "id": "23336dc68e4216ba",
+    "type": "split",
+    "children": [
+      {
+        "id": "476d3937d29ca72a",
+        "type": "leaf",
+        "state": {
+          "type": "markdown",
+          "state": {
+            "file": "Methods/Model Exploration.md",
+            "mode": "source",
+            "source": false
+          }
+        }
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "c9750a1220cb15c7",
+    "type": "split",
+    "children": [
+      {
+        "id": "a5fa3228adea2a93",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b45e192d42749a04",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {}
+            }
+          },
+          {
+            "id": "fad37f9af458abf9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "355fa3d87eb14afd",
+    "type": "split",
+    "children": [
+      {
+        "id": "950219eb2b1fe17f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "360c210da73c991a",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Methods/Model Exploration.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "active": "476d3937d29ca72a",
+  "lastOpenFiles": [
+    "Methods/Model Exploration.md",
+    "Fish Information/Pacific Hake.md",
+    "Data/Rockfish Recruitment & Ecosystem Assessment Survey.md",
+    "Data/CalCOFI Surveys.md",
+    "Data/West Coast Groundfish Bottom Trawl Survey.md",
+    "Fish Information/Widow Rockfish.md",
+    "Fish Information/Shortbelly Rockfish.md",
+    "Fish Information/Anchovy.md",
+    "Fish Information/Pacific Sanddab.md"
+  ]
+}
