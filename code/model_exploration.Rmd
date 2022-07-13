@@ -993,7 +993,7 @@ yoy_dab$lower_cpue <- (yoy_dab$lower_num / yoy_dab$total_num) * yoy_dab$catch
 yoy_dab$upper_cpue[is.na(yoy_dab$upper_cpue)] <- 0
 yoy_dab$lower_cpue[is.na(yoy_dab$lower_cpue)] <- 0
 
-yoy_dab_filtered <- yoy_dab[yoy_dab$year > 2010, ] 
+yoy_dab_filtered <- yoy_dab[yoy_dab$year > 2010, ] # Length data only from 2011 onward
 ```
 
 ```{r}
@@ -1058,22 +1058,23 @@ dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_upper_dis.jpg'),
 dev.off()
 ```
 
+Use this chunk and one below if something changes to incorporate VC term
 ```{r}
-pred_yoy_dab_lower <- variable_coefficient_lengths(dab_lower, yoy_dab_filtered, yoy_dab_filtered$NPGO_pos)
-
-plot_var_coef_lengths(dab_lower, yoy_dab_filtered, pred_yoy_dab_lower)
-dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_var_coef_lower.jpg'), 
-         height = 15, width = 8, units = 'in', res = 200)
-dev.off()
+# pred_yoy_dab_lower <- variable_coefficient_lengths(dab_lower, yoy_dab_filtered, yoy_dab_filtered$NPGO_pos)
+# 
+# plot_var_coef_lengths(dab_lower, yoy_dab_filtered, pred_yoy_dab_lower)
+# dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_var_coef_lower.jpg'), 
+#          height = 15, width = 8, units = 'in', res = 200)
+# dev.off()
 ```
 
 ```{r}
-pred_yoy_dab_upper <- variable_coefficient_lengths(dab_upper, yoy_dab_filtered, yoy_dab_filtered$NPGO_pos)
-
-plot_var_coef_lengths2(dab_upper, yoy_dab_filtered, pred_yoy_dab_upper)
-dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_var_coef_upper.jpg'), 
-         height = 15, width = 8, units = 'in', res = 200)
-dev.off()
+# pred_yoy_dab_upper <- variable_coefficient_lengths(dab_upper, yoy_dab_filtered, yoy_dab_filtered$NPGO_pos)
+# 
+# plot_var_coef_lengths2(dab_upper, yoy_dab_filtered, pred_yoy_dab_upper)
+# dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_var_coef_upper.jpg'), 
+#          height = 15, width = 8, units = 'in', res = 200)
+# dev.off()
 ```
 
 ## Adult Sanddab
