@@ -19,6 +19,7 @@ library(maps)
 library(mapdata)
 library(mgcv)
 library(fields)
+library(colorspace)
 source("functions/vis_gam_COLORS.R")
 ```
 
@@ -53,7 +54,7 @@ catch_GAMs <- function(species_subset){
                   data = species_subset[species_subset$lncatch > 0,])
   gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
-                                         function(x) min(gam_list[[x]]$aic)))]] # would like to also select by AIC
+                                         function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
 } 
 
@@ -89,7 +90,7 @@ tweedie_GAMs <- function(species_subset){
                   data = species_subset)
   gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
-                                         function(x) min(gam_list[[x]]$aic)))]] # would like to also select by AIC
+                                         function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
 } 
 
@@ -105,7 +106,6 @@ variable_coefficient <- function(gam, data, variable){
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
 }
 
-# Calculate variable coefficient term
 variable_coefficient2 <- function(gam, data, variable){
   preds <- predict(gam[[1]][[5]], type = 'terms', se.fit = T) # selects the PDO model
   pred_slope <- preds[[1]][, 5] / variable
@@ -797,7 +797,7 @@ yoy_hake$lower_cpue <- (yoy_hake$lower_num / yoy_hake$total_num) * yoy_hake$catc
 yoy_hake$upper_cpue[is.na(yoy_hake$upper_cpue)] <- 0
 yoy_hake$lower_cpue[is.na(yoy_hake$lower_cpue)] <- 0
 
-yoy_hake_filtered <- yoy_hake[yoy_hake$year > 1993, ] # no length measurements before 2011??
+yoy_hake_filtered <- yoy_hake[yoy_hake$year > 1993, ] # no length data before 1994
 ```
 
 ```{r}
@@ -834,9 +834,7 @@ Histogram of lengths
 hist(yoy_hake_sp$std_length)
 ```
 
-
-
-
+Split into two models
 ```{r}
 hake_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
                   family = tw(link = "log"),
