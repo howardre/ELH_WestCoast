@@ -34,7 +34,17 @@
 	- Results
 		- [[Pacific sanddab]]
 			- Data from 2011 onward
+			- Base model: s(NPGO), deviance = 57.7%
+			- Lower model: s(NPGO), deviance = 58.3%
+			- Upper model: s(NPGO), deviance = 60.4%
 		- [[Pacific hake]]
 			- Data from 1994 onward
-			- Base model with s(lat, lon, by = NPGO), deviance = 46.1%
-			- 
+			- Base model: s(lat, lon, by = NPGO), deviance = 46.1%
+			- Lower bin model: s(lat, lon, by = NPGO), deviance = 54.7%
+			- Upper bin model: s(lat, lon, by = NPGO), deviance = 48.5%
+- Notes
+	- [[Pacific sanddab]]
+		- Lack of inclusion of VC term
+		- Improved slightly by binning lengths
+	- [[Pacific hake]]
+		- Improved by binning lengths
