@@ -23,6 +23,31 @@ library(grid)
 library(reshape2)
 ```
 
+```{r}
+climate_match <- function(data){
+  data <- merge(data, npgo_index,
+                by.x = c("year", "month"),
+                by.y = c("YEAR", "MONTH"),
+                all.x = T, all.y = F)
+  data <- merge(data, pdo_index,
+                by.x = c("year", "month"),
+                by.y = c("year", "month"),
+                all.x = T, all.y = F)
+  data <- subset(data, select = -c(Date))
+  data <- merge(data, oni_matrix,
+                by.x = c("year", "month"),
+                by.y = c("year", "month"),
+                all.x = T, all.y = F)
+  match_npgo <- match(data$year, npgo_means$YEAR)
+  data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
+  match_pdo <- match(data$year, pdo_means$year)
+  data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
+  match_oni <- match(data$year, oni_means$year)
+  data$ONI_mean <- oni_means$ONI_mean[match_oni]
+  return(data)
+}
+```
+
 ```{r, include = FALSE, echo = FALSE}
 # Load biological data
 WCGBTS_catch <- read.csv(here('data', 'WCGBTS_catch.csv'), 
@@ -34,6 +59,40 @@ WCGBTS_specimens <- read.csv(here('data', 'WCGBTS_specimens.csv'),
 WCGBTS_hauls <- read.csv(here('data', 'WCGBTS_hauls.csv'), 
                          header = T,
                          fileEncoding = "UTF-8-BOM")
+
+# NPGO
+npgo_index <- read.table("../data/npgo_data.txt",
+                         header = T)
+
+# PDO
+pdo_index <- read.csv("../data/pdo_timeseries_ersstv5.csv")
+pdo_index$Date <- as.Date(pdo_index$Date, "%Y-%m-%d")
+pdo_index <- mutate(pdo_index,
+                    year = lubridate::year(Date),
+                    month = lubridate::month(Date))
+
+# ONI
+oni_index <- read.table("../data/oni_data.txt",
+                        row.names = 1)
+colnames(oni_index) <- c("01", "02", "03", "04", 
+                         "05", "06", "07", "08", 
+                         "09", "10", "11", "12")
+oni_matrix <- melt(as.matrix(oni_index))
+colnames(oni_matrix) <- c("year", "month", "ONI")
+
+# Means
+npgo_means <- npgo_index %>% 
+  filter(MONTH >= 1 & MONTH <= 3) %>%
+  group_by(YEAR) %>%
+  summarise(NPGO_mean = mean(NPGO))
+pdo_means <- pdo_index %>% 
+  filter(month >= 1 & month <= 3) %>%
+  group_by(year) %>%
+  summarise(PDO_mean = mean(PDO))
+oni_means <- oni_matrix %>% 
+  filter(month >= 1 & month <= 3) %>%
+  group_by(year) %>%
+  summarise(ONI_mean = mean(ONI))
 ```
 
 
@@ -48,21 +107,55 @@ species <- c("Merluccius productus",
              "Engraulis mordax",
              "Sebastes jordani",
              "Sebastes entomelas")
-reduce_data <- function(data){
-  filter(data,
-         project == "Groundfish Slope and Shelf Combination Survey",
+
+WCGBTS_catch$date <- as.Date(as.character(WCGBTS_catch$date_yyyymmdd), "%Y%m%d")
+WCGBTS_specimens$date <- as.Date(as.character(WCGBTS_specimens$date_yyyymmdd), "%Y%m%d")
+WCGBTS_hauls$date <- as.Date(as.character(WCGBTS_hauls$date_yyyymmdd), "%Y%m%d")
+
+WCGBTS_samples <- WCGBTS_catch %>% 
+  rename(c(cpue_kg = cpue_kg_per_ha_der,
+           cpue_num = cpue_numbers_per_ha_der,
+           latitude = latitude_dd,
+           longitude = longitude_dd)) %>%
+  filter(project == "Groundfish Slope and Shelf Combination Survey",
          performance != "Unsatisfactory",
-         scientific_name %in% species)
-}
+         scientific_name %in% species) %>%
+  mutate(month = lubridate::month(date),
+         day = lubridate::day(date),
+         doy = as.numeric(mdy.date(month, day, 1960))) 
 
-WCGBTS_samples <- filter(WCGBTS_catch,
-                         project == "Groundfish Slope and Shelf Combination Survey",
-                         performance != "Unsatisfactory",
-                         scientific_name %in% species)
-WCGBTS_individuals <- filter(WCGBTS_specimens,
-                             project == "Groundfish Slope and Shelf Combination Survey",
-                             performance != "Unsatisfactory",
-                             scientific_name %in% species)
+WCGBTS_individuals <- WCGBTS_specimens %>%
+  rename(c(latitude = latitude_dd,
+           longitude = longitude_dd)) %>% 
+  filter(project == "Groundfish Slope and Shelf Combination Survey",
+         performance != "Unsatisfactory",
+         scientific_name %in% species) %>%
+  mutate(month = lubridate::month(date),
+         day = lubridate::day(date),
+         doy = as.numeric(mdy.date(month, day, 1960))) 
 
+WCGBTS_tows <- WCGBTS_hauls %>%
+  rename(c(latitude = latitude_hi_prec_dd,
+           longitude = longitude_hi_prec_dd,
+           depth_m = depth_hi_prec_m)) %>% 
+  filter(project == "Groundfish Slope and Shelf Combination Survey",
+         performance != "Unsatisfactory") %>%
+  mutate(month = lubridate::month(date),
+         day = lubridate::day(date),
+         doy = as.numeric(mdy.date(month, day, 1960))) 
+```
+
+
+```{r}
+# Add environmental data to the catch and haul data
+WCGBTS_samps <- climate_match(WCGBTS_samples)
+WCGBTS_summary <- climate_match(WCGBTS_tows)
+```
+
+```{r}
+# Save new dataframes
+saveRDS(WCGBTS_samps, file = "../data/WCGBTS_samps.Rdata")
+saveRDS(WCGBTS_individuals, file = "../data/WCGBTS_individuals.Rdata")
+saveRDS(WCGBTS_summary, file = "../data/WCGBTS_summary.Rdata")
 ```
 
