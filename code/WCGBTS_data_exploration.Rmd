@@ -1,0 +1,68 @@
+---
+title: "WCGBTS Data Exploration"
+author: "Rebecca Howard"
+date: "8/2/2022"
+output: html_document
+---
+
+
+```{r setup, include = FALSE}
+### Load libraries
+library(readxl)
+library(plyr)
+library(tibble)
+library(here)
+library(ggplot2)
+library(lubridate)
+library(date)
+library(dplyr)
+library(maps)
+library(mapdata)
+library(gridExtra)
+library(grid)
+library(reshape2)
+```
+
+```{r, include = FALSE, echo = FALSE}
+# Load biological data
+WCGBTS_catch <- read.csv(here('data', 'WCGBTS_catch.csv'), 
+                         na.strings = c("", NA),
+                         fileEncoding = "UTF-8-BOM")
+WCGBTS_specimens <- read.csv(here('data', 'WCGBTS_specimens.csv'), 
+                         header = T,
+                         fileEncoding = "UTF-8-BOM")
+WCGBTS_hauls <- read.csv(here('data', 'WCGBTS_hauls.csv'), 
+                         header = T,
+                         fileEncoding = "UTF-8-BOM")
+```
+
+
+```{r}
+# Filter data
+# Which surveys do we want? Currently just sticking with the WCGBTS beginning in 2003
+# Not limiting by latitude or depth
+# Reduce datasets to only include species of interest (hake, sanddab, anchovy, shortbelly, widow)
+unique(WCGBTS_catch$project)
+species <- c("Merluccius productus", 
+             "Citharichthys sordidus",
+             "Engraulis mordax",
+             "Sebastes jordani",
+             "Sebastes entomelas")
+reduce_data <- function(data){
+  filter(data,
+         project == "Groundfish Slope and Shelf Combination Survey",
+         performance != "Unsatisfactory",
+         scientific_name %in% species)
+}
+
+WCGBTS_samples <- filter(WCGBTS_catch,
+                         project == "Groundfish Slope and Shelf Combination Survey",
+                         performance != "Unsatisfactory",
+                         scientific_name %in% species)
+WCGBTS_individuals <- filter(WCGBTS_specimens,
+                             project == "Groundfish Slope and Shelf Combination Survey",
+                             performance != "Unsatisfactory",
+                             scientific_name %in% species)
+
+```
+
