@@ -47,6 +47,21 @@ climate_match <- function(data){
   return(data)
 }
 
+merge_data <- function(data1, data2, data3){
+  data_set <- merge(data2[, c("lncpue", "lncpue_n", "NPGO",
+                         "PDO", "ONI", "NPGO_mean",
+                         "PDO_mean", "ONI_mean", "cpue_kg",
+                         "cpue_num", "trawl_id", "scientific_name")],
+                    data1, 
+                    by = c("trawl_id", "scientific_name"),
+                    all = T)
+  data_final <- merge(data3[, c("bottom_temp", "trawl_id")],
+                      data_set, 
+                      by = "trawl_id",
+                      all.y = T)
+  return(data_final)
+}
+
 plot_variables <- function(data_frame, species){
   data <- data_frame[data_frame$scientific_name == species, ]
   plot(table(data$year[data$lncpue_n > 0]),
@@ -79,6 +94,7 @@ plot_variables <- function(data_frame, species){
 Data cleaning
 ```{r, include = FALSE, echo = FALSE}
 # Load biological data
+options(scipen = 999) # removes scientific notation for trawl ID
 WCGBTS_catch <- read.csv(here('data', 'WCGBTS_catch.csv'), 
                          na.strings = c("", NA),
                          fileEncoding = "UTF-8-BOM")
@@ -165,9 +181,11 @@ WCGBTS_individuals <- WCGBTS_specimens %>%
          doy = as.numeric(mdy.date(month, day, 1960))) 
 
 WCGBTS_tows <- WCGBTS_hauls %>%
-  rename(c(latitude = latitude_hi_prec_dd,
-           longitude = longitude_hi_prec_dd,
-           depth_m = depth_hi_prec_m)) %>% 
+  rename(c(latitude = latitude_dd,
+           longitude = longitude_dd,
+           depth_m = depth_hi_prec_m,
+           year = date_dim.year,
+           bottom_temp = temperature_at_gear_c_der)) %>% 
   filter(project == "Groundfish Slope and Shelf Combination Survey",
          performance != "Unsatisfactory") %>%
   mutate(month = lubridate::month(date),
@@ -182,10 +200,17 @@ WCGBTS_summary <- climate_match(WCGBTS_tows)
 ```
 
 ```{r}
+# Match individuals with samples
+WCGBTS_combined <- merge_data(WCGBTS_individuals, WCGBTS_samps, WCGBTS_summary)
+```
+
+
+```{r}
 # Save new dataframes
 saveRDS(WCGBTS_samps, file = "../data/WCGBTS_samps.Rdata")
 saveRDS(WCGBTS_individuals, file = "../data/WCGBTS_individuals.Rdata") # not available for anchovy
 saveRDS(WCGBTS_summary, file = "../data/WCGBTS_summary.Rdata")
+saveRDS(WCGBTS_combined, file = "../data/WCGBTS_combined.Rdata")
 ```
 
 
