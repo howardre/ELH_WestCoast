@@ -5,3 +5,266 @@ date: "8/3/2022"
 output: html_document
 ---
 
+```{r setup, include = FALSE}
+### Load libraries
+library(readxl)
+library(plyr)
+library(tibble)
+library(here)
+library(ggplot2)
+library(lubridate)
+library(date)
+library(dplyr)
+library(maps)
+library(mapdata)
+library(mgcv)
+library(fields)
+library(colorspace)
+source("functions/vis_gam_COLORS.R")
+```
+
+Load data
+```{r}
+# Load data
+WCGBTS_data <- readRDS(file = "../data/WCGBTS_combined.Rdata")
+```
+
+Functions
+```{r}
+# Histogram of catches
+CPUE_hist <- function(species_subset){
+  par(mfrow = c(1,2))
+  hist(species_subset$lncpue,
+       xlab = "log(CPUE + 1)",
+       main = "Raw Data")
+  sum(1 * (species_subset$lncpue_n == 0)) / nrow(species_subset)
+  hist(species_subset$lncpue_n[species_subset$lncpue > 0],
+    xlab = "log(CPUE + 1)",
+    main = "Normalized Data")
+}
+
+# Gaussian GAMs
+cpue_num_GAMs <- function(species_subset){
+  year_gam <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4),
+                  data = species_subset[species_subset$lncpue_n > 0,])
+  pdo_gam <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                   s(bottom_temp, k = 4) + s(PDO, k = 4),
+                  data = species_subset[species_subset$lncpue_n > 0,])
+  npgo_gam <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4) + s(NPGO, k = 4),
+                  data = species_subset[species_subset$lncpue_n > 0,])
+  oni_gam <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                   s(bottom_temp, k = 4) + s(ONI, k = 4),
+                  data = species_subset[species_subset$lncpue_n > 0,])
+  pdo_flex <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
+                  data = species_subset[species_subset$lncpue_n > 0,])
+  npgo_flex <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                     s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  data = species_subset[species_subset$lncpue_n > 0,])
+  oni_flex <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
+                  data = species_subset[species_subset$lncpue_n > 0,])
+  gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
+  best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
+                                         function(x) min(gam_list[[x]]$aic)))]] 
+  return_list <- list(gam_list, best_gam)
+} 
+
+# Tweedie GAMs
+tweedie_GAMs <- function(species_subset){
+  year_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  pdo_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                   s(bottom_temp, k = 4) + s(PDO, k = 4),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  npgo_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4) + s(NPGO, k = 4),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  oni_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                   s(bottom_temp, k = 4) + s(ONI, k = 4),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  pdo_flex <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  npgo_flex <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                     s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  oni_flex <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+                    s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = species_subset)
+  gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
+  best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
+                                         function(x) min(gam_list[[x]]$aic)))]] 
+  return_list <- list(gam_list, best_gam)
+} 
+
+# Calculatitudee variable coefficient term
+variable_coefficient <- function(gam, data, variable){
+  preds <- predict(gam[[2]], type = 'terms', se.fit = T)
+  pred_slope <- preds[[1]][, 5] / variable
+  pred_slope_se <- 1.96 * preds[[2]][, 5]
+  pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, 5] - pred_slope_se) / variable
+  sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
+  sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
+  return(list(sign_slope_neg, sign_slope_pos, pred_slope))
+}
+
+# Plot smooth terms
+plot_variable <- function(gam, covariate, bounds, variable, ylabel, yvalues){
+  par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
+      oma = c(1, 1, 1, 1),
+      mgp = c(5, 2, 0))
+  plot(gam[[2]],
+       pages = 0,
+       select = covariate, # 1 = year/PDO/NPGO, 2 = latitude/longitude, 3 = depth, 4 = julian, 5 = temp
+       shade = T,
+       shade.col = "lemonchiffon3",
+       ylim = bounds,
+       xlab = variable,
+       ylab = ylabel,
+       yaxt = yvalues,
+       seWithMean = T,
+       scale = 0,
+       cex.axis = 3,
+       cex.lab = 3,
+       family = "serif",
+       lwd = 2)
+}
+
+
+location_plot <- function(gam, species_subset) {
+  par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
+      oma = c(1, 1, 1, 1),
+      mgp = c(5, 2, 0))
+  myvis_gam(gam[[2]],
+            view = c('longitude', 'latitude'),
+            too.far = 0.07,
+            plot.type = 'contour',
+            contour.col = contour_col,
+            color = "jet" ,
+            type = 'link',
+            xlim = c(-125.7, -116.5),
+            ylim = range(species_subset$latitude, na.rm = TRUE) + c(-.4, .5),
+            family = "serif",
+            xlab = "longitude",
+            ylab = "latitude",
+            main = " ",
+            cex.lab = 2.5,
+            cex.axis =  2.5)
+  maps::map('worldHires',
+            add = T,
+            col = 'antiquewhite4',
+            fill = T)
+  image.plot(legend.only = T,
+           col = jet.colors(100),
+           legend.shrink = 0.2,
+           smallplot = c(.28, .31, .11, .24),
+           legend.cex = 1.3,
+           axis.args = list(cex.axis = 1.8,
+                            family = "serif"),
+           legend.width = 0.8,
+           legend.mar = 6,
+           zlim = c(min(gam[[2]]$linear.predictors), 
+                    max(gam[[2]]$linear.predictors)),
+           legend.args = list("log(cpue+1)",
+                              side = 2, cex = 2,
+                              family = "serif"))
+}
+
+# Plot variable coefficient term
+plot_var_coef <- function(gam, data, predictions){
+  par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
+      oma = c(1, 1, 1, 1),
+      mgp = c(5, 2, 0))
+  myvis_gam(gam[[2]],
+            view = c('longitude', 'latitude'),
+            too.far = 0.07,
+            plot.type = 'contour',
+            contour.col = contour_col,
+            color = "jet" ,
+            type = 'link',
+            xlim = c(-125.7,-116.5),
+            ylim = range(data$latitude, na.rm = TRUE) + c(-.4, .5),
+            family = "serif",
+            xlab = "longitude",
+            ylab = "latitude",
+            main = " ",
+            cex.lab = 2.5,
+            cex.axis =  2.5)
+  symbols(data$longitude[predictions[[2]]],
+          data$latitude[predictions[[2]]],
+          circle = predictions[[3]][predictions[[2]]],
+          inches = 0.12,
+          add = T,
+          bg = alpha('darkred', 0.4),
+          fg = alpha('black', 0.08))
+  symbols(data$longitude[predictions[[1]]],
+          data$latitude[predictions[[1]]],
+          circle = (-1) * predictions[[3]][predictions[[1]]],
+          inches = 0.12,
+          add = T,
+          bg = alpha('navy', 0.4),
+          fg = alpha('black', 0.08))
+  map("worldHires",
+      fill = T,
+      col = "wheat4",
+      add = T)
+  image.plot(legend.only = T,
+             col = jet.colors(100),
+             legend.shrink = 0.2,
+             smallplot = c(.28, .31, .11, .24),
+             legend.cex = 1.3,
+             axis.args = list(cex.axis = 1.8,
+                              family = "serif"),
+             legend.width = 0.8,
+             legend.mar = 6,
+             zlim = c(min(gam[[2]]$linear.predictors),
+                      max(gam[[2]]$linear.predictors)),
+             legend.args = list("log(cpue+1)",
+                                side = 2, cex = 2,
+                                family = "serif"))
+}
+
+contour_col <- rgb(0, 0, 255, max = 255, alpha = 0, names = "white")
+jet.colors <- colorRampPalette(c(sequential_hcl(15, palette = "Mint")))
+```
+
+Convert climate indices to positive values
+```{r}
+WCGBTS_data$NPGO_pos <- WCGBTS_data$NPGO_mean + abs(min(WCGBTS_data$NPGO_mean))
+WCGBTS_data$PDO_pos <- WCGBTS_data$PDO_mean + abs(min(WCGBTS_data$PDO_mean))
+WCGBTS_data$ONI_pos <- WCGBTS_data$ONI_mean + abs(min(WCGBTS_data$ONI_mean))
+```
+
+#### Adult Hake
+### Gaussian on positive catches
+```{r}
+hake_base <- gam(lncpue_n ~ factor(year) +
+                   s(doy) +
+                   s(latitude, longitude) +
+                   s(depth_m, k = 4) +
+                   s(bottom_temp, k = 4),
+                 data = WCGBTS_data[WCGBTS_data$lncpue_n > 0, ])
+summary(hake_base)
+
+
+```
+
