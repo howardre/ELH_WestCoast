@@ -196,6 +196,10 @@ WCGBTS_tows <- WCGBTS_hauls %>%
 ```{r}
 # Add environmental data to the catch and haul data
 WCGBTS_samps <- climate_match(WCGBTS_samples)
+WCGBTS_samps <- merge(WCGBTS_samps, 
+                      WCGBTS_tows[c("bottom_temp",
+                                    "trawl_id")],
+                      by = "trawl_id")
 WCGBTS_summary <- climate_match(WCGBTS_tows)
 ```
 
