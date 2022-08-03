@@ -453,3 +453,38 @@ WCGBTS_individuals %>%
         strip.text = element_text(family = "serif", size = 18)) +
   facet_wrap(~ scientific_name)
 ```
+
+
+```{r, include = FALSE, echo = FALSE}
+# Make maps of catches
+west_coast <- map_data("usa")
+```
+
+```{r, warning = FALSE, echo = FALSE, fig.width = 15, fig.height = 20}
+ggplot() +  
+    geom_point(data = WCGBTS_samps, 
+            aes(longitude, latitude,
+                size = lncpue_n),
+            color = "salmon",
+            alpha = 0.2) +
+  labs(y = "Latitude",
+       x = "Longitude",
+       size = "ln(CPUE+1)") +
+  geom_polygon(aes(long, lat, group = group), 
+               data = west_coast,
+               fill = "lightyellow4", 
+               colour = "black") +
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 48)) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7),
+        strip.text = element_text(family = "serif", size = 18),
+        legend.title = element_text(family = "serif", size = 16),
+        legend.text = element_text(family = "serif", size = 14)) +
+  facet_wrap(~ scientific_name)
+```
