@@ -27,6 +27,7 @@ Load data
 ```{r}
 # Load data
 WCGBTS_data <- readRDS(file = "../data/WCGBTS_samps.Rdata")
+WCGBTS_tows <- readRDS(file = "../data/WCGBTS_summary.Rdata")
 WCGBTS_indvs <- readRDS(file = "../data/WCGBTS_combined.Rdata")
 ```
 
@@ -42,6 +43,20 @@ CPUE_hist <- function(species_subset){
   hist(species_subset$lncpue_n[species_subset$lncpue > 0],
     xlab = "log(CPUE + 1)",
     main = "Normalized Data")
+}
+
+# Subset data for each species
+subset_species <- function(species, catch, tows){
+  subset <- catch[catch$scientific_name == species, ]
+  match_id <- match(tows$trawl_id, subset$trawl_id)
+  tows$lncpue_n <- subset$lncpue_n[match_id]
+  tows$lncpue_n[is.na(tows$lncpue_n)] <- 0
+  selected_species <- select(tows, doy, year, lncpue_n, latitude, longitude, 
+                             PDO, NPGO, ONI, bottom_temp, depth_m, PDO_pos,
+                             NPGO_pos, ONI_pos)
+  selected_species <- na.omit(selected_species)
+  selected_species$pres <- 1 * (selected_species$lncpue_n > 0)
+  return(selected_species)
 }
 
 # Gaussian GAMs
@@ -253,14 +268,23 @@ Convert climate indices to positive values
 WCGBTS_data$NPGO_pos <- WCGBTS_data$NPGO_mean + abs(min(WCGBTS_data$NPGO_mean))
 WCGBTS_data$PDO_pos <- WCGBTS_data$PDO_mean + abs(min(WCGBTS_data$PDO_mean))
 WCGBTS_data$ONI_pos <- WCGBTS_data$ONI_mean + abs(min(WCGBTS_data$ONI_mean))
+
+WCGBTS_tows$NPGO_pos <- WCGBTS_tows$NPGO_mean + abs(min(WCGBTS_tows$NPGO_mean))
+WCGBTS_tows$PDO_pos <- WCGBTS_tows$PDO_mean + abs(min(WCGBTS_tows$PDO_mean))
+WCGBTS_tows$ONI_pos <- WCGBTS_tows$ONI_mean + abs(min(WCGBTS_tows$ONI_mean))
+```
+
+Create species datasets
+```{r}
+hake_data <- subset_species("Merluccius productus", WCGBTS_data, WCGBTS_tows)
+dab_data <- subset_species("Citharichthys sordidus", WCGBTS_data, WCGBTS_tows)
+anch_data <- subset_species("Engraulis mordax", WCGBTS_data, WCGBTS_tows)
+sbly_data <- subset_species("Sebastes jordani", WCGBTS_data, WCGBTS_tows)
+widw_data <- subset_species("Sebastes entomelas", WCGBTS_data, WCGBTS_tows)
 ```
 
 #### Gaussian on positive catches
 ### Adult Hake
-```{r}
-hake_data <- WCGBTS_data[WCGBTS_data$scientific_name == "Merluccius productus", ]
-```
-
 ```{r}
 # Explore simple GAM
 hake_base <- gam(lncpue_n ~ factor(year) +
@@ -291,10 +315,6 @@ plot(hake_gam[[2]])
 
 ### Adult Sanddab
 ```{r}
-dab_data <- WCGBTS_data[WCGBTS_data$scientific_name == "Citharichthys sordidus", ]
-```
-
-```{r}
 # Explore simple GAM
 dab_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
@@ -323,35 +343,95 @@ plot(dab_gam[[2]])
 ```
 
 
-### Adult 
-```{r}
-dab_data <- WCGBTS_data[WCGBTS_data$scientific_name == "Citharichthys sordidus", ]
-```
-
+### Adult Anchovy
 ```{r}
 # Explore simple GAM
-dab_base <- gam(lncpue_n ~ factor(year) +
+anch_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
                    s(latitude, longitude) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
-                 data = dab_data[dab_data$lncpue_n > 0, ])
-summary(dab_base)
+                 data = anch_data[anch_data$lncpue_n > 0, ])
+summary(anch_base)
 
 par(mfrow = c(2, 2))
-gam.check(dab_base)
+gam.check(anch_base)
 
 par(mfrow = c(2, 2))
-plot(dab_base)
+plot(anch_base)
 
 # Select best GAM
 # Select best GAM
-dab_gam <- cpue_GAMs(dab_data)
-summary(dab_gam[[2]])
+anch_gam <- cpue_GAMs(anch_data)
+summary(anch_gam[[2]])
 
 par(mfrow = c(2, 2))
-gam.check(dab_gam[[2]])
+gam.check(anch_gam[[2]])
 
 par(mfrow = c(2, 2))
-plot(dab_gam[[2]])
+plot(anch_gam[[2]])
 ```
+
+
+### Adult Shortbelly
+```{r}
+# Explore simple GAM
+sbly_base <- gam(lncpue_n ~ factor(year) +
+                   s(doy) +
+                   s(latitude, longitude) +
+                   s(depth_m, k = 4) +
+                   s(bottom_temp, k = 4),
+                 data = sbly_data[sbly_data$lncpue_n > 0, ])
+summary(sbly_base)
+
+par(mfrow = c(2, 2))
+gam.check(sbly_base)
+
+par(mfrow = c(2, 2))
+plot(sbly_base)
+
+# Select best GAM
+# Select best GAM
+sbly_gam <- cpue_GAMs(sbly_data)
+summary(sbly_gam[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(sbly_gam[[2]])
+
+par(mfrow = c(2, 2))
+plot(sbly_gam[[2]])
+```
+
+
+### Adult Widow
+```{r}
+# Explore simple GAM
+widw_base <- gam(lncpue_n ~ factor(year) +
+                   s(doy) +
+                   s(latitude, longitude) +
+                   s(depth_m, k = 4) +
+                   s(bottom_temp, k = 4),
+                 data = widw_data[widw_data$lncpue_n > 0, ])
+summary(widw_base)
+
+par(mfrow = c(2, 2))
+gam.check(widw_base)
+
+par(mfrow = c(2, 2))
+plot(widw_base)
+
+# Select best GAM
+# Select best GAM
+widw_gam <- cpue_GAMs(widw_data)
+summary(widw_gam[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(widw_gam[[2]])
+
+par(mfrow = c(2, 2))
+plot(widw_gam[[2]])
+```
+
+
+#### Tweedie
+### Adult Hake
