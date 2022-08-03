@@ -3,6 +3,8 @@ title: "WCGBTS Model Exploration"
 author: "Rebecca Howard"
 date: "8/3/2022"
 output: html_document
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include = FALSE}
@@ -26,9 +28,21 @@ source("functions/vis_gam_COLORS.R")
 Load data
 ```{r}
 # Load data
+options(scipen = 999)
 WCGBTS_data <- readRDS(file = "../data/WCGBTS_samps.Rdata")
 WCGBTS_tows <- readRDS(file = "../data/WCGBTS_summary.Rdata")
 WCGBTS_indvs <- readRDS(file = "../data/WCGBTS_combined.Rdata")
+```
+
+Convert climate indices to positive values
+```{r}
+WCGBTS_data$NPGO_pos <- WCGBTS_data$NPGO_mean + abs(min(WCGBTS_data$NPGO_mean))
+WCGBTS_data$PDO_pos <- WCGBTS_data$PDO_mean + abs(min(WCGBTS_data$PDO_mean))
+WCGBTS_data$ONI_pos <- WCGBTS_data$ONI_mean + abs(min(WCGBTS_data$ONI_mean))
+
+WCGBTS_tows$NPGO_pos <- WCGBTS_tows$NPGO_mean + abs(min(WCGBTS_tows$NPGO_mean))
+WCGBTS_tows$PDO_pos <- WCGBTS_tows$PDO_mean + abs(min(WCGBTS_tows$PDO_mean))
+WCGBTS_tows$ONI_pos <- WCGBTS_tows$ONI_mean + abs(min(WCGBTS_tows$ONI_mean))
 ```
 
 Functions
@@ -51,9 +65,11 @@ subset_species <- function(species, catch, tows){
   match_id <- match(tows$trawl_id, subset$trawl_id)
   tows$lncpue_n <- subset$lncpue_n[match_id]
   tows$lncpue_n[is.na(tows$lncpue_n)] <- 0
+  tows$catch <- subset$total_catch_numbers[match_id]
+  tows$catch[is.na(tows$catch)] <- 0
   selected_species <- select(tows, doy, year, lncpue_n, latitude, longitude, 
                              PDO, NPGO, ONI, bottom_temp, depth_m, PDO_pos,
-                             NPGO_pos, ONI_pos)
+                             NPGO_pos, ONI_pos, catch, trawl_id)
   selected_species <- na.omit(selected_species)
   selected_species$pres <- 1 * (selected_species$lncpue_n > 0)
   return(selected_species)
@@ -90,37 +106,37 @@ cpue_GAMs <- function(species_subset){
 
 # Tweedie GAMs
 tweedie_GAMs <- function(species_subset){
-  year_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+  year_gam <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                     s(bottom_temp, k = 4),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  pdo_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+  pdo_gam <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                    s(bottom_temp, k = 4) + s(PDO, k = 4),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  npgo_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+  npgo_gam <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                     s(bottom_temp, k = 4) + s(NPGO, k = 4),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  oni_gam <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+  oni_gam <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                    s(bottom_temp, k = 4) + s(ONI, k = 4),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  pdo_flex <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+  pdo_flex <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                     s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  npgo_flex <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+  npgo_flex <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                      s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  oni_flex <- gam(cpue_num + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
+  oni_flex <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                     s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
@@ -141,6 +157,13 @@ variable_coefficient <- function(gam, data, variable){
   sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
   sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
+}
+
+# Combine length data with trawl data
+merge_data <- function(data1, data2){
+  merge(data1, data2,
+        by = "trawl_id",
+        all.x = F, all.y = T)
 }
 
 # Plot smooth terms
@@ -200,7 +223,7 @@ location_plot <- function(gam, species_subset) {
            legend.mar = 6,
            zlim = c(min(gam[[2]]$linear.predictors), 
                     max(gam[[2]]$linear.predictors)),
-           legend.args = list("log(cpue+1)",
+           legend.args = list("log(count+1)",
                               side = 2, cex = 2,
                               family = "serif"))
 }
@@ -254,7 +277,7 @@ plot_var_coef <- function(gam, data, predictions){
              legend.mar = 6,
              zlim = c(min(gam[[2]]$linear.predictors),
                       max(gam[[2]]$linear.predictors)),
-             legend.args = list("log(cpue+1)",
+             legend.args = list("log(count+1)",
                                 side = 2, cex = 2,
                                 family = "serif"))
 }
@@ -263,16 +286,6 @@ contour_col <- rgb(0, 0, 255, max = 255, alpha = 0, names = "white")
 jet.colors <- colorRampPalette(c(sequential_hcl(15, palette = "Mint")))
 ```
 
-Convert climate indices to positive values
-```{r}
-WCGBTS_data$NPGO_pos <- WCGBTS_data$NPGO_mean + abs(min(WCGBTS_data$NPGO_mean))
-WCGBTS_data$PDO_pos <- WCGBTS_data$PDO_mean + abs(min(WCGBTS_data$PDO_mean))
-WCGBTS_data$ONI_pos <- WCGBTS_data$ONI_mean + abs(min(WCGBTS_data$ONI_mean))
-
-WCGBTS_tows$NPGO_pos <- WCGBTS_tows$NPGO_mean + abs(min(WCGBTS_tows$NPGO_mean))
-WCGBTS_tows$PDO_pos <- WCGBTS_tows$PDO_mean + abs(min(WCGBTS_tows$PDO_mean))
-WCGBTS_tows$ONI_pos <- WCGBTS_tows$ONI_mean + abs(min(WCGBTS_tows$ONI_mean))
-```
 
 Create species datasets
 ```{r}
@@ -282,6 +295,7 @@ anch_data <- subset_species("Engraulis mordax", WCGBTS_data, WCGBTS_tows)
 sbly_data <- subset_species("Sebastes jordani", WCGBTS_data, WCGBTS_tows)
 widw_data <- subset_species("Sebastes entomelas", WCGBTS_data, WCGBTS_tows)
 ```
+
 
 #### Gaussian on positive catches
 ### Adult Hake
@@ -435,3 +449,75 @@ plot(widw_gam[[2]])
 
 #### Tweedie
 ### Adult Hake
+```{r}
+# Base GAM
+hake_base_t <- gam(catch + 1 ~ factor(year) +
+                     s(doy) +
+                     s(latitude, longitude) +
+                     s(depth_m, k = 4) +
+                     s(bottom_temp, k = 4),
+                 family = tw(link = "log"),
+                 method = 'REML',
+                 data = hake_data)
+summary(hake_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(hake_base_t)
+
+par(mfrow = c(2, 2))
+plot(hake_base_t)
+
+
+# Select best GAM
+hake_gam_t <- tweedie_GAMs(hake_data)
+summary(hake_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(hake_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+plot(hake_gam_t[[2]])
+```
+
+```{r}
+pred_hake_t <- variable_coefficient(hake_gam_t, hake_data, hake_data$NPGO_pos)
+
+plot_var_coef(hake_gam_t, hake_data, pred_hake_t)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_hake_var_coef.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+Size-specific models
+```{r}
+hake_lengths <- WCGBTS_indvs %>%
+  filter(scientific_name == "Merluccius productus")
+
+hist(hake_lengths$length_cm)
+
+hake_lower <- aggregate(length_cm ~ trawl_id, 
+                        data = hake_lengths, 
+                        FUN = length, 
+                        subset = length_cm <= 40)
+hake_adults <- merge_data(hake_lower, hake_data)
+names(hake_adults)[names(hake_adults) == "length_cm"] <- "lower_num"
+
+hake_upper <- aggregate(length_cm ~ trawl_id, 
+                        data = hake_lengths, 
+                        FUN = length, 
+                        subset = length_cm > 40)
+hake_adults <- merge_data(hake_upper, hake_adults)
+names(hake_adults)[names(hake_adults) == "length_cm"] <- "upper_num"
+
+hake_total <- aggregate(length_cm ~ trawl_id, 
+                        data = hake_lengths, 
+                        FUN = length)
+hake_adults<- merge_data(hake_total, hake_adults)
+names(hake_adults)[names(hake_adults) == "length_cm"] <- "total_num"
+
+hake_adults$upper_count <- (hake_adults$upper_num / hake_adults$total_num) * hake_adults$catch
+hake_adults$lower_count <- (hake_adults$lower_num / hake_adults$total_num) * hake_adults$catch
+
+hake_adults$upper_count[is.na(hake_adults$upper_count)] <- 0
+hake_adults$lower_count[is.na(hake_adults$lower_count)] <- 0
+```
