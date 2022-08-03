@@ -1,0 +1,7 @@
+---
+title: "WCGBTS Model Exploration"
+author: "Rebecca Howard"
+date: "8/3/2022"
+output: html_document
+---
+
