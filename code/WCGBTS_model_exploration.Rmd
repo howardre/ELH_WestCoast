@@ -26,7 +26,8 @@ source("functions/vis_gam_COLORS.R")
 Load data
 ```{r}
 # Load data
-WCGBTS_data <- readRDS(file = "../data/WCGBTS_combined.Rdata")
+WCGBTS_data <- readRDS(file = "../data/WCGBTS_samps.Rdata")
+WCGBTS_indvs <- readRDS(file = "../data/WCGBTS_combined.Rdata")
 ```
 
 Functions
@@ -44,7 +45,7 @@ CPUE_hist <- function(species_subset){
 }
 
 # Gaussian GAMs
-cpue_num_GAMs <- function(species_subset){
+cpue_GAMs <- function(species_subset){
   year_gam <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
                     s(bottom_temp, k = 4),
                   data = species_subset[species_subset$lncpue_n > 0,])
@@ -254,17 +255,103 @@ WCGBTS_data$PDO_pos <- WCGBTS_data$PDO_mean + abs(min(WCGBTS_data$PDO_mean))
 WCGBTS_data$ONI_pos <- WCGBTS_data$ONI_mean + abs(min(WCGBTS_data$ONI_mean))
 ```
 
-#### Adult Hake
-### Gaussian on positive catches
+#### Gaussian on positive catches
+### Adult Hake
 ```{r}
+hake_data <- WCGBTS_data[WCGBTS_data$scientific_name == "Merluccius productus", ]
+```
+
+```{r}
+# Explore simple GAM
 hake_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
                    s(latitude, longitude) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
-                 data = WCGBTS_data[WCGBTS_data$lncpue_n > 0, ])
+                 data = hake_data[hake_data$lncpue_n > 0, ])
 summary(hake_base)
 
+par(mfrow = c(2, 2))
+gam.check(hake_base)
 
+par(mfrow = c(2, 2))
+plot(hake_base)
+
+# Select best GAM
+# Select best GAM
+hake_gam <- cpue_GAMs(hake_data)
+summary(hake_gam[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(hake_gam[[2]])
+
+par(mfrow = c(2, 2))
+plot(hake_gam[[2]])
 ```
 
+### Adult Sanddab
+```{r}
+dab_data <- WCGBTS_data[WCGBTS_data$scientific_name == "Citharichthys sordidus", ]
+```
+
+```{r}
+# Explore simple GAM
+dab_base <- gam(lncpue_n ~ factor(year) +
+                   s(doy) +
+                   s(latitude, longitude) +
+                   s(depth_m, k = 4) +
+                   s(bottom_temp, k = 4),
+                 data = dab_data[dab_data$lncpue_n > 0, ])
+summary(dab_base)
+
+par(mfrow = c(2, 2))
+gam.check(dab_base)
+
+par(mfrow = c(2, 2))
+plot(dab_base)
+
+# Select best GAM
+# Select best GAM
+dab_gam <- cpue_GAMs(dab_data)
+summary(dab_gam[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(dab_gam[[2]])
+
+par(mfrow = c(2, 2))
+plot(dab_gam[[2]])
+```
+
+
+### Adult 
+```{r}
+dab_data <- WCGBTS_data[WCGBTS_data$scientific_name == "Citharichthys sordidus", ]
+```
+
+```{r}
+# Explore simple GAM
+dab_base <- gam(lncpue_n ~ factor(year) +
+                   s(doy) +
+                   s(latitude, longitude) +
+                   s(depth_m, k = 4) +
+                   s(bottom_temp, k = 4),
+                 data = dab_data[dab_data$lncpue_n > 0, ])
+summary(dab_base)
+
+par(mfrow = c(2, 2))
+gam.check(dab_base)
+
+par(mfrow = c(2, 2))
+plot(dab_base)
+
+# Select best GAM
+# Select best GAM
+dab_gam <- cpue_GAMs(dab_data)
+summary(dab_gam[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(dab_gam[[2]])
+
+par(mfrow = c(2, 2))
+plot(dab_gam[[2]])
+```
