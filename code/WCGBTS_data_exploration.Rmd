@@ -49,7 +49,7 @@ climate_match <- function(data){
 
 merge_data <- function(data1, data2, data3){
   data_set <- merge(data2[, c("lncpue", "lncpue_n", "NPGO",
-                         "PDO", "ONI", "NPGO_mean",
+                         "PDO", "ONI", "NPGO_mean", "total_catch_numbers",
                          "PDO_mean", "ONI_mean", "cpue_kg",
                          "cpue_num", "trawl_id", "scientific_name")],
                     data1, 
