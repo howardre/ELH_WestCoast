@@ -5,7 +5,6 @@ date: "8/2/2022"
 output: html_document
 ---
 
-
 ```{r setup, include = FALSE}
 ### Load libraries
 library(readxl)
@@ -23,6 +22,7 @@ library(grid)
 library(reshape2)
 ```
 
+Functions
 ```{r}
 climate_match <- function(data){
   data <- merge(data, npgo_index,
@@ -46,8 +46,37 @@ climate_match <- function(data){
   data$ONI_mean <- oni_means$ONI_mean[match_oni]
   return(data)
 }
+
+plot_variables <- function(data_frame, species){
+  data <- data_frame[data_frame$scientific_name == species, ]
+  plot(table(data$year[data$lncpue_n > 0]),
+       ylab = 'Frequency',
+       xlab = 'Year',
+       main = '')
+  plot(table(data$doy[data$lncpue_n > 0]),
+       ylab = 'Frequency',
+       xlab = 'Day of Year',
+       main = '')
+  plot(table(data$latitude[data$lncpue_n > 0]),
+       ylab = 'Frequency',
+       xlab = 'Latitude',
+       main = '')
+  plot(table(data$longitude[data$lncpue_n > 0]),
+       ylab = 'Frequency',
+       xlab = 'Longitude',
+       main = '')
+  plot(table(data$depth_m[data$lncpue_n > 0]),
+       ylab = 'Frequency',
+       xlab = 'Depth',
+       main = '')
+  hist(data$lncpue_n, 
+       breaks = 100,
+       main = '',
+       xlab = 'ln(CPUE + 1)') 
+}
 ```
 
+Data cleaning
 ```{r, include = FALSE, echo = FALSE}
 # Load biological data
 WCGBTS_catch <- read.csv(here('data', 'WCGBTS_catch.csv'), 
@@ -95,7 +124,6 @@ oni_means <- oni_matrix %>%
   summarise(ONI_mean = mean(ONI))
 ```
 
-
 ```{r}
 # Filter data
 # Which surveys do we want? Currently just sticking with the WCGBTS beginning in 2003
@@ -122,7 +150,9 @@ WCGBTS_samples <- WCGBTS_catch %>%
          scientific_name %in% species) %>%
   mutate(month = lubridate::month(date),
          day = lubridate::day(date),
-         doy = as.numeric(mdy.date(month, day, 1960))) 
+         doy = as.numeric(mdy.date(month, day, 1960)),
+         lncpue = log(cpue_kg + 1),
+         lncpue_n = log(cpue_num + 1)) 
 
 WCGBTS_individuals <- WCGBTS_specimens %>%
   rename(c(latitude = latitude_dd,
@@ -145,7 +175,6 @@ WCGBTS_tows <- WCGBTS_hauls %>%
          doy = as.numeric(mdy.date(month, day, 1960))) 
 ```
 
-
 ```{r}
 # Add environmental data to the catch and haul data
 WCGBTS_samps <- climate_match(WCGBTS_samples)
@@ -155,7 +184,272 @@ WCGBTS_summary <- climate_match(WCGBTS_tows)
 ```{r}
 # Save new dataframes
 saveRDS(WCGBTS_samps, file = "../data/WCGBTS_samps.Rdata")
-saveRDS(WCGBTS_individuals, file = "../data/WCGBTS_individuals.Rdata")
+saveRDS(WCGBTS_individuals, file = "../data/WCGBTS_individuals.Rdata") # not available for anchovy
 saveRDS(WCGBTS_summary, file = "../data/WCGBTS_summary.Rdata")
 ```
 
+
+Data exploration
+```{r}
+# Hake
+par(mfrow = c(2, 3))
+plot_variables(WCGBTS_samps, "Merluccius productus")
+
+nrow(WCGBTS_samps[WCGBTS_samps$lncpue_n > 0 & WCGBTS_samps$scientific_name == "Merluccius productus", ])
+```
+
+```{r}
+# Sanddab
+par(mfrow = c(2, 3))
+plot_variables(WCGBTS_samps, "Citharichthys sordidus")
+
+nrow(WCGBTS_samps[WCGBTS_samps$lncpue_n > 0 & WCGBTS_samps$scientific_name == "Citharichthys sordidus", ])
+```
+
+```{r}
+# Anchovy
+par(mfrow = c(2, 3))
+plot_variables(WCGBTS_samps, "Engraulis mordax")
+
+nrow(WCGBTS_samps[WCGBTS_samps$lncpue_n > 0 & WCGBTS_samps$scientific_name == "Engraulis mordax", ])
+```
+
+```{r}
+# Shortbelly Rockfish
+par(mfrow = c(2, 3))
+plot_variables(WCGBTS_samps, "Sebastes jordani")
+
+nrow(WCGBTS_samps[WCGBTS_samps$lncpue_n > 0 & WCGBTS_samps$scientific_name == "Sebastes jordani", ])
+```
+
+```{r}
+# Widow Rockfish
+par(mfrow = c(2, 3))
+plot_variables(WCGBTS_samps, "Sebastes entomelas")
+
+nrow(WCGBTS_samps[WCGBTS_samps$lncpue_n > 0 & WCGBTS_samps$scientific_name == "Sebastes entomelas", ])
+```
+
+```{r}
+# Look at pattern of days by latitude
+ggplot(WCGBTS_samps, aes(day, latitude)) +
+  geom_point() +
+  facet_wrap(~ scientific_name)
+```
+
+```{r, warning = F}
+# Look at pattern of lengths
+ggplot(WCGBTS_individuals, 
+       aes(depth_m, length_cm)) + # depth
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name) # smaller at shallower depths for sebastes spp
+
+ggplot(WCGBTS_individuals, 
+       aes(year, length_cm)) + # year
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name)
+
+ggplot(WCGBTS_individuals, 
+       aes(doy, length_cm)) + # doy
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name)
+
+ggplot(WCGBTS_individuals, 
+       aes(latitude, length_cm)) + # latitude
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name) # slightly larger further north
+```
+
+```{r, warning = F}
+ggplot(WCGBTS_individuals, 
+       aes(depth_m, age_years)) + # depth
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name) # younger individuals in shallower water for sebastes spp
+
+ggplot(WCGBTS_individuals, 
+       aes(year, age_years)) + # year
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name) # age data not available for all species for all years
+
+ggplot(WCGBTS_individuals, 
+       aes(doy, age_years)) + # doy
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name)
+
+ggplot(WCGBTS_individuals, 
+       aes(latitude, age_years)) + # latitude
+  geom_point(alpha = 0.1,
+             size = 2) +
+  facet_wrap(~ scientific_name) # slightly older individuals further north for sanddab, widow
+```
+
+
+```{r, warning = F}
+WCGBTS_individuals %>%
+  mutate(depth_cut = cut(depth_m, breaks = c(0, 150, 300, 450, 600,
+                                             750, 900, 1050, 1200))) %>% 
+  ggplot(aes(depth_cut, length_cm)) +
+  geom_boxplot() +
+  facet_wrap(~ scientific_name)
+```
+
+```{r, fig.width = 20, fig.height = 15, warning = FALSE, echo = FALSE}
+WCGBTS_individuals %>%
+  mutate(depth_cut = cut(depth_m, breaks = seq(0, 1350, by = 150))) %>% 
+  ggplot() +
+  geom_boxplot(aes(depth_cut, length_cm),
+               fill = "darkseagreen3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (cm)",
+       x = "Depth (m)",
+       title = "Length by Depth") +
+  scale_x_discrete(labels = c("0-150", "150-300", "300-450", "450-600",
+                              "600-750", "750-900", "900-1050", "1050-1200",
+                              "1200-1350")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7),
+        strip.text = element_text(family = "serif", size = 18)) +
+  facet_wrap(~ scientific_name)
+
+```
+
+```{r, fig.width = 20, fig.height = 15, warning = FALSE, echo = FALSE}
+WCGBTS_individuals %>%
+  mutate(lat_cut = cut(latitude, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot() +
+  geom_boxplot(aes(lat_cut, length_cm),
+               fill = "cyan3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (cm)",
+       x = "Latitude",
+       title = "Length by Latitude") +
+  scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
+                              "37-38", "38-39", "39-40", "40-41", "41-42",
+                              "42-43", "43-44", "44-45", "45-46", "46-47",
+                              "47-48", "48-49")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7),
+        strip.text = element_text(family = "serif", size = 18)) +
+  facet_wrap(~ scientific_name)
+
+```
+
+```{r, fig.width = 20, fig.height = 15, warning = FALSE, echo = FALSE}
+WCGBTS_individuals %>%
+  mutate(doy_cut = cut(doy, breaks = seq(135, 300, by = 15))) %>% 
+  ggplot() +
+  geom_boxplot(aes(doy_cut, length_cm),
+               fill = "plum4", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (cm)",
+       x = "Day of Year",
+       title = "Length by Day of Year") +
+  scale_x_discrete(labels = c("135-150", "150-165", "165-180", "180-195",
+                              "195-210", "210-225", "225-240", "240-255",
+                              "255-270", "270-285", "285-300")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7),
+        strip.text = element_text(family = "serif", size = 18)) +
+  facet_wrap(~ scientific_name)
+```
+
+```{r, fig.width = 20, fig.height = 15, warning = FALSE, echo = FALSE}
+WCGBTS_individuals %>%
+  mutate(depth_cut = cut(depth_m, breaks = seq(0, 1350, by = 150))) %>% 
+  ggplot() +
+  geom_boxplot(aes(depth_cut, age_years),
+               fill = "darksalmon", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Age (years)",
+       x = "Depth (m)",
+       title = "Age by Depth") +
+  scale_x_discrete(labels = c("0-150", "150-300", "300-450", "450-600",
+                              "600-750", "750-900", "900-1050", "1050-1200",
+                              "1200-1350")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7),
+        strip.text = element_text(family = "serif", size = 18)) +
+  facet_wrap(~ scientific_name)
+```
+
+```{r, fig.width = 20, fig.height = 15, warning = FALSE, echo = FALSE}
+WCGBTS_individuals %>%
+  mutate(lat_cut = cut(latitude, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot() +
+  geom_boxplot(aes(lat_cut, age_years),
+               fill = "goldenrod1", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Age (years)",
+       x = "Latitude",
+       title = "Age by Latitude") +
+  scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
+                              "37-38", "38-39", "39-40", "40-41", "41-42",
+                              "42-43", "43-44", "44-45", "45-46", "46-47",
+                              "47-48", "48-49")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7),
+        strip.text = element_text(family = "serif", size = 18)) +
+  facet_wrap(~ scientific_name)
+```
+
+```{r, fig.width = 20, fig.height = 15, warning = FALSE, echo = FALSE}
+WCGBTS_individuals %>%
+  mutate(doy_cut = cut(doy, breaks = seq(135, 300, by = 15))) %>% 
+  ggplot() +
+  geom_boxplot(aes(doy_cut, age_years),
+               fill = "lightpink", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Age (years)",
+       x = "Day of Year",
+       title = "Age by Day of Year") +
+  scale_x_discrete(labels = c("135-150", "150-165", "165-180", "180-195",
+                              "195-210", "210-225", "225-240", "240-255",
+                              "255-270", "270-285", "285-300")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7),
+        strip.text = element_text(family = "serif", size = 18)) +
+  facet_wrap(~ scientific_name)
+```
