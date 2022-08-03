@@ -147,9 +147,20 @@ tweedie_GAMs <- function(species_subset){
   return_list <- list(gam_list, best_gam)
 } 
 
-# Calculatitudee variable coefficient term
+# Calculate variable coefficient term 
 variable_coefficient <- function(gam, data, variable){
   preds <- predict(gam[[2]], type = 'terms', se.fit = T)
+  pred_slope <- preds[[1]][, 5] / variable
+  pred_slope_se <- 1.96 * preds[[2]][, 5]
+  pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, 5] - pred_slope_se) / variable
+  sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
+  sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
+  return(list(sign_slope_neg, sign_slope_pos, pred_slope))
+}
+
+variable_coefficient_lengths <- function(gam, data, variable){
+  preds <- predict(gam, type = 'terms', se.fit = T)
   pred_slope <- preds[[1]][, 5] / variable
   pred_slope_se <- 1.96 * preds[[2]][, 5]
   pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
@@ -187,7 +198,6 @@ plot_variable <- function(gam, covariate, bounds, variable, ylabel, yvalues){
        family = "serif",
        lwd = 2)
 }
-
 
 location_plot <- function(gam, species_subset) {
   par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
@@ -277,6 +287,59 @@ plot_var_coef <- function(gam, data, predictions){
              legend.mar = 6,
              zlim = c(min(gam[[2]]$linear.predictors),
                       max(gam[[2]]$linear.predictors)),
+             legend.args = list("log(count+1)",
+                                side = 2, cex = 2,
+                                family = "serif"))
+}
+
+plot_var_coef_lengths <- function(gam, data, predictions){
+  par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
+      oma = c(1, 1, 1, 1),
+      mgp = c(5, 2, 0))
+  myvis_gam(gam,
+            view = c('longitude', 'latitude'),
+            too.far = 0.07,
+            plot.type = 'contour',
+            contour.col = contour_col,
+            color = "jet" ,
+            type = 'link',
+            xlim = c(-125.7, -116.5),
+            ylim = range(data$lat, na.rm = TRUE) + c(-.4, .5),
+            family = "serif",
+            xlab = "Longitude",
+            ylab = "Latitude",
+            main = " ",
+            cex.lab = 2.5,
+            cex.axis =  2.5)
+  symbols(data$lon[predictions[[2]]],
+          data$lat[predictions[[2]]],
+          circle = predictions[[3]][predictions[[2]]],
+          inches = 0.12,
+          add = T,
+          bg = alpha('darkred', 0.4),
+          fg = alpha('black', 0.08))
+  symbols(data$lon[predictions[[1]]],
+          data$lat[predictions[[1]]],
+          circle = (-1) * predictions[[3]][predictions[[1]]],
+          inches = 0.12,
+          add = T,
+          bg = alpha('navy', 0.4),
+          fg = alpha('black', 0.08))
+  map("worldHires",
+      fill = T,
+      col = "wheat4",
+      add = T)
+  image.plot(legend.only = T,
+             col = jet.colors(100),
+             legend.shrink = 0.2,
+             smallplot = c(.28, .31, .11, .24),
+             legend.cex = 1.3,
+             axis.args = list(cex.axis = 1.8,
+                              family = "serif"),
+             legend.width = 0.8,
+             legend.mar = 6,
+             zlim = c(min(gam$linear.predictors),
+                      max(gam$linear.predictors)),
              legend.args = list("log(count+1)",
                                 side = 2, cex = 2,
                                 family = "serif"))
@@ -490,10 +553,11 @@ dev.off()
 
 Size-specific models
 ```{r}
+# Split into two data frames for small and large individuals
 hake_lengths <- WCGBTS_indvs %>%
   filter(scientific_name == "Merluccius productus")
 
-hist(hake_lengths$length_cm)
+hist(hake_lengths$length_cm) # Check to see where to make the split
 
 hake_lower <- aggregate(length_cm ~ trawl_id, 
                         data = hake_lengths, 
@@ -515,9 +579,50 @@ hake_total <- aggregate(length_cm ~ trawl_id,
 hake_adults<- merge_data(hake_total, hake_adults)
 names(hake_adults)[names(hake_adults) == "length_cm"] <- "total_num"
 
+# Calculate how much of the catch comes from small/large individuals
 hake_adults$upper_count <- (hake_adults$upper_num / hake_adults$total_num) * hake_adults$catch
 hake_adults$lower_count <- (hake_adults$lower_num / hake_adults$total_num) * hake_adults$catch
 
 hake_adults$upper_count[is.na(hake_adults$upper_count)] <- 0
 hake_adults$lower_count[is.na(hake_adults$lower_count)] <- 0
+```
+
+```{r}
+# Best model from full data set is as below
+hake_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = hake_adults)
+hake_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = hake_adults)
+hake_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = hake_adults)
+summary(hake_all) # 45.5% deviance explained 
+summary(hake_small) # 45% deviance explained
+summary(hake_large) # 48.8% deviance explained
+```
+
+```{r}
+pred_adult_hake_lower <- variable_coefficient_lengths(hake_small, hake_adults, hake_adults$NPGO_pos)
+
+plot_var_coef_lengths(hake_small, hake_adults, pred_adult_hake_lower)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_hake_var_coef_lower.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+pred_adult_hake_upper <- variable_coefficient_lengths(hake_large, hake_adults, hake_adults$NPGO_pos)
+
+plot_var_coef_lengths(hake_large, hake_adults, pred_adult_hake_upper)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_hake_var_coef_upper.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
 ```
