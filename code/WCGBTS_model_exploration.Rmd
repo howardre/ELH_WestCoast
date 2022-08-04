@@ -4,7 +4,7 @@ author: "Rebecca Howard"
 date: "8/3/2022"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include = FALSE}
@@ -213,8 +213,8 @@ location_plot <- function(gam, species_subset) {
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$latitude, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
-            xlab = "longitude",
-            ylab = "latitude",
+            xlab = "Longitude",
+            ylab = "Latitude",
             main = " ",
             cex.lab = 2.5,
             cex.axis =  2.5)
@@ -253,8 +253,8 @@ plot_var_coef <- function(gam, data, predictions){
             xlim = c(-125.7,-116.5),
             ylim = range(data$latitude, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
-            xlab = "longitude",
-            ylab = "latitude",
+            xlab = "Longitude",
+            ylab = "Latitude",
             main = " ",
             cex.lab = 2.5,
             cex.axis =  2.5)
@@ -623,6 +623,355 @@ pred_adult_hake_upper <- variable_coefficient_lengths(hake_large, hake_adults, h
 
 plot_var_coef_lengths(hake_large, hake_adults, pred_adult_hake_upper)
 dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_hake_var_coef_upper.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+### Adult Sanddab
+```{r}
+# Base GAM
+dab_base_t <- gam(catch + 1 ~ factor(year) +
+                     s(doy) +
+                     s(latitude, longitude) +
+                     s(depth_m, k = 4) +
+                     s(bottom_temp, k = 4),
+                 family = tw(link = "log"),
+                 method = 'REML',
+                 data = dab_data)
+summary(dab_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(dab_base_t)
+
+par(mfrow = c(2, 2))
+plot(dab_base_t)
+
+
+# Select best GAM
+dab_gam_t <- tweedie_GAMs(dab_data)
+summary(dab_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(dab_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+plot(dab_gam_t[[2]])
+```
+
+```{r}
+pred_dab_t <- variable_coefficient(dab_gam_t, dab_data, dab_data$NPGO_pos)
+
+plot_var_coef(dab_gam_t, dab_data, pred_dab_t)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_dab_var_coef.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+Size-specific models
+```{r}
+# Split into two data frames for small and large individuals
+dab_lengths <- WCGBTS_indvs %>%
+  filter(scientific_name == "Citharichthys sordidus")
+
+hist(dab_lengths$length_cm) # Check to see where to make the split
+
+dab_lower <- aggregate(length_cm ~ trawl_id, 
+                        data = dab_lengths, 
+                        FUN = length, 
+                        subset = length_cm <= 22)
+dab_adults <- merge_data(dab_lower, dab_data)
+names(dab_adults)[names(dab_adults) == "length_cm"] <- "lower_num"
+
+dab_upper <- aggregate(length_cm ~ trawl_id, 
+                        data = dab_lengths, 
+                        FUN = length, 
+                        subset = length_cm > 22)
+dab_adults <- merge_data(dab_upper, dab_adults)
+names(dab_adults)[names(dab_adults) == "length_cm"] <- "upper_num"
+
+dab_total <- aggregate(length_cm ~ trawl_id, 
+                        data = dab_lengths, 
+                        FUN = length)
+dab_adults<- merge_data(dab_total, dab_adults)
+names(dab_adults)[names(dab_adults) == "length_cm"] <- "total_num"
+
+# Calculate how much of the catch comes from small/large individuals
+dab_adults$upper_count <- (dab_adults$upper_num / dab_adults$total_num) * dab_adults$catch
+dab_adults$lower_count <- (dab_adults$lower_num / dab_adults$total_num) * dab_adults$catch
+
+dab_adults$upper_count[is.na(dab_adults$upper_count)] <- 0
+dab_adults$lower_count[is.na(dab_adults$lower_count)] <- 0
+```
+
+```{r}
+# Best model from full data set is as below
+dab_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = dab_adults)
+dab_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = dab_adults)
+dab_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = dab_adults)
+summary(dab_all) # 74% deviance explained 
+summary(dab_small) # 74.6% deviance explained
+summary(dab_large) # 69.7% deviance explained
+```
+
+```{r}
+pred_adult_dab_lower <- variable_coefficient_lengths(dab_small, dab_adults, dab_adults$NPGO_pos)
+
+plot_var_coef_lengths(dab_small, dab_adults, pred_adult_dab_lower)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_dab_var_coef_lower.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+pred_adult_dab_upper <- variable_coefficient_lengths(dab_large, dab_adults, dab_adults$NPGO_pos)
+
+plot_var_coef_lengths(dab_large, dab_adults, pred_adult_dab_upper)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_dab_var_coef_upper.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+
+### Adult Shortbelly
+```{r}
+# Base GAM
+sbly_base_t <- gam(catch + 1 ~ factor(year) +
+                     s(doy) +
+                     s(latitude, longitude) +
+                     s(depth_m, k = 4) +
+                     s(bottom_temp, k = 4),
+                 family = tw(link = "log"),
+                 method = 'REML',
+                 data = sbly_data)
+summary(sbly_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(sbly_base_t)
+
+par(mfrow = c(2, 2))
+plot(sbly_base_t)
+
+
+# Select best GAM
+sbly_gam_t <- tweedie_GAMs(sbly_data)
+summary(sbly_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(sbly_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+plot(sbly_gam_t[[2]])
+```
+
+```{r}
+pred_sbly_t <- variable_coefficient(sbly_gam_t, sbly_data, sbly_data$NPGO_pos)
+
+plot_var_coef(sbly_gam_t, sbly_data, pred_sbly_t)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_sbly_var_coef.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+Size-specific models
+```{r}
+# Split into two data frames for small and large individuals
+sbly_lengths <- WCGBTS_indvs %>%
+  filter(scientific_name == "Sebastes jordani")
+
+hist(sbly_lengths$length_cm) # Check to see where to make the split
+
+sbly_lower <- aggregate(length_cm ~ trawl_id, 
+                        data = sbly_lengths, 
+                        FUN = length, 
+                        subset = length_cm <= 12)
+sbly_adults <- merge_data(sbly_lower, sbly_data)
+names(sbly_adults)[names(sbly_adults) == "length_cm"] <- "lower_num"
+
+sbly_upper <- aggregate(length_cm ~ trawl_id, 
+                        data = sbly_lengths, 
+                        FUN = length, 
+                        subset = length_cm > 12)
+sbly_adults <- merge_data(sbly_upper, sbly_adults)
+names(sbly_adults)[names(sbly_adults) == "length_cm"] <- "upper_num"
+
+sbly_total <- aggregate(length_cm ~ trawl_id, 
+                        data = sbly_lengths, 
+                        FUN = length)
+sbly_adults<- merge_data(sbly_total, sbly_adults)
+names(sbly_adults)[names(sbly_adults) == "length_cm"] <- "total_num"
+
+# Calculate how much of the catch comes from small/large individuals
+sbly_adults$upper_count <- (sbly_adults$upper_num / sbly_adults$total_num) * sbly_adults$catch
+sbly_adults$lower_count <- (sbly_adults$lower_num / sbly_adults$total_num) * sbly_adults$catch
+
+sbly_adults$upper_count[is.na(sbly_adults$upper_count)] <- 0
+sbly_adults$lower_count[is.na(sbly_adults$lower_count)] <- 0
+```
+
+```{r}
+# Best model from full data set is as below
+sbly_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = sbly_adults)
+sbly_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = sbly_adults)
+sbly_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = sbly_adults)
+summary(sbly_all) # 67.1% deviance explained 
+summary(sbly_small) # 76.6% deviance explained
+summary(sbly_large) # 67.2% deviance explained
+```
+
+```{r}
+pred_adult_sbly_lower <- variable_coefficient_lengths(sbly_small, sbly_adults, sbly_adults$NPGO_pos)
+
+plot_var_coef_lengths(sbly_small, sbly_adults, pred_adult_sbly_lower)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_sbly_var_coef_lower.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+pred_adult_sbly_upper <- variable_coefficient_lengths(sbly_large, sbly_adults, sbly_adults$NPGO_pos)
+
+plot_var_coef_lengths(sbly_large, sbly_adults, pred_adult_sbly_upper)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_sbly_var_coef_upper.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+### Adult Widow
+```{r}
+# Base GAM
+widw_base_t <- gam(catch + 1 ~ factor(year) +
+                     s(doy) +
+                     s(latitude, longitude) +
+                     s(depth_m, k = 4) +
+                     s(bottom_temp, k = 4),
+                 family = tw(link = "log"),
+                 method = 'REML',
+                 data = widw_data)
+summary(widw_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(widw_base_t)
+
+par(mfrow = c(2, 2))
+plot(widw_base_t)
+
+
+# Select best GAM
+widw_gam_t <- tweedie_GAMs(widw_data)
+summary(widw_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(widw_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+plot(widw_gam_t[[2]])
+```
+
+```{r}
+pred_widw_t <- variable_coefficient(widw_gam_t, widw_data, widw_data$NPGO_pos)
+
+plot_var_coef(widw_gam_t, widw_data, pred_widw_t)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_widw_var_coef.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+Size-specific models
+```{r}
+# Split into two data frames for small and large individuals
+widw_lengths <- WCGBTS_indvs %>%
+  filter(scientific_name == "Sebastes entomelas")
+
+hist(widw_lengths$length_cm) # Check to see where to make the split
+
+widw_lower <- aggregate(length_cm ~ trawl_id, 
+                        data = widw_lengths, 
+                        FUN = length, 
+                        subset = length_cm <= 38)
+widw_adults <- merge_data(widw_lower, widw_data)
+names(widw_adults)[names(widw_adults) == "length_cm"] <- "lower_num"
+
+widw_upper <- aggregate(length_cm ~ trawl_id, 
+                        data = widw_lengths, 
+                        FUN = length, 
+                        subset = length_cm > 38)
+widw_adults <- merge_data(widw_upper, widw_adults)
+names(widw_adults)[names(widw_adults) == "length_cm"] <- "upper_num"
+
+widw_total <- aggregate(length_cm ~ trawl_id, 
+                        data = widw_lengths, 
+                        FUN = length)
+widw_adults<- merge_data(widw_total, widw_adults)
+names(widw_adults)[names(widw_adults) == "length_cm"] <- "total_num"
+
+# Calculate how much of the catch comes from small/large individuals
+widw_adults$upper_count <- (widw_adults$upper_num / widw_adults$total_num) * widw_adults$catch
+widw_adults$lower_count <- (widw_adults$lower_num / widw_adults$total_num) * widw_adults$catch
+
+widw_adults$upper_count[is.na(widw_adults$upper_count)] <- 0
+widw_adults$lower_count[is.na(widw_adults$lower_count)] <- 0
+```
+
+```{r}
+# Best model from full data set is as below
+widw_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = widw_adults)
+widw_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = widw_adults)
+widw_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = widw_adults)
+summary(widw_all) # 50.5% deviance explained 
+summary(widw_small) # 76.6% deviance explained
+summary(widw_large) # 67.2% deviance explained
+```
+
+```{r}
+pred_adult_widw_lower <- variable_coefficient_lengths(widw_small, widw_adults, widw_adults$NPGO_pos)
+
+plot_var_coef_lengths(widw_small, widw_adults, pred_adult_widw_lower)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_widw_var_coef_lower.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+pred_adult_widw_upper <- variable_coefficient_lengths(widw_large, widw_adults, widw_adults$NPGO_pos)
+
+plot_var_coef_lengths(widw_large, widw_adults, pred_adult_widw_upper)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_widw_var_coef_upper.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
 ```
