@@ -954,8 +954,8 @@ widw_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(de
                   method = 'REML',
                   data = widw_adults)
 summary(widw_all) # 50.5% deviance explained 
-summary(widw_small) # 76.6% deviance explained
-summary(widw_large) # 67.2% deviance explained
+summary(widw_small) # 48.2% deviance explained
+summary(widw_large) # 46.8% deviance explained
 ```
 
 ```{r}
