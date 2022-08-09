@@ -48,14 +48,14 @@ climate_match <- function(data){
 }
 
 merge_data <- function(data1, data2, data3){
-  data_set <- merge(data2[, c("lncpue", "lncpue_n", "NPGO",
+  data_set <- merge(data2[, c("trawl_id", "lncpue", "lncpue_n", "NPGO",
                          "PDO", "ONI", "NPGO_mean", "total_catch_numbers",
                          "PDO_mean", "ONI_mean", "cpue_kg",
-                         "cpue_num", "trawl_id", "scientific_name")],
+                         "cpue_num", "scientific_name")],
                     data1, 
                     by = c("trawl_id", "scientific_name"),
-                    all = T)
-  data_final <- merge(data3[, c("bottom_temp", "trawl_id")],
+                    all.y = T)
+  data_final <- merge(data3[, c("trawl_id", "bottom_temp")],
                       data_set, 
                       by = "trawl_id",
                       all.y = T)
@@ -204,7 +204,6 @@ WCGBTS_summary <- climate_match(WCGBTS_tows)
 ```
 
 ```{r}
-# Match individuals with samples
 WCGBTS_combined <- merge_data(WCGBTS_individuals, WCGBTS_samps, WCGBTS_summary)
 ```
 
@@ -216,7 +215,6 @@ saveRDS(WCGBTS_individuals, file = "../data/WCGBTS_individuals.Rdata") # not ava
 saveRDS(WCGBTS_summary, file = "../data/WCGBTS_summary.Rdata")
 saveRDS(WCGBTS_combined, file = "../data/WCGBTS_combined.Rdata")
 ```
-
 
 Data exploration
 ```{r}
