@@ -4,7 +4,7 @@ author: "Rebecca Howard"
 date: "8/3/2022"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include = FALSE}
@@ -359,7 +359,6 @@ sbly_data <- subset_species("Sebastes jordani", WCGBTS_data, WCGBTS_tows)
 widw_data <- subset_species("Sebastes entomelas", WCGBTS_data, WCGBTS_tows)
 ```
 
-
 #### Gaussian on positive catches
 ### Adult Hake
 ```{r}
@@ -588,6 +587,51 @@ hake_adults$lower_count[is.na(hake_adults$lower_count)] <- 0
 ```
 
 ```{r}
+# Summary of NAs
+hake_adults %>% 
+  summarise(length_n = sum(total_num > 0, na.rm = T),
+            count = sum(catch > 0, na.rm = T),
+            percentage = sum(total_num > 0, na.rm = T) / sum(catch > 0, na.rm = T))
+```
+
+```{r}
+# Impute missing values
+hake_NA <- hake_adults[is.na(hake_adults$total_num), ]
+hake_values <- hake_adults[!is.na(hake_adults$total_num), ]
+
+hake_NA[, c(22, 23)] <- as.data.frame(RANN::nn2(hake_values[, c('latitude', 'longitude', 'doy', 'year')],
+                                                hake_NA[, c('latitude', 'longitude', 'doy', 'year')],
+                                                k = 1))
+hake_NA$imputed_upper <- hake_values[c(hake_NA$nn.idx), 3] 
+hake_NA$imputed_lower <- hake_values[c(hake_NA$nn.idx), 4] 
+hake_NA <- hake_NA[-c(22, 23)]
+
+# Remove any values where CPUE is zero
+hake_NA$imputed_upper[hake_NA$lncpue_n == 0] <- NA
+hake_NA$imputed_lower[hake_NA$lncpue_n == 0] <- NA
+
+hake_NA <- hake_NA[-c(3, 4)]
+colnames(hake_NA)[colnames(hake_NA) == "imputed_upper"] <- "upper_num"
+colnames(hake_NA)[colnames(hake_NA) == "imputed_lower"] <- "lower_num"
+hake_NA$total_num <- rowSums(hake_NA[, c("upper_num", "lower_num")], na.rm = T)
+
+hake_NA$upper_count <- (hake_NA$upper_num / hake_NA$total_num) * hake_NA$catch
+hake_NA$lower_count <- (hake_NA$lower_num / hake_NA$total_num) * hake_NA$catch
+
+hake_NA$upper_count[is.na(hake_NA$upper_count)] <- 0
+hake_NA$lower_count[is.na(hake_NA$lower_count)] <- 0
+
+hake_adults <- rbind(hake_NA, hake_values)
+
+# Check NAs
+hake_adults %>% 
+  summarise(length_n = sum(total_num > 0, na.rm = T),
+            count = sum(catch > 0, na.rm = T),
+            percentage = sum(total_num > 0, na.rm = T) / sum(catch > 0, na.rm = T))
+```
+
+
+```{r}
 # Best model from full data set is as below
 hake_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
                   s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
@@ -701,6 +745,14 @@ dab_adults$lower_count <- (dab_adults$lower_num / dab_adults$total_num) * dab_ad
 
 dab_adults$upper_count[is.na(dab_adults$upper_count)] <- 0
 dab_adults$lower_count[is.na(dab_adults$lower_count)] <- 0
+```
+
+```{r}
+# Summary of NAs
+dab_adults %>% 
+  summarise(length_n = sum(total_num > 0, na.rm = T),
+            count = sum(catch > 0, na.rm = T),
+            percentage = sum(total_num > 0, na.rm = T) / sum(catch > 0, na.rm = T))
 ```
 
 ```{r}
@@ -821,6 +873,14 @@ sbly_adults$lower_count[is.na(sbly_adults$lower_count)] <- 0
 ```
 
 ```{r}
+# Summary of NAs
+sbly_adults %>% 
+  summarise(length_n = sum(total_num > 0, na.rm = T),
+            count = sum(lncpue_n > 0, na.rm = T),
+            percentage = sum(total_num > 0, na.rm = T) / sum(lncpue_n > 0, na.rm = T))
+```
+
+```{r}
 # Best model from full data set is as below
 sbly_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
                   s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
@@ -934,6 +994,14 @@ widw_adults$lower_count <- (widw_adults$lower_num / widw_adults$total_num) * wid
 
 widw_adults$upper_count[is.na(widw_adults$upper_count)] <- 0
 widw_adults$lower_count[is.na(widw_adults$lower_count)] <- 0
+```
+
+```{r}
+# Summary of NAs
+widw_adults %>% 
+  summarise(length_n = sum(total_num > 0, na.rm = T),
+            count = sum(lncpue_n > 0, na.rm = T),
+            percentage = sum(total_num > 0, na.rm = T) / sum(lncpue_n > 0, na.rm = T))
 ```
 
 ```{r}
