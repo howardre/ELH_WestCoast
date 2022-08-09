@@ -48,3 +48,64 @@
 		- Improved slightly by binning lengths
 	- [[Pacific hake]]
 		- Improved by binning lengths
+
+
+[[West Coast Groundfish Bottom Trawl Survey]]
+
+Cleaned data to isolate species of interest
+Length/age data for hake, sanddab, shortbelly, widow but not for anchovy
+- Not a lot of it, quite a bit missing
+
+**Species**
+[[Pacific sanddab]] 
+
+
+[[Pacific hake]]
+
+
+[[Shortbelly Rockfish]]
+
+
+[[Widow Rockfish]]
+
+
+[[Anchovy]]
+
+**Models**
+- Simple GAMs
+	- Either used Tweedie or Gaussian
+	- Either with or without variable coefficient terms
+	- PDO, NPGO, or ONI
+	- Formulations:
+		lncatch ~ f(year) + s(lon, lat) + s(depth) + s(DOY)
+		lncatch ~ f(year) + s(lon, lat) + s(depth) + s(DOY) + s(climate index)
+		lncatch ~ f(year) + s(lon, lat) + s(depth) + s(DOY) + s(lat, lon, by = climate index)
+	- Results
+		- [[Pacific sanddab]]
+			- Gaussian: Model with s(ONI), $R^2$ = 0.356, deviance = 37.5%
+			- Tweedie: Model with s(lat, lon, by = NPGO), deviance = 59.9%
+		- [[Pacific hake]]
+			- Gaussian: Model with s(lat, lon, by = NPGO), $R^2$ = 0.232, deviance = 25.8%
+			- Tweedie: Model with s(lat, lon, by = NPGO), deviance = 47.3%
+- Length binned GAMs
+	- Split the data into two length bins
+		- Used histograms to look at number to split at
+	- Compare split models to base model using all the data
+		- Had to limit due to lack of length data in some years
+	- Results
+		- [[Pacific sanddab]]
+			- Data from 2011 onward
+			- Base model: s(NPGO), deviance = 57.7%
+			- Lower model: s(NPGO), deviance = 58.3%
+			- Upper model: s(NPGO), deviance = 60.4%
+		- [[Pacific hake]]
+			- Data from 1994 onward
+			- Base model: s(lat, lon, by = NPGO), deviance = 46.1%
+			- Lower bin model: s(lat, lon, by = NPGO), deviance = 54.7%
+			- Upper bin model: s(lat, lon, by = NPGO), deviance = 48.5%
+- Notes
+	- [[Pacific sanddab]]
+		- Lack of inclusion of VC term
+		- Improved slightly by binning lengths
+	- [[Pacific hake]]
+		- Improved by binning lengths
