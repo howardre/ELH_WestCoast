@@ -4,7 +4,7 @@ author: "Rebecca Howard"
 date: "8/3/2022"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include = FALSE}
@@ -150,10 +150,10 @@ tweedie_GAMs <- function(species_subset){
 # Calculate variable coefficient term 
 variable_coefficient <- function(gam, data, variable){
   preds <- predict(gam[[2]], type = 'terms', se.fit = T)
-  pred_slope <- preds[[1]][, 5] / variable
-  pred_slope_se <- 1.96 * preds[[2]][, 5]
-  pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
-  pred_slope_low <- (preds[[1]][, 5] - pred_slope_se) / variable
+  pred_slope <- preds[[1]][, 6] / variable
+  pred_slope_se <- 1.96 * preds[[2]][, 6]
+  pred_slope_up <- (preds[[1]][, 6] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, 6] - pred_slope_se) / variable
   sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
   sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
@@ -161,10 +161,10 @@ variable_coefficient <- function(gam, data, variable){
 
 variable_coefficient_lengths <- function(gam, data, variable){
   preds <- predict(gam, type = 'terms', se.fit = T)
-  pred_slope <- preds[[1]][, 5] / variable
-  pred_slope_se <- 1.96 * preds[[2]][, 5]
-  pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
-  pred_slope_low <- (preds[[1]][, 5] - pred_slope_se) / variable
+  pred_slope <- preds[[1]][, 6] / variable
+  pred_slope_se <- 1.96 * preds[[2]][, 6]
+  pred_slope_up <- (preds[[1]][, 6] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, 6] - pred_slope_se) / variable
   sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
   sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
@@ -369,15 +369,14 @@ hake_base <- gam(lncpue_n ~ factor(year) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
                  data = hake_data[hake_data$lncpue_n > 0, ])
-summary(hake_base)
+summary(hake_base) # 22%, R2 = 0.212
 
 par(mfrow = c(2, 2))
 gam.check(hake_base)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(hake_base)
 
-# Select best GAM
 # Select best GAM
 hake_gam <- cpue_GAMs(hake_data)
 summary(hake_gam[[2]])
@@ -385,7 +384,7 @@ summary(hake_gam[[2]])
 par(mfrow = c(2, 2))
 gam.check(hake_gam[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(hake_gam[[2]])
 ```
 
@@ -398,23 +397,22 @@ dab_base <- gam(lncpue_n ~ factor(year) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
                  data = dab_data[dab_data$lncpue_n > 0, ])
-summary(dab_base)
+summary(dab_base) # 33.9%, R2 = 0.33
 
 par(mfrow = c(2, 2))
 gam.check(dab_base)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(dab_base)
 
 # Select best GAM
-# Select best GAM
 dab_gam <- cpue_GAMs(dab_data)
-summary(dab_gam[[2]])
+summary(dab_gam[[2]]) # VGAM w/ NPGO, 35.1%, R2 = 0.338
 
 par(mfrow = c(2, 2))
 gam.check(dab_gam[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(dab_gam[[2]])
 ```
 
@@ -433,10 +431,9 @@ summary(anch_base)
 par(mfrow = c(2, 2))
 gam.check(anch_base)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(anch_base)
 
-# Select best GAM
 # Select best GAM
 anch_gam <- cpue_GAMs(anch_data)
 summary(anch_gam[[2]])
@@ -444,7 +441,7 @@ summary(anch_gam[[2]])
 par(mfrow = c(2, 2))
 gam.check(anch_gam[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(anch_gam[[2]])
 ```
 
@@ -463,10 +460,9 @@ summary(sbly_base)
 par(mfrow = c(2, 2))
 gam.check(sbly_base)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(sbly_base)
 
-# Select best GAM
 # Select best GAM
 sbly_gam <- cpue_GAMs(sbly_data)
 summary(sbly_gam[[2]])
@@ -474,7 +470,7 @@ summary(sbly_gam[[2]])
 par(mfrow = c(2, 2))
 gam.check(sbly_gam[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(sbly_gam[[2]])
 ```
 
@@ -493,10 +489,9 @@ summary(widw_base)
 par(mfrow = c(2, 2))
 gam.check(widw_base)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(widw_base)
 
-# Select best GAM
 # Select best GAM
 widw_gam <- cpue_GAMs(widw_data)
 summary(widw_gam[[2]])
@@ -504,7 +499,7 @@ summary(widw_gam[[2]])
 par(mfrow = c(2, 2))
 gam.check(widw_gam[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(widw_gam[[2]])
 ```
 
@@ -526,7 +521,7 @@ summary(hake_base_t)
 par(mfrow = c(2, 2))
 gam.check(hake_base_t)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(hake_base_t)
 
 
@@ -537,11 +532,12 @@ summary(hake_gam_t[[2]])
 par(mfrow = c(2, 2))
 gam.check(hake_gam_t[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(hake_gam_t[[2]])
 ```
 
 ```{r}
+dev.off()
 pred_hake_t <- variable_coefficient(hake_gam_t, hake_data, hake_data$NPGO_pos)
 
 plot_var_coef(hake_gam_t, hake_data, pred_hake_t)
@@ -648,9 +644,9 @@ hake_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(de
                   family = tw(link = "log"),
                   method = 'REML',
                   data = hake_adults)
-summary(hake_all) # 45.5% deviance explained 
-summary(hake_small) # 45% deviance explained
-summary(hake_large) # 48.8% deviance explained
+summary(hake_all) # 45.5% deviance explained
+summary(hake_small) # 45% deviance explained before imputation / 45.8% after
+summary(hake_large) # 48.8% deviance explained before imputation / 52.3% after
 ```
 
 ```{r}
@@ -703,6 +699,7 @@ plot(dab_gam_t[[2]])
 ```
 
 ```{r}
+dev.off()
 pred_dab_t <- variable_coefficient(dab_gam_t, dab_data, dab_data$NPGO_pos)
 
 plot_var_coef(dab_gam_t, dab_data, pred_dab_t)
