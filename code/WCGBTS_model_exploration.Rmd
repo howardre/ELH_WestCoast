@@ -22,16 +22,16 @@ library(mapdata)
 library(mgcv)
 library(fields)
 library(colorspace)
-source("functions/vis_gam_COLORS.R")
+source(here("code/functions", "vis_gam_COLORS.R"))
 ```
 
 Load data
 ```{r}
 # Load data
 options(scipen = 999)
-WCGBTS_data <- readRDS(file = "../data/WCGBTS_samps.Rdata")
-WCGBTS_tows <- readRDS(file = "../data/WCGBTS_summary.Rdata")
-WCGBTS_indvs <- readRDS(file = "../data/WCGBTS_combined.Rdata")
+WCGBTS_data <- readRDS(here("data", "WCGBTS_samps.Rdata"))
+WCGBTS_tows <- readRDS(here("data", "WCGBTS_summary.Rdata"))
+WCGBTS_indvs <- readRDS(here("data", "WCGBTS_combined.Rdata"))
 ```
 
 Convert climate indices to positive values
@@ -69,9 +69,10 @@ subset_species <- function(species, catch, tows){
   tows$catch[is.na(tows$catch)] <- 0
   selected_species <- select(tows, doy, year, lncpue_n, latitude, longitude, 
                              PDO, NPGO, ONI, bottom_temp, depth_m, PDO_pos,
-                             NPGO_pos, ONI_pos, catch, trawl_id)
+                             NPGO_pos, ONI_pos, catch, trawl_id, area_swept_ha_der)
   selected_species <- na.omit(selected_species)
   selected_species$pres <- 1 * (selected_species$lncpue_n > 0)
+  colnames(selected_species)[colnames(selected_species) == "area_swept_ha_der"] <- "area_swept"
   return(selected_species)
 }
 
@@ -146,6 +147,49 @@ tweedie_GAMs <- function(species_subset){
                                          function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
 } 
+
+# ZIPLSS GAMs
+ZIP_selection <- function(species_subset){
+  year_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+                            s(doy) + s(bottom_temp, k = 4),
+                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                     data = species_subset,
+                     family = ziplss)
+  pdo_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+                            s(doy) + s(bottom_temp, k = 4) + s(PDO, k = 4),
+                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                     data = species_subset,
+                     family = ziplss) 
+  npgo_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+                            s(doy) + s(bottom_temp, k = 4) + s(NPGO, k = 4),
+                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                     data = species_subset,
+                     family = ziplss)  
+  oni_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+                            s(doy) + s(bottom_temp, k = 4) + s(ONI, k = 4),
+                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                     data = species_subset,
+                     family = ziplss)  
+  pdo_flex <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                         s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = PDO_pos),
+                       ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                  data = species_subset,
+                  family = ziplss)  
+  npgo_flex <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                          s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
+                        ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                   data = species_subset,
+                   family = ziplss) 
+  oni_flex <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                         s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = ONI_pos),
+                       ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                  data = species_subset,
+                  family = ziplss)
+  ziplss_list <- list(year_ziplss, pdo_ziplss, npgo_ziplss, oni_ziplss, pdo_flex, npgo_flex, oni_flex)
+  best_ziplss <- ziplss_list[[which.min(sapply(1:length(ziplss_list),
+                                         function(x) min(ziplss_list[[x]]$aic)))]] # would like to also select by AIC
+  return_list <- list(ziplss_list, best_ziplss)
+}
 
 # Calculate variable coefficient term 
 variable_coefficient <- function(gam, data, variable){
@@ -1045,7 +1089,7 @@ dev.off()
 ```
 
 ### Adult Anchovy
-# No lengths available
+No lengths available
 ```{r}
 # Base GAM
 anch_base_t <- gam(catch + 1 ~ factor(year) +
@@ -1086,3 +1130,10 @@ dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_anch_var_coef.jpg'),
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
 ```
+
+#### ZIPLSS
+### Adult Hake
+```{r}
+hake_ziplss <- ZIP_selection(hake_data)
+```
+
