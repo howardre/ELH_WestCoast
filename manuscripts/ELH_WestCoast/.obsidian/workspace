@@ -9,7 +9,7 @@
         "state": {
           "type": "markdown",
           "state": {
-            "file": "Data/West Coast Groundfish Bottom Trawl Survey.md",
+            "file": "Methods/Model Exploration.md",
             "mode": "source",
             "source": false
           }
@@ -69,7 +69,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Data/West Coast Groundfish Bottom Trawl Survey.md",
+                "file": "Methods/Model Exploration.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -89,13 +89,13 @@
   },
   "active": "476d3937d29ca72a",
   "lastOpenFiles": [
+    "Fish Information/Pacific Hake.md",
     "Methods/Model Exploration.md",
+    "Data/West Coast Groundfish Bottom Trawl Survey.md",
     "Data/Rockfish Recruitment & Ecosystem Assessment Survey.md",
     "Fish Information/Shortbelly Rockfish.md",
     "Fish Information/Anchovy.md",
-    "Data/West Coast Groundfish Bottom Trawl Survey.md",
     "Data/CalCOFI Surveys.md",
-    "Fish Information/Pacific Hake.md",
     "Fish Information/Pacific Sanddab.md",
     "Fish Information/Widow Rockfish.md"
   ]
