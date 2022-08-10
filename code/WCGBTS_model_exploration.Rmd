@@ -683,7 +683,7 @@ summary(dab_base_t)
 par(mfrow = c(2, 2))
 gam.check(dab_base_t)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(dab_base_t)
 
 
@@ -694,7 +694,7 @@ summary(dab_gam_t[[2]])
 par(mfrow = c(2, 2))
 gam.check(dab_gam_t[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(dab_gam_t[[2]])
 ```
 
@@ -809,7 +809,7 @@ summary(sbly_base_t)
 par(mfrow = c(2, 2))
 gam.check(sbly_base_t)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(sbly_base_t)
 
 
@@ -820,11 +820,12 @@ summary(sbly_gam_t[[2]])
 par(mfrow = c(2, 2))
 gam.check(sbly_gam_t[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(sbly_gam_t[[2]])
 ```
 
 ```{r}
+dev.off()
 pred_sbly_t <- variable_coefficient(sbly_gam_t, sbly_data, sbly_data$NPGO_pos)
 
 plot_var_coef(sbly_gam_t, sbly_data, pred_sbly_t)
@@ -880,17 +881,17 @@ sbly_adults %>%
 ```{r}
 # Best model from full data set is as below
 sbly_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = sbly_adults)
 sbly_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = sbly_adults)
 sbly_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = sbly_adults)
@@ -900,7 +901,7 @@ summary(sbly_large) # 67.2% deviance explained
 ```
 
 ```{r}
-pred_adult_sbly_lower <- variable_coefficient_lengths(sbly_small, sbly_adults, sbly_adults$NPGO_pos)
+pred_adult_sbly_lower <- variable_coefficient_lengths(sbly_small, sbly_adults, sbly_adults$PDO_pos)
 
 plot_var_coef_lengths(sbly_small, sbly_adults, pred_adult_sbly_lower)
 dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_sbly_var_coef_lower.jpg'), 
@@ -909,7 +910,7 @@ dev.off()
 ```
 
 ```{r}
-pred_adult_sbly_upper <- variable_coefficient_lengths(sbly_large, sbly_adults, sbly_adults$NPGO_pos)
+pred_adult_sbly_upper <- variable_coefficient_lengths(sbly_large, sbly_adults, sbly_adults$PDO_pos)
 
 plot_var_coef_lengths(sbly_large, sbly_adults, pred_adult_sbly_upper)
 dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_sbly_var_coef_upper.jpg'), 
@@ -933,7 +934,7 @@ summary(widw_base_t)
 par(mfrow = c(2, 2))
 gam.check(widw_base_t)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(widw_base_t)
 
 
@@ -944,11 +945,13 @@ summary(widw_gam_t[[2]])
 par(mfrow = c(2, 2))
 gam.check(widw_gam_t[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 plot(widw_gam_t[[2]])
 ```
 
 ```{r}
+dev.off()
+
 pred_widw_t <- variable_coefficient(widw_gam_t, widw_data, widw_data$NPGO_pos)
 
 plot_var_coef(widw_gam_t, widw_data, pred_widw_t)
@@ -1004,17 +1007,17 @@ widw_adults %>%
 ```{r}
 # Best model from full data set is as below
 widw_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = widw_adults)
 widw_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = widw_adults)
 widw_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = widw_adults)
@@ -1024,7 +1027,7 @@ summary(widw_large) # 46.8% deviance explained
 ```
 
 ```{r}
-pred_adult_widw_lower <- variable_coefficient_lengths(widw_small, widw_adults, widw_adults$NPGO_pos)
+pred_adult_widw_lower <- variable_coefficient_lengths(widw_small, widw_adults, widw_adults$ONI_pos)
 
 plot_var_coef_lengths(widw_small, widw_adults, pred_adult_widw_lower)
 dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_widw_var_coef_lower.jpg'), 
@@ -1033,10 +1036,53 @@ dev.off()
 ```
 
 ```{r}
-pred_adult_widw_upper <- variable_coefficient_lengths(widw_large, widw_adults, widw_adults$NPGO_pos)
+pred_adult_widw_upper <- variable_coefficient_lengths(widw_large, widw_adults, widw_adults$ONI_pos)
 
 plot_var_coef_lengths(widw_large, widw_adults, pred_adult_widw_upper)
 dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_widw_var_coef_upper.jpg'), 
+         height = 15, width = 8, units = 'in', res = 200)
+dev.off()
+```
+
+### Adult Anchovy
+# No lengths available
+```{r}
+# Base GAM
+anch_base_t <- gam(catch + 1 ~ factor(year) +
+                     s(doy) +
+                     s(latitude, longitude) +
+                     s(depth_m, k = 4) +
+                     s(bottom_temp, k = 4),
+                 family = tw(link = "log"),
+                 method = 'REML',
+                 data = anch_data)
+summary(anch_base_t)
+
+par(mfrow = c(2, 2))
+gam.check(anch_base_t)
+
+par(mfrow = c(2, 3))
+plot(anch_base_t)
+
+
+# Select best GAM
+anch_gam_t <- tweedie_GAMs(anch_data)
+summary(anch_gam_t[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(anch_gam_t[[2]])
+
+par(mfrow = c(2, 3))
+plot(anch_gam_t[[2]])
+```
+
+```{r}
+dev.off()
+
+pred_anch_t <- variable_coefficient(anch_gam_t, anch_data, anch_data$NPGO_pos)
+
+plot_var_coef(anch_gam_t, anch_data, pred_anch_t)
+dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_anch_var_coef.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
 ```
