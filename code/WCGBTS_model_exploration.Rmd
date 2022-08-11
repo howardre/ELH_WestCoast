@@ -4,7 +4,7 @@ author: "Rebecca Howard"
 date: "8/3/2022"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include = FALSE}
@@ -150,40 +150,47 @@ tweedie_GAMs <- function(species_subset){
 
 # ZIPLSS GAMs
 ZIP_selection <- function(species_subset){
-  year_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+  year_ziplss <- gam(list(catch ~ s(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
                             s(doy) + s(bottom_temp, k = 4),
-                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                          ~ s(year) + s(longitude, latitude) + s(doy)),
                      data = species_subset,
+                     offset = log(area_swept),
                      family = ziplss)
-  pdo_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+  pdo_ziplss <- gam(list(catch ~ s(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
                             s(doy) + s(bottom_temp, k = 4) + s(PDO, k = 4),
-                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
-                     data = species_subset,
-                     family = ziplss) 
-  npgo_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+                          ~ s(year) + s(longitude, latitude) + s(doy)),
+                    data = species_subset,
+                    offset = log(area_swept),
+                    family = ziplss) 
+  npgo_ziplss <- gam(list(catch ~ s(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
                             s(doy) + s(bottom_temp, k = 4) + s(NPGO, k = 4),
-                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                          ~ s(year) + s(longitude, latitude) + s(doy)),
                      data = species_subset,
+                     offset = log(area_swept),
                      family = ziplss)  
-  oni_ziplss <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
+  oni_ziplss <- gam(list(catch ~ s(year) + s(longitude, latitude) + s(depth_m, k = 4) + 
                             s(doy) + s(bottom_temp, k = 4) + s(ONI, k = 4),
-                          ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
-                     data = species_subset,
-                     family = ziplss)  
-  pdo_flex <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                          ~ s(year) + s(longitude, latitude) + s(doy)),
+                    data = species_subset,
+                    offset = log(area_swept),
+                    family = ziplss)  
+  pdo_flex <- gam(list(catch ~ s(year) + s(longitude, latitude) + s(depth_m, k = 4) +
                          s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = PDO_pos),
-                       ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                       ~ s(year) + s(longitude, latitude) + s(doy)),
                   data = species_subset,
+                  offset = log(area_swept),
                   family = ziplss)  
-  npgo_flex <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+  npgo_flex <- gam(list(catch ~ s(year) + s(longitude, latitude) + s(depth_m, k = 4) +
                           s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
-                        ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                        ~ s(year) + s(longitude, latitude) + s(doy)),
                    data = species_subset,
+                  offset = log(area_swept),
                    family = ziplss) 
-  oni_flex <- gam(list(catch ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+  oni_flex <- gam(list(catch ~ s(year) + s(longitude, latitude) + s(depth_m, k = 4) +
                          s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = ONI_pos),
-                       ~ offset(log(area_swept)) + factor(year) + s(longitude, latitude) + s(doy)),
+                       ~ s(year) + s(longitude, latitude) + s(doy)),
                   data = species_subset,
+                  offset = log(area_swept),
                   family = ziplss)
   ziplss_list <- list(year_ziplss, pdo_ziplss, npgo_ziplss, oni_ziplss, pdo_flex, npgo_flex, oni_flex)
   best_ziplss <- ziplss_list[[which.min(sapply(1:length(ziplss_list),
@@ -1131,9 +1138,88 @@ dev.copy(jpeg, here('results/WCGBTS_preliminary', 'adult_anch_var_coef.jpg'),
 dev.off()
 ```
 
-#### ZIPLSS
-### Adult Hake
+#### Other models
+### ZIPLSS
+This doesn't seem to be a good fit, not continuing to test on other species
 ```{r}
-hake_ziplss <- ZIP_selection(hake_data)
+hake_ziplss <- gam(list(catch ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                          s(doy) + s(bottom_temp, k = 4),
+                        ~ factor(year) + s(longitude, latitude) + s(doy)),
+                   data = hake_data,
+                   offset = log(area_swept),
+                   family = ziplss)
+summary(hake_ziplss)
+```
+
+```{r}
+par(mfrow = c(2, 3))
+plot(hake_ziplss)
+
+par(mfrow = c(2, 2))
+gam.check(hake_ziplss)
+```
+
+### ZIP
+```{r}
+hake_zip <- gam(catch ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
+                  s(doy) + s(bottom_temp, k = 4),
+                data = hake_data,
+                offset = log(area_swept),
+                family = ziP())
+summary(hake_zip)
+```
+
+```{r}
+hake_zip$outer.info
+
+gam.check(hake_zip) # doesn't work?
+
+range(predict(hake_zip, type = "response")[hake_zip$y == 0])
+
+par(mfrow = c(2, 2))
+plot(predict(hake_zip, type = "response"), residuals(hake_zip))
+plot(predict(hake_zip, type = "response"), abline(0, 1, col = 2))
+plot(hake_zip$linear.predictors, hake_zip$y)
+qq.gam(hake_zip, rep = 20, level = 1)
+
+# looks bad
+```
+
+### Negative binomial
+```{r}
+hake_nb <- gam(sqrt(catch) ~ factor(year) +
+                 s(longitude, latitude) +
+                 s(doy) +
+                 s(depth_m, k = 4) +
+                 s(bottom_temp, k = 4),
+               data = hake_data,
+               family = nb(),
+               offset = log(area_swept))
+summary(hake_nb)
+
+par(mfrow = c(2, 2))
+plot(hake_nb)
+
+par(mfrow = c(2, 2))
+gam.check(hake_nb)
+```
+
+```{r}
+hake_nb_vc <- gam(catch ~ factor(year) +
+                    s(longitude, latitude) +
+                    s(doy) +
+                    s(depth_m, k = 4) +
+                    s(bottom_temp, k = 4) +
+                    s(longitude, latitude, by = NPGO_pos),
+                  data = hake_data,
+                  family = nb(),
+                  offset = log(area_swept))
+summary(hake_nb_vc)
+
+par(mfrow = c(2, 3))
+plot(hake_nb_vc)
+
+par(mfrow = c(2, 2))
+gam.check(hake_nb_vc)
 ```
 
