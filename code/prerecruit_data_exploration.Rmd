@@ -1,0 +1,47 @@
+---
+title: "Prerecruit Data Exploration"
+author: "Rebecca Howard"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(plyr)
+library(tibble)
+library(here)
+library(ggplot2)
+library(lubridate)
+library(date)
+library(dplyr)
+library(maps)
+library(mapdata)
+library(gridExtra)
+library(grid)
+library(reshape2)
+```
+
+Functions
+```{r}
+
+```
+
+Load data
+```{r}
+# Divide up the prerecruit data
+juveniles <- read.csv(here('data', 'Prerecruit_full.csv')) %>%
+  filter(program == 'PRS_juveniles') # begins in 2011
+larvae <- read.csv(here('data', 'Prerecruit_full.csv')) %>%
+  filter(program == 'PRS_larvae') # begins in 2013
+
+hake_subset <- juveniles[juveniles$scientific_name == "Merluccius productus", ]
+  tows$lncpue <- OR_subset$lncpue_n[match_id]
+  tows$lncpue[is.na(tows$lncpue)] <- 0
+  selected_species <- select(tows, julian, year, lncpue, latitude, longitude, PDO, NPGO,
+                             bottom_temp, depth_m, project, grain_size, area_swept)
+  selected_species <- na.omit(selected_species)
+  selected_species$pres <- 1 * (selected_species$lncpue > 0)
+
+
+
+ctds <- read.csv(here('data', 'Prerecruit_env.csv'))[, -1]
+```
+
