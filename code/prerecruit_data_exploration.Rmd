@@ -25,13 +25,33 @@ species_filter <- function(data, species){
 
 Load data
 ```{r}
+ctds <- read.csv(here('data', 'Prerecruit_env.csv'))[, -1]
+# Need to match date, swfcs.station, maybe swfcs.transect
+# Average values for the top 10 m (depths between 0 - 10)
+
+avg_ctds <- ctds %>%
+  filter(depth_m <= 10) %>%
+  group_by(date, swfcs.station, swfcs.transect) %>%
+  mutate(sst = mean(temperature_c),
+         sss = mean(salinity_psu),
+         fluor = mean(fluor_volt),
+         disv_o = mean(dissolved_oxygen)) %>%
+  select(c('sst', 'sss', 'fluor', 'disv_o',
+           'date', 'swfcs.station', 'swfcs.transect'))
+
+final_ctd <- avg_ctds[!duplicated(avg_ctds),]
+final_ctd$date <- as.numeric(format(as.Date(final_ctd$date, format = "%Y-%m-%d"), "%m%d%Y"))
+```
+
+```{r}
 # Divide up the prerecruit data
 juveniles <- read.csv(here('data', 'Prerecruit_full.csv')) %>%
   filter(program == 'PRS_juveniles') %>%
     select(c('cruise', 'date', 'year', 'month',
            'day', 'tow_depth', 'latitude', 'longitude',
            'scientific_name', 'larvae_count',
-           'surface.temp..oc.', 'maturity')) %>% # begins in 2011
+           'surface.temp..oc.', 'maturity', 
+           'swfcs.station', 'swfcs.transect')) %>% # begins in 2011
   rename(surface_temp = surface.temp..oc.)
 
 larvae <- read.csv(here('data', 'Prerecruit_full.csv')) %>%
@@ -39,11 +59,22 @@ larvae <- read.csv(here('data', 'Prerecruit_full.csv')) %>%
   select(c('cruise', 'date', 'year', 'month',
            'day', 'tow_depth', 'latitude', 'longitude',
            'scientific_name', 'larvae_count',
-           'surface.temp..oc.', 'maturity')) %>% # begins in 2013
+           'surface.temp..oc.', 'maturity', 
+           'swfcs.station', 'swfcs.transect')) %>% # begins in 2013
   rename(surface_temp = surface.temp..oc.)
 
+juveniles$date <- as.numeric(format(as.Date(juveniles$date, format = "%m/%d/%Y"), "%m%d%Y"))
+juveniles_env <- merge(juveniles, final_ctd,
+                       by = c('date', 'swfcs.station', 'swfcs.transect'),
+                       all.x = T)
+
+larvae$date <- as.numeric(format(as.Date(larvae$date, format = "%m/%d/%Y"), "%m%d%Y"))
+larvae_env <- merge(larvae, final_ctd,
+                    by = c('date', 'swfcs.station', 'swfcs.transect'),
+                    all.x = T)
+
 # SPlit into species subsets
-juveniles_wide <- juveniles %>% pivot_wider(names_from = scientific_name, 
+juveniles_wide <- juveniles_env %>% pivot_wider(names_from = scientific_name, 
                                             values_from = larvae_count,
                                             values_fn = list) %>%
   mutate(across(c(11:169), ~replace(., lengths(.) == 0, NA)))
@@ -53,9 +84,6 @@ juveniles_hake <- species_filter(juveniles_wide, 'Merluccius productus')
 juveniles_anchovy <- species_filter(juveniles_wide, 'Engraulis mordax')
 juveniles_widow <- species_filter(juveniles_wide, 'Sebastes entomelas')
 juveniles_shortbelly <- species_filter(juveniles_wide, 'Sebastes jordani')
-
-
-
-ctds <- read.csv(here('data', 'Prerecruit_env.csv'))[, -1]
 ```
+
 
