@@ -19,6 +19,7 @@ library(mapdata)
 library(gridExtra)
 library(grid)
 library(reshape2)
+library(rerddap)
 ```
 
 ```{r, include = FALSE, echo = FALSE}
@@ -33,6 +34,13 @@ clean_data <- function(data_list, i){
   data_frame$lncatch <- log(data_frame$catch + 1)
   return(data_frame)
 }
+
+# Extract from ERDDAP
+extract_ERDDAP <- function(info, variable_list, species){
+  tabledap(info,
+           fields = variable_list,
+           species)
+  }
 
 # Plot relevant variables
 plot_variables <- function(data){
@@ -110,6 +118,30 @@ yoy_hake_sp <- as.data.frame(data_list[[4]])
 yoy_dab_sp <- as.data.frame(data_list[[5]])
 adult_dab_sp <- as.data.frame(data_list[[6]])
 ```
+
+```{r}
+# ERDDAP extraction
+# RREAS
+servers()
+RREAS_info <- info('FED_Rockfish_Catch')
+RREAS_list <- c('latitude', 'longitude',
+                'common_name', 'cruise',
+                'ctd_index', 'haul_no',
+                'sci_name', 'station', 
+                'bottom_depth', 'time')
+
+RREAS_hake <- extract_ERDDAP(RREAS_info, RREAS_list,
+                             'sci_name="Merluccius productus"')
+RREAS_sanddab <- extract_ERDDAP(RREAS_info, RREAS_list,
+                                'sci_name="Citharichthys sordidus"')
+RREAS_anchovy <- extract_ERDDAP(RREAS_info, RREAS_list,
+                                'sci_name="Engraulis mordax"')
+RREAS_widow <- extract_ERDDAP(RREAS_info, RREAS_list,
+                                'sci_name="Sebastes entomelas"')
+RREAS_shortbelly <- extract_ERDDAP(RREAS_info, RREAS_list,
+                                   'sci_name="Sebastes jordani"')
+```
+
 
 ```{r}
 # NPGO
