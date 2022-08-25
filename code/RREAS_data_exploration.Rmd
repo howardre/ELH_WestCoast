@@ -22,6 +22,7 @@ library(reshape2)
 library(rerddap)
 ```
 
+Functions
 ```{r, include = FALSE, echo = FALSE}
 # Get data into appropriate format
 clean_data <- function(data_list, i){
@@ -39,7 +40,8 @@ clean_data <- function(data_list, i){
 extract_ERDDAP <- function(info, variable_list, species){
   tabledap(info,
            fields = variable_list,
-           species)
+           species,
+           'maturity="Y"')
   }
 
 # Plot relevant variables
@@ -101,10 +103,10 @@ climate_match <- function(data){
 }
 ```
 
-
+Data from emails
 ```{r, include = FALSE, echo = FALSE}
 # Load data
-exl_data <- here('data', 'hake_dabs.xlsx')
+exl_data <- here::here('data', 'hake_dabs.xlsx')
 excel_sheets(path = exl_data) # view the worksheets
 tab_names <- excel_sheets(path = exl_data)
 
@@ -119,17 +121,25 @@ yoy_dab_sp <- as.data.frame(data_list[[5]])
 adult_dab_sp <- as.data.frame(data_list[[6]])
 ```
 
+ERDDAP data
 ```{r}
 # ERDDAP extraction
 # RREAS
 servers()
 RREAS_info <- info('FED_Rockfish_Catch')
 RREAS_list <- c('latitude', 'longitude',
-                'common_name', 'cruise',
-                'ctd_index', 'haul_no',
-                'sci_name', 'station', 
-                'bottom_depth', 'time')
+                'cruise', 'ctd_index', 
+                'haul_no', 'station',
+                'bottom_depth', 'time',
+                'maturity', 'catch')
 
+RREAS_length_info <- info('FED_Rockfish_Length')
+RREAS_length_list <- c('cruise', 'haul_no', 
+                       'station', 'time',
+                       'maturity', 'std_length')
+
+# Create data sets for each species YOY
+# Abundance
 RREAS_hake <- extract_ERDDAP(RREAS_info, RREAS_list,
                              'sci_name="Merluccius productus"')
 RREAS_sanddab <- extract_ERDDAP(RREAS_info, RREAS_list,
@@ -137,9 +147,48 @@ RREAS_sanddab <- extract_ERDDAP(RREAS_info, RREAS_list,
 RREAS_anchovy <- extract_ERDDAP(RREAS_info, RREAS_list,
                                 'sci_name="Engraulis mordax"')
 RREAS_widow <- extract_ERDDAP(RREAS_info, RREAS_list,
-                                'sci_name="Sebastes entomelas"')
+                              'sci_name="Sebastes entomelas"')
 RREAS_shortbelly <- extract_ERDDAP(RREAS_info, RREAS_list,
                                    'sci_name="Sebastes jordani"')
+# Lengths
+length_hake <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
+                             'sci_name="Merluccius productus"')
+length_sanddab <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
+                                'sci_name="Citharichthys sordidus"')
+length_anchovy <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
+                                'sci_name="Engraulis mordax"')
+length_widow <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
+                              'sci_name="Sebastes entomelas"')
+length_shortbelly <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
+                                   'sci_name="Sebastes jordani"')
+```
+
+CTD data from ERDDAP
+```{r}
+RREAS_CTD_info <- info('FED_Rockfish_CTD')
+
+ctds <- tabledap(RREAS_CTD_info,
+                 fields = c('cruise', 'ctd_index',
+                            'temperature', 'salinity', 
+                            'oxygen', 'station',
+                            'ctd_depth'),
+                 'ctd_depth<=10')
+
+cols <- c('temperature', 'salinity', 'oxygen')
+ctds[cols] <- sapply(ctds[cols], as.numeric)
+
+ctd_means <- ctds  %>%
+  group_by(cruise, ctd_index, station) %>%
+  summarise_at(vars('temperature', 'salinity', 'oxygen'), mean) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .)) 
+```
+
+```{r}
+RREAS_hake_env <- merge(RREAS_hake,
+                        ctd_means,
+                        by = c('cruise', 'ctd_index',
+                               'station'),
+                        all.x = T)
 ```
 
 
