@@ -150,6 +150,20 @@ RREAS_widow <- extract_ERDDAP(RREAS_info, RREAS_list,
                               'sci_name="Sebastes entomelas"')
 RREAS_shortbelly <- extract_ERDDAP(RREAS_info, RREAS_list,
                                    'sci_name="Sebastes jordani"')
+
+# Change date format, add julian day
+RREAS_list <- list(RREAS_hake, RREAS_sanddab, RREAS_anchovy, RREAS_widow, RREAS_shortbelly)
+RREAS_list <- lapply(RREAS_list, function(x) {
+  x$date <- as.Date(format(as.POSIXct(x$time, tz = "UTC", format = "%Y-%m-%d")))
+  return(x)
+  })
+RREAS_list <- lapply(RREAS_list, function(x) {
+  x %>% mutate(year = lubridate::year(date),
+               month = lubridate::month(date),
+               day = lubridate::day(date)) %>%
+    mutate(julian = as.numeric(mdy.date(month, day, 1960)))
+  })
+
 # Lengths
 length_hake <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
                              'sci_name="Merluccius productus"')
@@ -161,6 +175,15 @@ length_widow <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
                               'sci_name="Sebastes entomelas"')
 length_shortbelly <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
                                    'sci_name="Sebastes jordani"')
+
+length_list <- list(length_hake, length_sanddab, length_anchovy, length_widow, length_shortbelly)
+length_list <- lapply(length_list, function(x) {
+  x$date <- format(as.POSIXct(x$time, tz = "UTC", format = "%Y-%m-%d"))
+  return(x)
+  })
+length_list <- lapply(length_list, function(x) {
+  mutate(x, year = lubridate::year(date))
+  })
 ```
 
 CTD data from ERDDAP
@@ -183,54 +206,93 @@ ctd_means <- ctds  %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) 
 ```
 
+Add CTD to abundance data
 ```{r}
-RREAS_hake_env <- merge(RREAS_hake,
-                        ctd_means,
-                        by = c('cruise', 'ctd_index',
-                               'station'),
-                        all.x = T)
+RREAS_list_env <- lapply(RREAS_list, function(x) merge(x, ctd_means,
+                                                       by = c('cruise', 
+                                                              'ctd_index',
+                                                              'station'),
+                                                       all.x = T))
+```
+
+Add length ratios
+```{r}
+# Filter based on years with length data
+add_lengths <- function(lengths, species, start_year){
+  lower <- aggregate(std_length ~ haul_no + cruise,
+                         data = lengths,
+                         FUN = length,
+                         subset = std_length <= median(as.numeric(std_length), na.rm = T))
+  yoy <- merge_data(lower, species)
+  names(yoy)[names(yoy) == "std_length"] <- "lower_num"
+  
+  upper <- aggregate(std_length ~ haul_no + cruise,
+                         data = lengths,
+                         FUN = length,
+                         subset = std_length > median(as.numeric(std_length), na.rm = T))
+  yoy <- merge_data(upper, yoy)
+  names(yoy)[names(yoy) == "std_length"] <- "upper_num"
+  
+  total <- aggregate(std_length ~ haul_no + cruise,
+                         data = lengths,
+                         FUN = length)
+  yoy <- merge_data(total, yoy)
+  names(yoy)[names(yoy) == "std_length"] <- "total_num"
+  
+  yoy$upper_cpue <- (yoy$upper_num / yoy$total_num) * yoy$catch
+  yoy$lower_cpue <- (yoy$lower_num / yoy$total_num) * yoy$catch
+  
+  yoy$upper_cpue[is.na(yoy$upper_cpue)] <- 0
+  yoy$lower_cpue[is.na(yoy$lower_cpue)] <- 0
+  
+  yoy_filtered <- yoy[yoy$year > min(lengths$year), ] # Length data only from 2012 onward
+  return(yoy_filtered)
+}
+
+RREAS_final_list <- lapply(RREAS_list, function(x) add_lengths(x, length_list, ))
 ```
 
 
+Add climate indices
 ```{r}
-# NPGO
-npgo_index <- read.table("../data/npgo_data.txt",
-                         header = T)
-
-# PDO
-pdo_index <- read.csv("../data/pdo_timeseries_ersstv5.csv")
-pdo_index$Date <- as.Date(pdo_index$Date, "%Y-%m-%d")
-pdo_index <- mutate(pdo_index,
-                    year = lubridate::year(Date),
-                    month = lubridate::month(Date))
-
-# ONI
-oni_index <- read.table("../data/oni_data.txt",
-                        row.names = 1)
-colnames(oni_index) <- c("01", "02", "03", "04", 
-                         "05", "06", "07", "08", 
-                         "09", "10", "11", "12")
-oni_matrix <- melt(as.matrix(oni_index))
-colnames(oni_matrix) <- c("year", "month", "ONI")
-
-# Means
-npgo_means <- npgo_index %>% 
-  filter(MONTH >= 1 & MONTH <= 3) %>%
-  group_by(YEAR) %>%
-  summarise(NPGO_mean = mean(NPGO))
-pdo_means <- pdo_index %>% 
-  filter(month >= 1 & month <= 3) %>%
-  group_by(year) %>%
-  summarise(PDO_mean = mean(PDO))
-oni_means <- oni_matrix %>% 
-  filter(month >= 1 & month <= 3) %>%
-  group_by(year) %>%
-  summarise(ONI_mean = mean(ONI))
-
-# Match to dataframes
-yoy_hake_catch <- climate_match(yoy_hake_catch)
-yoy_dab_catch <- climate_match(yoy_dab_catch)
-adult_dab_catch <- climate_match(adult_dab_catch)
+# # NPGO
+# npgo_index <- read.table("../data/npgo_data.txt",
+#                          header = T)
+# 
+# # PDO
+# pdo_index <- read.csv("../data/pdo_timeseries_ersstv5.csv")
+# pdo_index$Date <- as.Date(pdo_index$Date, "%Y-%m-%d")
+# pdo_index <- mutate(pdo_index,
+#                     year = lubridate::year(Date),
+#                     month = lubridate::month(Date))
+# 
+# # ONI
+# oni_index <- read.table("../data/oni_data.txt",
+#                         row.names = 1)
+# colnames(oni_index) <- c("01", "02", "03", "04", 
+#                          "05", "06", "07", "08", 
+#                          "09", "10", "11", "12")
+# oni_matrix <- melt(as.matrix(oni_index))
+# colnames(oni_matrix) <- c("year", "month", "ONI")
+# 
+# # Means
+# npgo_means <- npgo_index %>% 
+#   filter(MONTH >= 1 & MONTH <= 3) %>%
+#   group_by(YEAR) %>%
+#   summarise(NPGO_mean = mean(NPGO))
+# pdo_means <- pdo_index %>% 
+#   filter(month >= 1 & month <= 3) %>%
+#   group_by(year) %>%
+#   summarise(PDO_mean = mean(PDO))
+# oni_means <- oni_matrix %>% 
+#   filter(month >= 1 & month <= 3) %>%
+#   group_by(year) %>%
+#   summarise(ONI_mean = mean(ONI))
+# 
+# # Match to dataframes
+# yoy_hake_catch <- climate_match(yoy_hake_catch)
+# yoy_dab_catch <- climate_match(yoy_dab_catch)
+# adult_dab_catch <- climate_match(adult_dab_catch)
 ```
 
 
