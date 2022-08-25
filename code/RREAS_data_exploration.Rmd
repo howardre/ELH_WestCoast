@@ -79,28 +79,59 @@ merge_data <- function(data1, data2){
         all.x = F, all.y = T)
 }
 
-climate_match <- function(data){
-  data <- merge(data, npgo_index,
-                by.x = c("year", "month"),
-                by.y = c("YEAR", "MONTH"),
-                all.x = T, all.y = F)
-  data <- merge(data, pdo_index,
-                by.x = c("year", "month"),
-                by.y = c("year", "month"),
-                all.x = T, all.y = F)
-  data <- subset(data, select = -c(Date))
-  data <- merge(data, oni_matrix,
-                by.x = c("year", "month"),
-                by.y = c("year", "month"),
-                all.x = T, all.y = F)
-  match_npgo <- match(data$year, npgo_means$YEAR)
-  data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
-  match_pdo <- match(data$year, pdo_means$year)
-  data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
-  match_oni <- match(data$year, oni_means$year)
-  data$ONI_mean <- oni_means$ONI_mean[match_oni]
-  return(data)
+# Add the length ratios to the abundance data set
+add_lengths <- function(species, lengths){
+  lower <- aggregate(std_length ~ haul_no + cruise,
+                         data = lengths,
+                         FUN = length,
+                         subset = std_length <= median(as.numeric(std_length), na.rm = T))
+  yoy <- merge_data(lower, species)
+  names(yoy)[names(yoy) == "std_length"] <- "lower_num"
+  
+  upper <- aggregate(std_length ~ haul_no + cruise,
+                         data = lengths,
+                         FUN = length,
+                         subset = std_length > median(as.numeric(std_length), na.rm = T))
+  yoy <- merge_data(upper, yoy)
+  names(yoy)[names(yoy) == "std_length"] <- "upper_num"
+  
+  total <- aggregate(std_length ~ haul_no + cruise,
+                         data = lengths,
+                         FUN = length)
+  yoy <- merge_data(total, yoy)
+  names(yoy)[names(yoy) == "std_length"] <- "total_num"
+  
+  yoy$upper_cpue <- (yoy$upper_num / yoy$total_num) * yoy$catch
+  yoy$lower_cpue <- (yoy$lower_num / yoy$total_num) * yoy$catch
+  
+  yoy$upper_cpue[is.na(yoy$upper_cpue)] <- 0
+  yoy$lower_cpue[is.na(yoy$lower_cpue)] <- 0
+  
+  yoy_filtered <- yoy[yoy$year > min(lengths$year), ] # Length data only from 2012 onward
+  return(yoy_filtered)
 }
+# climate_match <- function(data){
+#   data <- merge(data, npgo_index,
+#                 by.x = c("year", "month"),
+#                 by.y = c("YEAR", "MONTH"),
+#                 all.x = T, all.y = F)
+#   data <- merge(data, pdo_index,
+#                 by.x = c("year", "month"),
+#                 by.y = c("year", "month"),
+#                 all.x = T, all.y = F)
+#   data <- subset(data, select = -c(Date))
+#   data <- merge(data, oni_matrix,
+#                 by.x = c("year", "month"),
+#                 by.y = c("year", "month"),
+#                 all.x = T, all.y = F)
+#   match_npgo <- match(data$year, npgo_means$YEAR)
+#   data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
+#   match_pdo <- match(data$year, pdo_means$year)
+#   data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
+#   match_oni <- match(data$year, oni_means$year)
+#   data$ONI_mean <- oni_means$ONI_mean[match_oni]
+#   return(data)
+# }
 ```
 
 Data from emails
@@ -176,6 +207,7 @@ length_widow <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
 length_shortbelly <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
                                    'sci_name="Sebastes jordani"')
 
+# Change date format
 length_list <- list(length_hake, length_sanddab, length_anchovy, length_widow, length_shortbelly)
 length_list <- lapply(length_list, function(x) {
   x$date <- format(as.POSIXct(x$time, tz = "UTC", format = "%Y-%m-%d"))
@@ -218,38 +250,11 @@ RREAS_list_env <- lapply(RREAS_list, function(x) merge(x, ctd_means,
 Add length ratios
 ```{r}
 # Filter based on years with length data
-add_lengths <- function(lengths, species, start_year){
-  lower <- aggregate(std_length ~ haul_no + cruise,
-                         data = lengths,
-                         FUN = length,
-                         subset = std_length <= median(as.numeric(std_length), na.rm = T))
-  yoy <- merge_data(lower, species)
-  names(yoy)[names(yoy) == "std_length"] <- "lower_num"
-  
-  upper <- aggregate(std_length ~ haul_no + cruise,
-                         data = lengths,
-                         FUN = length,
-                         subset = std_length > median(as.numeric(std_length), na.rm = T))
-  yoy <- merge_data(upper, yoy)
-  names(yoy)[names(yoy) == "std_length"] <- "upper_num"
-  
-  total <- aggregate(std_length ~ haul_no + cruise,
-                         data = lengths,
-                         FUN = length)
-  yoy <- merge_data(total, yoy)
-  names(yoy)[names(yoy) == "std_length"] <- "total_num"
-  
-  yoy$upper_cpue <- (yoy$upper_num / yoy$total_num) * yoy$catch
-  yoy$lower_cpue <- (yoy$lower_num / yoy$total_num) * yoy$catch
-  
-  yoy$upper_cpue[is.na(yoy$upper_cpue)] <- 0
-  yoy$lower_cpue[is.na(yoy$lower_cpue)] <- 0
-  
-  yoy_filtered <- yoy[yoy$year > min(lengths$year), ] # Length data only from 2012 onward
-  return(yoy_filtered)
-}
-
-RREAS_final_list <- lapply(RREAS_list, function(x) add_lengths(x, length_list, ))
+yoy_hake <- add_lengths(RREAS_list[[1]], length_list[[1]])
+yoy_sanddab <- add_lengths(RREAS_list[[2]], length_list[[2]])
+yoy_anchovy <- add_lengths(RREAS_list[[3]], length_list[[3]])
+yoy_widow <- add_lengths(RREAS_list[[4]], length_list[[4]])
+yoy_shortbelly <- add_lengths(RREAS_list[[5]], length_list[[5]])
 ```
 
 
