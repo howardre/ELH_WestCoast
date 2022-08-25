@@ -25,22 +25,16 @@ species_filter <- function(data, species){
 
 Load data
 ```{r}
-ctds <- read.csv(here('data', 'Prerecruit_env.csv'))[, -1]
+ctds <- read.csv(here::here('data', 'Prerecruit_env.csv'))[, -1]
 # Need to match date, swfcs.station, maybe swfcs.transect
 # Average values for the top 10 m (depths between 0 - 10)
 
 avg_ctds <- ctds %>%
   filter(depth_m <= 10) %>%
   group_by(date, swfcs.station, swfcs.transect) %>%
-  mutate(sst = mean(temperature_c),
-         sss = mean(salinity_psu),
-         fluor = mean(fluor_volt),
-         disv_o = mean(dissolved_oxygen)) %>%
-  select(c('sst', 'sss', 'fluor', 'disv_o',
-           'date', 'swfcs.station', 'swfcs.transect'))
+  summarise_at(vars('temperature_c', 'salinity_psu', 'dissolved_oxygen'), mean) 
 
-final_ctd <- avg_ctds[!duplicated(avg_ctds),]
-final_ctd$date <- as.numeric(format(as.Date(final_ctd$date, format = "%Y-%m-%d"), "%m%d%Y"))
+avg_ctds$date <- as.numeric(format(as.Date(avg_ctds$date, format = "%Y-%m-%d"), "%m%d%Y"))
 ```
 
 ```{r}
@@ -64,16 +58,18 @@ larvae <- read.csv(here('data', 'Prerecruit_full.csv')) %>%
   rename(surface_temp = surface.temp..oc.)
 
 juveniles$date <- as.numeric(format(as.Date(juveniles$date, format = "%m/%d/%Y"), "%m%d%Y"))
-juveniles_env <- merge(juveniles, final_ctd,
+juveniles_env <- merge(juveniles, avg_ctds,
                        by = c('date', 'swfcs.station', 'swfcs.transect'),
                        all.x = T)
 
 larvae$date <- as.numeric(format(as.Date(larvae$date, format = "%m/%d/%Y"), "%m%d%Y"))
-larvae_env <- merge(larvae, final_ctd,
+larvae_env <- merge(larvae, avg_ctds,
                     by = c('date', 'swfcs.station', 'swfcs.transect'),
                     all.x = T)
+```
 
-# SPlit into species subsets
+```{r}
+# Split into species subsets
 juveniles_wide <- juveniles_env %>% pivot_wider(names_from = scientific_name, 
                                             values_from = larvae_count,
                                             values_fn = list) %>%
