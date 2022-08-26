@@ -24,18 +24,6 @@ library(rerddap)
 
 Functions
 ```{r, include = FALSE, echo = FALSE}
-# Get data into appropriate format
-clean_data <- function(data_list, i){
-  data_frame <- as.data.frame(data_list[[i]])
-  data_frame <- mutate(data_frame,
-                     year = lubridate::year(haul_date),
-                     month = lubridate::month(haul_date),
-                     day = lubridate::day(haul_date))
-  data_frame$doy <- as.numeric(mdy.date(data_frame$month, data_frame$day, 1960))
-  data_frame$lncatch <- log(data_frame$catch + 1)
-  return(data_frame)
-}
-
 # Extract from ERDDAP
 extract_ERDDAP <- function(info, variable_list, species){
   tabledap(info,
@@ -50,15 +38,15 @@ plot_variables <- function(data){
        ylab = 'Frequency',
        xlab = 'Year',
        main = '')
-  plot(table(data$doy[data$catch > 0]),
+  plot(table(data$julian[data$catch > 0]),
        ylab = 'Frequency',
        xlab = 'Day of Year',
        main = '')
-  plot(table(data$lat[data$catch > 0]),
+  plot(table(data$latitude[data$catch > 0]),
        ylab = 'Frequency',
        xlab = 'Latitude',
        main = '')
-  plot(table(data$lon[data$catch > 0]),
+  plot(table(data$longitude[data$catch > 0]),
        ylab = 'Frequency',
        xlab = 'Longitude',
        main = '')
@@ -110,28 +98,6 @@ add_lengths <- function(species, lengths){
   yoy_filtered <- yoy[yoy$year > min(lengths$year), ] # Length data only from 2012 onward
   return(yoy_filtered)
 }
-# climate_match <- function(data){
-#   data <- merge(data, npgo_index,
-#                 by.x = c("year", "month"),
-#                 by.y = c("YEAR", "MONTH"),
-#                 all.x = T, all.y = F)
-#   data <- merge(data, pdo_index,
-#                 by.x = c("year", "month"),
-#                 by.y = c("year", "month"),
-#                 all.x = T, all.y = F)
-#   data <- subset(data, select = -c(Date))
-#   data <- merge(data, oni_matrix,
-#                 by.x = c("year", "month"),
-#                 by.y = c("year", "month"),
-#                 all.x = T, all.y = F)
-#   match_npgo <- match(data$year, npgo_means$YEAR)
-#   data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
-#   match_pdo <- match(data$year, pdo_means$year)
-#   data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
-#   match_oni <- match(data$year, oni_means$year)
-#   data$ONI_mean <- oni_means$ONI_mean[match_oni]
-#   return(data)
-# }
 ```
 
 Data from emails
@@ -258,71 +224,19 @@ yoy_shortbelly <- add_lengths(RREAS_list[[5]], length_list[[5]])
 ```
 
 
-Add climate indices
-```{r}
-# # NPGO
-# npgo_index <- read.table("../data/npgo_data.txt",
-#                          header = T)
-# 
-# # PDO
-# pdo_index <- read.csv("../data/pdo_timeseries_ersstv5.csv")
-# pdo_index$Date <- as.Date(pdo_index$Date, "%Y-%m-%d")
-# pdo_index <- mutate(pdo_index,
-#                     year = lubridate::year(Date),
-#                     month = lubridate::month(Date))
-# 
-# # ONI
-# oni_index <- read.table("../data/oni_data.txt",
-#                         row.names = 1)
-# colnames(oni_index) <- c("01", "02", "03", "04", 
-#                          "05", "06", "07", "08", 
-#                          "09", "10", "11", "12")
-# oni_matrix <- melt(as.matrix(oni_index))
-# colnames(oni_matrix) <- c("year", "month", "ONI")
-# 
-# # Means
-# npgo_means <- npgo_index %>% 
-#   filter(MONTH >= 1 & MONTH <= 3) %>%
-#   group_by(YEAR) %>%
-#   summarise(NPGO_mean = mean(NPGO))
-# pdo_means <- pdo_index %>% 
-#   filter(month >= 1 & month <= 3) %>%
-#   group_by(year) %>%
-#   summarise(PDO_mean = mean(PDO))
-# oni_means <- oni_matrix %>% 
-#   filter(month >= 1 & month <= 3) %>%
-#   group_by(year) %>%
-#   summarise(ONI_mean = mean(ONI))
-# 
-# # Match to dataframes
-# yoy_hake_catch <- climate_match(yoy_hake_catch)
-# yoy_dab_catch <- climate_match(yoy_dab_catch)
-# adult_dab_catch <- climate_match(adult_dab_catch)
-```
-
-
 ```{r}
 # Save final dataframes
-saveRDS(yoy_hake_catch, file = "../data/yoy_hake_catch.Rdata")
-saveRDS(yoy_dab_catch, file = "../data/yoy_dab_catch.Rdata")
-saveRDS(adult_dab_catch, file = "../data/adult_dab_catch.Rdata")
-saveRDS(yoy_hake_sp, file = "../data/yoy_hake_sp.Rdata")
-saveRDS(yoy_dab_sp, file = "../data/yoy_dab_sp.Rdata")
-saveRDS(adult_dab_sp, file = "../data/adult_dab_sp.Rdata")
-```
-
-
-```{r, include = FALSE, echo = FALSE}
-# Match specimen data to catch data
-yoy_hake <- merge_data(yoy_hake_catch, yoy_hake_sp)
-yoy_dab <- merge_data(yoy_dab_catch, yoy_dab_sp)
-adult_dab <- merge_data(adult_dab_catch, adult_dab_sp) # not a lot of adult specimens compared to yoy
+saveRDS(yoy_hake, file = "../data/yoy_hake.Rdata")
+saveRDS(yoy_dab, file = "../data/yoy_sanddab.Rdata")
+saveRDS(yoy_anchovy, file = "../data/yoy_anchovy.Rdata")
+saveRDS(yoy_widow, file = "../data/yoy_widow.Rdata")
+saveRDS(yoy_shortbelly, file = "../data/yoy_shortbelly.Rdata")
 ```
 
 ```{r, include = FALSE, echo = FALSE}
 # Hake
 par(mfrow = c(2, 3))
-plot_variables(yoy_hake_catch)
+plot_variables(yoy_hake)
 ```
 
 ```{r, include = FALSE, echo = FALSE}
