@@ -50,9 +50,9 @@ plot_variables <- function(data){
        ylab = 'Frequency',
        xlab = 'Longitude',
        main = '')
-  plot(table(data$strata[data$catch > 0]),
+  plot(table(data$station[data$catch > 0]),
        ylab = 'Frequency',
-       xlab = 'Strata',
+       xlab = 'Station',
        main = '')
   hist(data$catch, 
        breaks = 100,
@@ -95,7 +95,7 @@ add_lengths <- function(species, lengths){
   yoy$upper_cpue[is.na(yoy$upper_cpue)] <- 0
   yoy$lower_cpue[is.na(yoy$lower_cpue)] <- 0
   
-  yoy_filtered <- yoy[yoy$year > min(lengths$year), ] # Length data only from 2012 onward
+  yoy_filtered <- yoy[yoy$year > min(lengths$year), ] # Length data only from 2013 onward
   return(yoy_filtered)
 }
 ```
@@ -113,8 +113,8 @@ RREAS_list <- c('latitude', 'longitude',
                 'maturity', 'catch')
 
 RREAS_length_info <- info('FED_Rockfish_Length')
-RREAS_length_list <- c('cruise', 'haul_no', 
-                       'station', 'time',
+RREAS_length_list <- c('cruise', 'haul_no', 'latitude',
+                       'station', 'time', 'bottom_depth',
                        'maturity', 'std_length')
 
 # Create data sets for each species YOY
@@ -132,6 +132,7 @@ RREAS_shortbelly <- extract_ERDDAP(RREAS_info, RREAS_list,
 
 # Change date format, add julian day
 RREAS_list <- list(RREAS_hake, RREAS_sanddab, RREAS_anchovy, RREAS_widow, RREAS_shortbelly)
+names(RREAS_list) <- c("hake", "sanddab", "anchovy", "widow", "shortbelly")
 RREAS_list <- lapply(RREAS_list, function(x) {
   x$date <- as.Date(format(as.POSIXct(x$time, tz = "UTC", format = "%Y-%m-%d")))
   return(x)
@@ -141,36 +142,10 @@ RREAS_list <- lapply(RREAS_list, function(x) {
                month = lubridate::month(date),
                day = lubridate::day(date)) %>%
     mutate(julian = as.numeric(mdy.date(month, day, 1960)),
-           latitude = sprintf("%06.4f", as.numeric(x$latitude)),
-           longitude = sprintf("%07.4f", as.numeric(x$longitude))) 
+           latitude = as.numeric(latitude),
+           longitude = as.numeric(longitude),
+           bottom_depth = as.numeric(bottom_depth)) 
   })
-
-RREAS_lat <- lapply(RREAS_list, function(x) {
-  x %>% separate(col = latitude,
-                 into = c('degrees', 'min_sec')) %>%
-    separate(col = min_sec,
-             into = c('min', 'sec'),
-             sep = cumsum(c(2, 2))) %>%
-    transform(degrees = as.numeric(degrees),
-              min = as.numeric(min),
-              sec = as.numeric(sec)) %>%
-    mutate(latitude = degrees + (min/60) + (sec/3600)) %>%
-    subset(select = -c(degrees, min, sec))
-})
-
-RREAS_lon <- lapply(RREAS_lat, function(x) {
-  x %>% separate(col = longitude,
-                 into = c('degrees', 'min_sec'),
-                 sep = "\\.") %>%
-    separate(col = min_sec,
-             into = c('min', 'sec'),
-             sep = cumsum(c(2, 2))) %>%
-    transform(degrees = as.numeric(degrees),
-              min = as.numeric(min),
-              sec = as.numeric(sec)) %>%
-    mutate(longitude = degrees + (min/60) + (sec/3600)) %>%
-    subset(select = -c(degrees, min, sec))
-})
 
 # Lengths
 length_hake <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
@@ -186,12 +161,16 @@ length_shortbelly <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
 
 # Change date format
 length_list <- list(length_hake, length_sanddab, length_anchovy, length_widow, length_shortbelly)
+names(length_list) <- c("hake", "sanddab", "anchovy", "widow", "shortbelly")
 length_list <- lapply(length_list, function(x) {
   x$date <- format(as.POSIXct(x$time, tz = "UTC", format = "%Y-%m-%d"))
   return(x)
   })
 length_list <- lapply(length_list, function(x) {
-  mutate(x, year = lubridate::year(date))
+  mutate(x, year = lubridate::year(date),
+         bottom_depth = as.numeric(bottom_depth),
+         std_length = as.numeric(std_length),
+         latitude = as.numeric(latitude))
   })
 ```
 
@@ -227,65 +206,73 @@ RREAS_list_env <- lapply(RREAS_list, function(x) merge(x, ctd_means,
 Add length ratios
 ```{r}
 # Filter based on years with length data
-yoy_hake <- add_lengths(RREAS_list[[1]], length_list[[1]])
-yoy_sanddab <- add_lengths(RREAS_list[[2]], length_list[[2]])
-yoy_anchovy <- add_lengths(RREAS_list[[3]], length_list[[3]])
-yoy_widow <- add_lengths(RREAS_list[[4]], length_list[[4]])
-yoy_shortbelly <- add_lengths(RREAS_list[[5]], length_list[[5]])
+yoy_hake <- add_lengths(RREAS_list_env[[1]], length_list[[1]])
+yoy_sanddab <- add_lengths(RREAS_list_env[[2]], length_list[[2]])
+yoy_anchovy <- add_lengths(RREAS_list_env[[3]], length_list[[3]])
+yoy_widow <- add_lengths(RREAS_list_env[[4]], length_list[[4]])
+yoy_shortbelly <- add_lengths(RREAS_list_env[[5]], length_list[[5]])
 ```
 
 
 ```{r}
 # Save final dataframes
+saveRDS(RREAS_list_env, file = "../data/RREAS_list.Rdata")
+saveRDS(length_list, file = "../data/length_list.Rdata")
+saveRDS(ctd_means, file = "../data/ctd_means.Rdata")
 saveRDS(yoy_hake, file = "../data/yoy_hake.Rdata")
-saveRDS(yoy_dab, file = "../data/yoy_sanddab.Rdata")
+saveRDS(yoy_sanddab, file = "../data/yoy_sanddab.Rdata")
 saveRDS(yoy_anchovy, file = "../data/yoy_anchovy.Rdata")
 saveRDS(yoy_widow, file = "../data/yoy_widow.Rdata")
 saveRDS(yoy_shortbelly, file = "../data/yoy_shortbelly.Rdata")
 ```
 
-```{r, include = FALSE, echo = FALSE}
-# Hake
+```{r}
+# Full data
+par(mfrow = c(2, 3))
+plot_variables(RREAS_list[[1]])
+plot_variables(RREAS_list[[2]])
+plot_variables(RREAS_list[[3]])
+plot_variables(RREAS_list[[4]])
+plot_variables(RREAS_list[[5]])
+```
+
+```{r}
+# Length limited data
 par(mfrow = c(2, 3))
 plot_variables(yoy_hake)
+plot_variables(yoy_sanddab)
+plot_variables(yoy_anchovy)
+plot_variables(yoy_widow)
+plot_variables(yoy_shortbelly)
 ```
 
-```{r, include = FALSE, echo = FALSE}
-# Sanddab
-par(mfrow = c(2, 3))
-plot_variables(yoy_dab_catch)
 
-par(mfrow = c(2, 3))
-plot_variables(adult_dab_catch)
-```
-
-```{r, include = FALSE, echo = FALSE}
-# Look at pattern of days by latitude
-ggplot(yoy_hake) +
-  geom_point(aes(day, lat))
-ggplot(yoy_dab) +
-  geom_point(aes(day, lat))
-ggplot(adult_dab) +
-  geom_point(aes(day, lat))
-```
-
-```{r, include = FALSE, echo = FALSE}
-ggplot(yoy_hake) +
+```{r}
+ggplot(length_list[[1]]) +
   geom_point(aes(bottom_depth, std_length),
                  alpha = 0.1,
                  size = 2)
-ggplot(yoy_dab) +
+ggplot(length_list[[2]]) +
   geom_point(aes(bottom_depth, std_length),
                  alpha = 0.1,
-                 size = 2) # one outlier >65 cm
-ggplot(adult_dab) +
+                 size = 2) 
+ggplot(length_list[[3]]) +
   geom_point(aes(bottom_depth, std_length),
                  alpha = 0.1,
-                 size = 2) # two outliers found at >300 m depth
+                 size = 2)
+ggplot(length_list[[4]]) +
+  geom_point(aes(bottom_depth, std_length),
+                 alpha = 0.1,
+                 size = 2)
+ggplot(length_list[[5]]) +
+  geom_point(aes(bottom_depth, std_length),
+                 alpha = 0.1,
+                 size = 2)
 ```
 
-```{r, include = FALSE, echo = FALSE}
-yoy_hake %>%
+```{r}
+range(length_list[[1]]$bottom_depth, na.rm = T)
+length_list[[1]] %>%
   mutate(depth_cut = cut(bottom_depth, breaks = c(0, 250, 500, 750,
                                                   1000, 1250, 1500,
                                                   1750, 2000, 2250,
@@ -294,7 +281,8 @@ yoy_hake %>%
   ggplot(aes(depth_cut, std_length)) +
   geom_boxplot()
 
-yoy_dab %>%
+range(length_list[[2]]$bottom_depth, na.rm = T)
+length_list[[2]] %>%
   mutate(depth_cut = cut(bottom_depth, breaks = c(0, 250, 500, 750,
                                                   1000, 1250, 1500,
                                                   1750, 2000, 2250,
@@ -303,26 +291,40 @@ yoy_dab %>%
   ggplot(aes(depth_cut, std_length)) +
   geom_boxplot()
 
-adult_dab %>%
-  mutate(depth_cut = cut(bottom_depth, breaks = c(0, 50, 100, 150, 200,
-                                                  250, 300, 350, 400,
-                                                  450, 500, 550, 600, 
-                                                  650, 700, 750, 800))) %>% 
+range(length_list[[3]]$bottom_depth, na.rm = T)
+length_list[[3]] %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = c(0, 250, 500, 750,
+                                                  1000, 1250, 1500,
+                                                  1750, 2000, 2250,
+                                                  2500))) %>% 
+  ggplot(aes(depth_cut, std_length)) +
+  geom_boxplot()
+
+range(length_list[[4]]$bottom_depth, na.rm = T)
+length_list[[4]] %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = c(0, 250, 500, 750,
+                                                  1000, 1250, 1500,
+                                                  1750, 2000, 2250,
+                                                  2500, 2750, 3000,
+                                                  3250, 3500))) %>% 
+  ggplot(aes(depth_cut, std_length)) +
+  geom_boxplot()
+
+range(length_list[[5]]$bottom_depth, na.rm = T)
+length_list[[5]] %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = c(0, 250, 500, 750,
+                                                  1000, 1250, 1500,
+                                                  1750, 2000, 2250,
+                                                  2500, 2750, 3000,
+                                                  3300))) %>% 
   ggplot(aes(depth_cut, std_length)) +
   geom_boxplot()
 ```
 
-```{r, include = FALSE, echo = FALSE}
-# Filter out outliers
-yoy_dab <- filter(yoy_dab, std_length < 65)
-yoy_dab <- yoy_dab[!is.na(yoy_dab$bottom_depth), ]
-adult_dab <- filter(adult_dab, bottom_depth < 300)
-```
-
 ```{r, fig.width = 10, fig.height = 5, warning = FALSE, echo = FALSE}
 # polish boxplot for depth/length
-yoy_hake %>%
-  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 3750, by = 250))) %>% 
+length_list[[1]] %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 4000, by = 250))) %>% 
   ggplot() +
   geom_boxplot(aes(depth_cut, std_length),
                fill = "darkseagreen3", 
@@ -334,7 +336,7 @@ yoy_hake %>%
                               "1000-1250", "1250-1500", "1500-1750",
                               "1750-2000", "2000-2250", "2250-2500",
                               "2500-2750", "2750-3000", "3000-3250",
-                              "3250-3500", "3500-3750")) +
+                              "3250-3500", "3500-3750", "3750-4000")) +
   theme_classic() +
   theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
         axis.line = element_blank(),
@@ -344,7 +346,7 @@ yoy_hake %>%
         axis.title = element_text(family = "serif", size = 18),
         axis.text.x = element_text(angle = 45, vjust = 0.7))
 
-yoy_dab %>%
+length_list[[2]] %>%
   mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 3750, by = 250))) %>% 
   ggplot() +
   geom_boxplot(aes(depth_cut, std_length),
@@ -367,17 +369,67 @@ yoy_dab %>%
         axis.title = element_text(family = "serif", size = 18),
         axis.text.x = element_text(angle = 45, vjust = 0.7))
 
-adult_dab %>%
-  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 300, by = 50))) %>% 
+length_list[[3]] %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 2500, by = 125))) %>% 
   ggplot() +
   geom_boxplot(aes(depth_cut, std_length),
                fill = "darkseagreen3", 
                outlier.alpha = 0.2) +  
   labs(y = "Length (mm)",
        x = "Depth (m)",
-       title = "Size of Adult Sanddab by Depth") +
-  scale_x_discrete(labels = c("0-50", "50-100", "100-150", "150-200",
-                              "200-250", "250-300")) +
+       title = "Size of YOY Anchovy by Depth") +
+  scale_x_discrete(labels = c("0-125", "125-250", "250-375", "375-500",
+                              "500-625", "625-750", "750-875", "875-1000",
+                              "1000-1125", "1125-1250", "1250-1375", 
+                              "1375-1500", "1500-1625", "1625-1750",
+                              "1750-1875", "1875-2000", "2000-2125",
+                              "2125-2375", "2375-2500")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7))
+
+length_list[[4]] %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 4000, by = 250))) %>% 
+  ggplot() +
+  geom_boxplot(aes(depth_cut, std_length),
+               fill = "darkseagreen3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (mm)",
+       x = "Depth (m)",
+       title = "Size of YOY Widow Rockfish by Depth") +
+  scale_x_discrete(labels = c("0-250", "250-500", "500-750", "750-1000",
+                              "1000-1250", "1250-1500", "1500-1750",
+                              "1750-2000", "2000-2250", "2250-2500",
+                              "2500-2750", "2750-3000", "3000-3250",
+                              "3250-3500", "3500-3750", "3750-4000")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7))
+
+length_list[[5]] %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 3750, by = 250))) %>% 
+  ggplot() +
+  geom_boxplot(aes(depth_cut, std_length),
+               fill = "darkseagreen3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (mm)",
+       x = "Depth (m)",
+       title = "Size of YOY Shortbelly Rockfish by Depth") +
+  scale_x_discrete(labels = c("0-250", "250-500", "500-750", "750-1000",
+                              "1000-1250", "1250-1500", "1500-1750",
+                              "1750-2000", "2000-2250", "2250-2500",
+                              "2500-2750", "2750-3000", "3000-3250",
+                              "3250-3500", "3500-3750")) +
   theme_classic() +
   theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
         axis.line = element_blank(),
@@ -388,55 +440,71 @@ adult_dab %>%
         axis.text.x = element_text(angle = 45, vjust = 0.7))
 ```
 
-```{r, include = FALSE, echo = FALSE}
+```{r}
 # Investigate latitude
-ggplot(yoy_hake) +
-  geom_point(aes(lat, std_length),
+ggplot(length_list[[1]]) +
+  geom_point(aes(latitude, std_length),
                  alpha = 0.1,
                  size = 2)
-ggplot(yoy_dab) +
-  geom_point(aes(lat, std_length),
+ggplot(length_list[[2]]) +
+  geom_point(aes(latitude, std_length),
                  alpha = 0.1,
-                 size = 2) # one outlier >65 cm
-ggplot(adult_dab) +
-  geom_point(aes(lat, std_length),
+                 size = 2) 
+ggplot(length_list[[3]]) +
+  geom_point(aes(latitude, std_length),
                  alpha = 0.1,
-                 size = 2) # two outliers found at >300 m depth
+                 size = 2)
+ggplot(length_list[[4]]) +
+  geom_point(aes(latitude, std_length),
+                 alpha = 0.1,
+                 size = 2)
+ggplot(length_list[[5]]) +
+  geom_point(aes(latitude, std_length),
+                 alpha = 0.1,
+                 size = 2)
 ```
 
 
-```{r, include = FALSE, echo = FALSE}
-yoy_hake %>%
-  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
-  ggplot(aes(lat_cut, std_length)) +
+```{r}
+length_list[[1]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot(aes(latitude_cut, std_length)) +
   geom_boxplot()
 
-yoy_dab %>%
-  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
-  ggplot(aes(lat_cut, std_length)) +
+length_list[[2]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot(aes(latitude_cut, std_length)) +
   geom_boxplot()
 
-adult_dab %>%
-  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
-  ggplot(aes(lat_cut, std_length)) +
+length_list[[3]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot(aes(latitude_cut, std_length)) +
+  geom_boxplot()
+
+length_list[[4]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot(aes(latitude_cut, std_length)) +
+  geom_boxplot()
+
+length_list[[5]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot(aes(latitude_cut, std_length)) +
   geom_boxplot()
 ```
 
 ```{r, fig.width = 10, fig.height = 5, warning = FALSE, echo = FALSE}
 # polish boxplot for lat/length
-yoy_hake %>%
-  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
+length_list[[1]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 42, by = 1))) %>% 
   ggplot() +
-  geom_boxplot(aes(lat_cut, std_length),
+  geom_boxplot(aes(latitude_cut, std_length),
                fill = "cyan3", 
                outlier.alpha = 0.2) +  
   labs(y = "Length (mm)",
        x = "Latitude",
        title = "Size of YOY Hake by Latitude") +
   scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
-                              "37-38", "38-39", "39-40", "40-41", "41-42",
-                              "42-43", "43-44", "44-45", "45-46", "46-47",
-                              "47-48", "48-49")) +
+                              "37-38", "38-39", "39-40", "40-41", "41-42")) +
   theme_classic() +
   theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
         axis.line = element_blank(),
@@ -446,19 +514,17 @@ yoy_hake %>%
         axis.title = element_text(family = "serif", size = 18),
         axis.text.x = element_text(angle = 45, vjust = 0.7))
 
-yoy_dab %>%
-  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
+length_list[[2]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 42, by = 1))) %>% 
   ggplot() +
-  geom_boxplot(aes(lat_cut, std_length),
+  geom_boxplot(aes(latitude_cut, std_length),
                fill = "cyan3", 
                outlier.alpha = 0.2) +  
   labs(y = "Length (mm)",
        x = "Latitude",
        title = "Size of YOY Sanddab by Latitude") +
   scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
-                              "37-38", "38-39", "39-40", "40-41", "41-42",
-                              "42-43", "43-44", "44-45", "45-46", "46-47",
-                              "47-48")) +
+                              "37-38", "38-39", "39-40", "40-41", "41-42")) +
   theme_classic() +
   theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
         axis.line = element_blank(),
@@ -468,19 +534,57 @@ yoy_dab %>%
         axis.title = element_text(family = "serif", size = 18),
         axis.text.x = element_text(angle = 45, vjust = 0.7))
 
-adult_dab %>%
-  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
+length_list[[3]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 42, by = 1))) %>% 
   ggplot() +
-  geom_boxplot(aes(lat_cut, std_length),
+  geom_boxplot(aes(latitude_cut, std_length),
                fill = "cyan3", 
                outlier.alpha = 0.2) +  
   labs(y = "Length (mm)",
        x = "Latitude",
-       title = "Size of Adult Sanddab by Latitude") +
+       title = "Size of YOY Anchovy Latitude") +
   scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
-                              "37-38", "38-39", "39-40", "40-41", "41-42",
-                              "42-43", "43-44", "44-45", "45-46", "46-47",
-                              "47-48")) +
+                              "37-38", "38-39", "39-40", "40-41", "41-42")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7))
+
+length_list[[2]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 42, by = 1))) %>% 
+  ggplot() +
+  geom_boxplot(aes(latitude_cut, std_length),
+               fill = "cyan3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (mm)",
+       x = "Latitude",
+       title = "Size of YOY Widow Rockfish by Latitude") +
+  scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
+                              "37-38", "38-39", "39-40", "40-41", "41-42")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7))
+
+length_list[[3]] %>%
+  mutate(latitude_cut = cut(latitude, breaks = seq(32, 42, by = 1))) %>% 
+  ggplot() +
+  geom_boxplot(aes(latitude_cut, std_length),
+               fill = "cyan3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (mm)",
+       x = "Latitude",
+       title = "Size of YOY Shortbelly Rockfish Latitude") +
+  scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
+                              "37-38", "38-39", "39-40", "40-41", "41-42")) +
   theme_classic() +
   theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
         axis.line = element_blank(),
@@ -497,144 +601,53 @@ west_coast <- map_data("usa")
 ```
 
 ```{r, warning = FALSE, echo = FALSE}
-# YOY Hake
 ggplot() +  
   geom_polygon(aes(long, lat, group = group), data = west_coast,
                fill = "lightyellow4", 
                colour = "black") +
-  geom_point(data = yoy_hake_catch, 
-            aes(lon, lat,
+  geom_point(data = RREAS_list[[1]], 
+            aes(as.numeric(longitude), as.numeric(latitude),
                 size = catch),
             color = "salmon") +
-  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 48))
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 42))
 
-yoy_hakeplot1 <- ggplot() +  
+ggplot() +  
   geom_polygon(aes(long, lat, group = group), data = west_coast,
                fill = "lightyellow4", 
                colour = "black") +
-  geom_point(data = yoy_hake_catch, 
-            aes(lon, lat,
+  geom_point(data = RREAS_list[[2]], 
+            aes(as.numeric(longitude), as.numeric(latitude),
                 size = catch),
             color = "salmon") +
-  coord_quickmap(xlim = c(-126, -123), ylim = c(42, 48))
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 42))
 
-yoy_hakeplot2 <- ggplot() +  
+ggplot() +  
   geom_polygon(aes(long, lat, group = group), data = west_coast,
                fill = "lightyellow4", 
                colour = "black") +
-  geom_point(data = yoy_hake_catch, 
-            aes(lon, lat,
+  geom_point(data = RREAS_list[[3]], 
+            aes(as.numeric(longitude), as.numeric(latitude),
                 size = catch),
             color = "salmon") +
-  coord_quickmap(xlim = c(-126, -120), ylim = c(35, 42))
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 42))
 
-yoy_hakeplot3 <- ggplot() +  
+ggplot() +  
   geom_polygon(aes(long, lat, group = group), data = west_coast,
                fill = "lightyellow4", 
                colour = "black") +
-  geom_point(data = yoy_hake_catch, 
-            aes(lon, lat,
+  geom_point(data = RREAS_list[[4]], 
+            aes(as.numeric(longitude), as.numeric(latitude),
                 size = catch),
             color = "salmon") +
-  coord_quickmap(xlim = c(-121.5, -117), ylim = c(32, 35))
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 42))
+
+ggplot() +  
+  geom_polygon(aes(long, lat, group = group), data = west_coast,
+               fill = "lightyellow4", 
+               colour = "black") +
+  geom_point(data = RREAS_list[[5]], 
+            aes(as.numeric(longitude), as.numeric(latitude),
+                size = catch),
+            color = "salmon") +
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 42))
 ```
-
-```{r}
-grid.newpage()
-# Create layout : nrow = 2, ncol = 2
-pushViewport(viewport(layout = grid.layout(2, 2)))
-# A helper function to define a region on the layout
-define_region <- function(row, col){
-  viewport(layout.pos.row = row, layout.pos.col = col)
-} 
-# Arrange the plots
-print(yoy_hakeplot3, vp = define_region(2, 1:2))
-print(yoy_hakeplot1, vp = define_region(1, 1))
-print(yoy_hakeplot2, vp = define_region(1, 2))
-```
-
-```{r, warning = FALSE, echo = FALSE}
-# YOY Sanddab
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = yoy_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 48))
-
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = yoy_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-126, -123), ylim = c(42, 48))
-
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = yoy_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-126, -120), ylim = c(35, 42))
-
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = yoy_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-121.5, -117), ylim = c(32, 35))
-```
-
-```{r, warning = FALSE, echo = FALSE}
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = adult_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 48))
-
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = adult_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-126, -123), ylim = c(42, 48))
-
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = adult_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-126, -120), ylim = c(35, 42))
-
-ggplot() +  
-  geom_polygon(aes(long, lat, group = group), data = west_coast,
-               fill = "lightyellow4", 
-               colour = "black") +
-  geom_point(data = adult_dab_catch, 
-            aes(lon, lat,
-                size = catch),
-            color = "salmon") +
-  coord_quickmap(xlim = c(-121.5, -117), ylim = c(32, 35))
-```
-
