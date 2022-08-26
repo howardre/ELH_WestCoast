@@ -100,24 +100,6 @@ add_lengths <- function(species, lengths){
 }
 ```
 
-Data from emails
-```{r, include = FALSE, echo = FALSE}
-# Load data
-exl_data <- here::here('data', 'hake_dabs.xlsx')
-excel_sheets(path = exl_data) # view the worksheets
-tab_names <- excel_sheets(path = exl_data)
-
-data_list <- lapply(tab_names, function(x) read_excel(path = exl_data, sheet = x))
-
-### Clean data
-yoy_hake_catch <- clean_data(data_list, 1)
-yoy_dab_catch <- clean_data(data_list, 2)
-adult_dab_catch <- clean_data(data_list, 3)
-yoy_hake_sp <- as.data.frame(data_list[[4]])
-yoy_dab_sp <- as.data.frame(data_list[[5]])
-adult_dab_sp <- as.data.frame(data_list[[6]])
-```
-
 ERDDAP data
 ```{r}
 # ERDDAP extraction
@@ -158,8 +140,37 @@ RREAS_list <- lapply(RREAS_list, function(x) {
   x %>% mutate(year = lubridate::year(date),
                month = lubridate::month(date),
                day = lubridate::day(date)) %>%
-    mutate(julian = as.numeric(mdy.date(month, day, 1960)))
+    mutate(julian = as.numeric(mdy.date(month, day, 1960)),
+           latitude = sprintf("%06.4f", as.numeric(x$latitude)),
+           longitude = sprintf("%07.4f", as.numeric(x$longitude))) 
   })
+
+RREAS_lat <- lapply(RREAS_list, function(x) {
+  x %>% separate(col = latitude,
+                 into = c('degrees', 'min_sec')) %>%
+    separate(col = min_sec,
+             into = c('min', 'sec'),
+             sep = cumsum(c(2, 2))) %>%
+    transform(degrees = as.numeric(degrees),
+              min = as.numeric(min),
+              sec = as.numeric(sec)) %>%
+    mutate(latitude = degrees + (min/60) + (sec/3600)) %>%
+    subset(select = -c(degrees, min, sec))
+})
+
+RREAS_lon <- lapply(RREAS_lat, function(x) {
+  x %>% separate(col = longitude,
+                 into = c('degrees', 'min_sec'),
+                 sep = "\\.") %>%
+    separate(col = min_sec,
+             into = c('min', 'sec'),
+             sep = cumsum(c(2, 2))) %>%
+    transform(degrees = as.numeric(degrees),
+              min = as.numeric(min),
+              sec = as.numeric(sec)) %>%
+    mutate(longitude = degrees + (min/60) + (sec/3600)) %>%
+    subset(select = -c(degrees, min, sec))
+})
 
 # Lengths
 length_hake <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
