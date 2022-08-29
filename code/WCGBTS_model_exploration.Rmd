@@ -67,7 +67,7 @@ subset_species <- function(species, catch, tows){
   tows$lncpue_n[is.na(tows$lncpue_n)] <- 0
   tows$catch <- subset$total_catch_numbers[match_id]
   tows$catch[is.na(tows$catch)] <- 0
-  selected_species <- select(tows, doy, year, lncpue_n, latitude, longitude, 
+  selected_species <- select(tows, doy, year, lncpue_n, longitude, latitude, 
                              PDO, NPGO, ONI, bottom_temp, depth_m, PDO_pos,
                              NPGO_pos, ONI_pos, catch, trawl_id, area_swept_ha_der)
   selected_species <- na.omit(selected_species)
@@ -91,13 +91,13 @@ cpue_GAMs <- function(species_subset){
                    s(bottom_temp, k = 4) + s(ONI, k = 4),
                   data = species_subset[species_subset$lncpue_n > 0,])
   pdo_flex <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
-                    s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
+                    s(bottom_temp, k = 4) + s(longitude, latitude, by = PDO_pos),
                   data = species_subset[species_subset$lncpue_n > 0,])
   npgo_flex <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
-                     s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                     s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   data = species_subset[species_subset$lncpue_n > 0,])
   oni_flex <- gam(lncpue_n ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
-                    s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
+                    s(bottom_temp, k = 4) + s(longitude, latitude, by = ONI_pos),
                   data = species_subset[species_subset$lncpue_n > 0,])
   gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
@@ -128,17 +128,17 @@ tweedie_GAMs <- function(species_subset){
                   method = 'REML',
                   data = species_subset)
   pdo_flex <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
-                    s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
+                    s(bottom_temp, k = 4) + s(longitude, latitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
   npgo_flex <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
-                     s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                     s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
   oni_flex <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) + s(doy) + 
-                    s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
+                    s(bottom_temp, k = 4) + s(longitude, latitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
@@ -416,7 +416,7 @@ widw_data <- subset_species("Sebastes entomelas", WCGBTS_data, WCGBTS_tows)
 # Explore simple GAM
 hake_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
-                   s(latitude, longitude) +
+                   s(longitude, latitude) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
                  data = hake_data[hake_data$lncpue_n > 0, ])
@@ -444,7 +444,7 @@ plot(hake_gam[[2]])
 # Explore simple GAM
 dab_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
-                   s(latitude, longitude) +
+                   s(longitude, latitude) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
                  data = dab_data[dab_data$lncpue_n > 0, ])
@@ -473,7 +473,7 @@ plot(dab_gam[[2]])
 # Explore simple GAM
 anch_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
-                   s(latitude, longitude) +
+                   s(longitude, latitude) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
                  data = anch_data[anch_data$lncpue_n > 0, ])
@@ -502,7 +502,7 @@ plot(anch_gam[[2]])
 # Explore simple GAM
 sbly_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
-                   s(latitude, longitude) +
+                   s(longitude, latitude) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
                  data = sbly_data[sbly_data$lncpue_n > 0, ])
@@ -531,7 +531,7 @@ plot(sbly_gam[[2]])
 # Explore simple GAM
 widw_base <- gam(lncpue_n ~ factor(year) +
                    s(doy) +
-                   s(latitude, longitude) +
+                   s(longitude, latitude) +
                    s(depth_m, k = 4) +
                    s(bottom_temp, k = 4),
                  data = widw_data[widw_data$lncpue_n > 0, ])
@@ -561,7 +561,7 @@ plot(widw_gam[[2]])
 # Base GAM
 hake_base_t <- gam(catch + 1 ~ factor(year) +
                      s(doy) +
-                     s(latitude, longitude) +
+                     s(longitude, latitude) +
                      s(depth_m, k = 4) +
                      s(bottom_temp, k = 4),
                  family = tw(link = "log"),
@@ -681,17 +681,17 @@ hake_adults %>%
 ```{r}
 # Best model from full data set is as below
 hake_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = hake_adults)
 hake_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = hake_adults)
 hake_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = hake_adults)
@@ -723,7 +723,7 @@ dev.off()
 # Base GAM
 dab_base_t <- gam(catch + 1 ~ factor(year) +
                      s(doy) +
-                     s(latitude, longitude) +
+                     s(longitude, latitude) +
                      s(depth_m, k = 4) +
                      s(bottom_temp, k = 4),
                  family = tw(link = "log"),
@@ -806,17 +806,17 @@ dab_adults %>%
 ```{r}
 # Best model from full data set is as below
 dab_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                  s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = dab_adults)
 dab_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = dab_adults)
 dab_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = NPGO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = dab_adults)
@@ -849,7 +849,7 @@ dev.off()
 # Base GAM
 sbly_base_t <- gam(catch + 1 ~ factor(year) +
                      s(doy) +
-                     s(latitude, longitude) +
+                     s(longitude, latitude) +
                      s(depth_m, k = 4) +
                      s(bottom_temp, k = 4),
                  family = tw(link = "log"),
@@ -932,17 +932,17 @@ sbly_adults %>%
 ```{r}
 # Best model from full data set is as below
 sbly_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
+                  s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = sbly_adults)
 sbly_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = sbly_adults)
 sbly_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = PDO_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = sbly_adults)
@@ -974,7 +974,7 @@ dev.off()
 # Base GAM
 widw_base_t <- gam(catch + 1 ~ factor(year) +
                      s(doy) +
-                     s(latitude, longitude) +
+                     s(longitude, latitude) +
                      s(depth_m, k = 4) +
                      s(bottom_temp, k = 4),
                  family = tw(link = "log"),
@@ -1058,17 +1058,17 @@ widw_adults %>%
 ```{r}
 # Best model from full data set is as below
 widw_all <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                  s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
+                  s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = widw_adults)
 widw_small <- gam(lower_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = widw_adults)
 widw_large <- gam(upper_count + 1 ~ factor(year) + s(longitude, latitude) + s(depth_m, k = 4) +
-                    s(doy) + s(bottom_temp, k = 4) + s(latitude, longitude, by = ONI_pos),
+                    s(doy) + s(bottom_temp, k = 4) + s(longitude, latitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = widw_adults)
@@ -1101,7 +1101,7 @@ No lengths available
 # Base GAM
 anch_base_t <- gam(catch + 1 ~ factor(year) +
                      s(doy) +
-                     s(latitude, longitude) +
+                     s(longitude, latitude) +
                      s(depth_m, k = 4) +
                      s(bottom_temp, k = 4),
                  family = tw(link = "log"),
