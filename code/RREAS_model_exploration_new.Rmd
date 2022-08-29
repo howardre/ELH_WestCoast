@@ -38,21 +38,29 @@ CPUE_hist <- function(species_subset){
 
 # Gaussian GAMs
 catch_GAMs <- function(species_subset){
-  year_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy),
-                  data = species_subset[species_subset$lncatch > 0,])
-  pdo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(PDO, k = 4),
-                  data = species_subset[species_subset$lncatch > 0,])
-  npgo_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(NPGO, k = 4),
-                  data = species_subset[species_subset$lncatch > 0,])
-  oni_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(ONI, k = 4),
-                  data = species_subset[species_subset$lncatch > 0,])
-  pdo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = PDO_pos),
-                  data = species_subset[species_subset$lncatch > 0,])
-  npgo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
-                  data = species_subset[species_subset$lncatch > 0,])
-  oni_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = ONI_pos),
-                  data = species_subset[species_subset$lncatch > 0,])
-  gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
+  base_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian),
+                  data = species_subset[species_subset$lncpue > 0,])
+  ts_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                  s(temperature, k = 4) + s(salinity, k = 4),
+                data = species_subset[species_subset$lncpue > 0,])  
+  tso_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                   s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4),
+                 data = species_subset[species_subset$lncpue > 0,])  
+  ts_geog_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                       s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = mean_temp),
+                     data = species_subset[species_subset$lncpue > 0,])    
+  tso_geog_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                        s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
+                        s(longitude, latitude, by = mean_temp),
+                      data = species_subset[species_subset$lncpue > 0,])    
+  ts_phen_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                       s(temperature, k = 4) + s(salinity, k = 4) + s(julian, by = mean_temp),
+                     data = species_subset[species_subset$lncpue > 0,])    
+  tso_phen_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                        s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
+                        s(julian, by = mean_temp),
+                      data = species_subset[species_subset$lncpue > 0,])    
+  gam_list <- list(base_gam, ts_gam, tso_gam, ts_geog_gam, tso_geog_gam, ts_phen_gam, tso_phen_gam)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
                                          function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
@@ -60,31 +68,31 @@ catch_GAMs <- function(species_subset){
 
 # Tweedie GAMs
 tweedie_GAMs <- function(species_subset){
-  year_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy),
+  year_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  pdo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(PDO, k = 4),
+  pdo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(PDO, k = 4),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  npgo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(NPGO, k = 4),
+  npgo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(NPGO, k = 4),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  oni_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(ONI, k = 4),
+  oni_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(ONI, k = 4),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  pdo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = PDO_pos),
+  pdo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  npgo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
+  npgo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  oni_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = ONI_pos),
+  oni_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
@@ -568,9 +576,8 @@ yoy_anch <- readRDS(file = "../data/yoy_anchovy.Rdata")
 yoy_widow <- readRDS(file = "../data/yoy_widow.Rdata")
 yoy_sbelly <- readRDS(file = "../data/yoy_shortbelly.Rdata")
 RREAS_list <- readRDS(file = "../data/RREAS_list.Rdata")
-ctds <- readRDS(file = "../data/ctd_means.Rdata")
+ctd_means <- readRDS(file = "../data/RREAS_ctd_means.Rds")
 ```
-
 
 ```{r}
 CPUE_hist(yoy_hake)
@@ -580,18 +587,28 @@ CPUE_hist(yoy_widow)
 CPUE_hist(yoy_sbelly)
 ```
 
+Match with CTD means
+```{r}
+yoy_hake$mean_temp <- ctd_means$temperature[match(yoy_hake$year, ctd_means$year)]
+yoy_dab$mean_temp <- ctd_means$temperature[match(yoy_dab$year, ctd_means$year)]
+yoy_anch$mean_temp <- ctd_means$temperature[match(yoy_anch$year, ctd_means$year)]
+yoy_widow$mean_temp <- ctd_means$temperature[match(yoy_widow$year, ctd_means$year)]
+yoy_sbelly$mean_temp <- ctd_means$temperature[match(yoy_sbelly$year, ctd_means$year)]
 
+RREAS_list <- lapply(RREAS_list, function(x)
+  mutate(x, mean_temp = ctd_means$temperature[match(x$year, ctd_means$year)],
+         lncpue = log(x$catch + 1)))
+```
 
-#### YOY Hake
-### Gaussian on positive catches
-## YOY Hake
+Gaussian on positive catches
+YOY Hake
 ```{r}
 # Base GAM
-hake_base <- gam(lncatch ~ factor(year) +
-                   s(doy) +
-                   s(lat, lon) +
+hake_base <- gam(lncpue ~ factor(year) +
+                   s(julian) +
+                   s(longitude, latitude) +
                    s(bottom_depth, k = 4),
-                 data = yoy_hake_catch[yoy_hake_catch$lncatch > 0,])
+                 data = RREAS_list[[1]][RREAS_list[[1]]$lncpue > 0,])
 summary(hake_base)
 
 par(mfrow = c(2, 2))
@@ -602,7 +619,7 @@ plot(hake_base)
 
 
 # Select best GAM
-hake_gam <- catch_GAMs(yoy_hake_catch)
+hake_gam <- catch_GAMs(RREAS_list[[1]])
 summary(hake_gam[[2]])
 
 par(mfrow = c(2, 2))
@@ -615,40 +632,40 @@ plot(hake_gam[[2]])
 ## YOY Sanddab
 ```{r}
 # Base GAM
-yoy_dab_base <- gam(lncatch ~ factor(year) +
-                      s(doy) +
-                      s(lat, lon) +
-                      s(bottom_depth, k = 4),
-                    data = yoy_dab_catch[yoy_dab_catch$lncatch > 0,])
-summary(yoy_dab_base)
+dab_base <- gam(lncpue ~ factor(year) +
+                  s(julian) +
+                  s(longitude, latitude) +
+                  s(bottom_depth, k = 4),
+                data =  yoy_dab[yoy_dab$lncpue > 0,])
+summary(dab_base)
 
 par(mfrow = c(2, 2))
-gam.check(yoy_dab_base)
+gam.check(dab_base)
 
 par(mfrow = c(2, 2))
-plot(yoy_dab_base)
+plot(dab_base)
 
 
 # Select best GAM
-yoy_dab_gam <- catch_GAMs(yoy_dab_catch)
-summary(yoy_dab_gam[[2]])
+dab_gam <- catch_GAMs(yoy_dab)
+summary(dab_gam[[2]])
 
 par(mfrow = c(2, 2))
-gam.check(yoy_dab_gam[[2]])
+gam.check(dab_gam[[2]])
 
 par(mfrow = c(2, 2))
-plot(yoy_dab_gam[[2]])
+plot(dab_gam[[2]])
 ```
 
 
 ## Adult Sanddab
 ```{r}
 # Base GAM
-adult_dab_base <- gam(lncatch ~ factor(year) +
-                        s(doy) +
-                        s(lat, lon) +
+adult_dab_base <- gam(lncpue ~ factor(year) +
+                        s(julian) +
+                        s(longitude, latitude) +
                         s(bottom_depth, k = 4),
-                      data = adult_dab_catch[adult_dab_catch$lncatch > 0,])
+                      data = adult_dab_catch[adult_dab_catch$lncpue > 0,])
 summary(adult_dab_base)
 
 par(mfrow = c(2, 2))
@@ -675,12 +692,12 @@ plot(adult_dab_gam[[2]])
 ```{r}
 # Base GAM
 hake_base_t <- gam(catch + 1 ~ factor(year) +
-                   s(doy) +
-                   s(lat, lon) +
+                   s(julian) +
+                   s(longitude, latitude) +
                    s(bottom_depth, k = 4),
                  family = tw(link = "log"),
                  method = 'REML',
-                 data = yoy_hake_catch)
+                 data = yoy_hake)
 summary(hake_base_t)
 
 par(mfrow = c(2, 2))
@@ -691,7 +708,7 @@ plot(hake_base_t)
 
 
 # Select best GAM
-hake_gam_t <- tweedie_GAMs(yoy_hake_catch)
+hake_gam_t <- tweedie_GAMs(yoy_hake)
 summary(hake_gam_t[[2]])
 
 AIC(hake_gam_t[[2]])
@@ -705,9 +722,9 @@ plot(hake_gam_t[[2]])
 ```
 
 ```{r}
-pred_hake_t <- variable_coefficient(hake_gam_t, yoy_hake_catch, yoy_hake_catch$NPGO_pos)
+pred_hake_t <- variable_coefficient(hake_gam_t, yoy_hake, yoy_hake$NPGO_pos)
 
-plot_var_coef(hake_gam_t, yoy_hake_catch, pred_hake_t)
+plot_var_coef(hake_gam_t, yoy_hake, pred_hake_t)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
@@ -733,14 +750,14 @@ plot_variable(hake_gam_t,
               "Day of Year", 
               "", 
               "n")
-dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_doy.jpg'), 
+dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_julian.jpg'), 
          height = 10, width = 10, units = 'in', res = 200)
 dev.off()
 ```
 
 ```{r}
 location_plot(hake_gam_t,
-              yoy_hake_catch)
+              yoy_hake)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_distribution.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
@@ -748,9 +765,9 @@ dev.off()
 
 Variable coefficient term for PDO model
 ```{r}
-pred_yoy_hake_t <- variable_coefficient2(hake_gam_t, yoy_hake_catch, yoy_hake_catch$PDO_pos)
+pred_yoy_hake_t <- variable_coefficient2(hake_gam_t, yoy_hake, yoy_hake$PDO_pos)
 
-plot_var_coef_PDO(hake_gam_t, yoy_hake_catch, pred_yoy_hake_t)
+plot_var_coef_PDO(hake_gam_t, yoy_hake, pred_yoy_hake_t)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef_PDO.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
@@ -762,7 +779,7 @@ hake_lower <- aggregate(std_length ~ haul_no + cruise,
                         data = yoy_hake_sp, 
                         FUN = length, 
                         subset = std_length <= 30)
-yoy_hake <- merge_data(hake_lower, yoy_hake_catch)
+yoy_hake <- merge_data(hake_lower, yoy_hake)
 names(yoy_hake)[names(yoy_hake) == "std_length"] <- "lower_num"
 
 hake_upper <- aggregate(std_length ~ haul_no + cruise, 
@@ -823,11 +840,11 @@ hist(yoy_hake_sp$std_length)
 
 Split into two models
 ```{r}
-hake_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
+hake_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_hake_filtered)
-hake_upper <- gam(upper_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
+hake_upper <- gam(upper_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_hake_filtered)
@@ -874,8 +891,8 @@ dev.off()
 ```{r}
 # Base GAM
 yoy_dab_base_t <- gam(catch + 1 ~ factor(year) +
-                      s(doy) +
-                      s(lat, lon) +
+                      s(julian) +
+                      s(longitude, latitude) +
                       s(bottom_depth, k = 4),
                     family = tw(link = "log"),
                     method = 'REML',
@@ -928,7 +945,7 @@ plot_variable(yoy_dab_gam_t,
               "Day of Year", 
               "", 
               "n")
-dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_doy.jpg'), 
+dev.copy(jpeg, here('results/yoy_dab_preliminary', 'yoy_dab_julian.jpg'), 
          height = 10, width = 10, units = 'in', res = 200)
 dev.off()
 ```
@@ -1017,11 +1034,11 @@ hist(yoy_dab_sp$std_length)
 ```
 
 ```{r}
-dab_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(NPGO_pos),
+dab_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_dab_filtered)
-dab_upper <- gam(upper_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(NPGO_pos),
+dab_upper <- gam(upper_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_dab_filtered)
@@ -1068,8 +1085,8 @@ Use this chunk and one below if something changes to incorporate VC term
 ```{r}
 # Base GAM
 adult_dab_base_t <- gam(catch + 1 ~ factor(year) +
-                        s(doy) +
-                        s(lat, lon) +
+                        s(julian) +
+                        s(longitude, latitude) +
                         s(bottom_depth, k = 4),
                       family = tw(link = "log"),
                       method = 'REML',
@@ -1122,7 +1139,7 @@ plot_variable(adult_dab_gam_t,
               "Day of Year", 
               "", 
               "n")
-dev.copy(jpeg, here('results/adult_dab_preliminary', 'adult_dab_doy.jpg'), 
+dev.copy(jpeg, here('results/adult_dab_preliminary', 'adult_dab_julian.jpg'), 
          height = 10, width = 10, units = 'in', res = 200)
 dev.off()
 ```
