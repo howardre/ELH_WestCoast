@@ -46,11 +46,11 @@ catch_GAMs <- function(species_subset){
                   data = species_subset[species_subset$lncatch > 0,])
   oni_gam <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(ONI, k = 4),
                   data = species_subset[species_subset$lncatch > 0,])
-  pdo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = PDO_pos),
+  pdo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = PDO_pos),
                   data = species_subset[species_subset$lncatch > 0,])
-  npgo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
+  npgo_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = NPGO_pos),
                   data = species_subset[species_subset$lncatch > 0,])
-  oni_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = ONI_pos),
+  oni_flex <- gam(lncatch ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = ONI_pos),
                   data = species_subset[species_subset$lncatch > 0,])
   gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
@@ -76,15 +76,15 @@ tweedie_GAMs <- function(species_subset){
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  pdo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = PDO_pos),
+  pdo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = PDO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  npgo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
+  npgo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
-  oni_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = ONI_pos),
+  oni_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = ONI_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = species_subset)
@@ -602,7 +602,7 @@ adult_dab_catch$ONI_pos <- adult_dab_catch$ONI_mean + abs(min(adult_dab_catch$ON
 # Base GAM
 hake_base <- gam(lncatch ~ factor(year) +
                    s(doy) +
-                   s(lat, lon) +
+                   s(lon, lat) +
                    s(bottom_depth, k = 4),
                  data = yoy_hake_catch[yoy_hake_catch$lncatch > 0,])
 summary(hake_base)
@@ -630,7 +630,7 @@ plot(hake_gam[[2]])
 # Base GAM
 yoy_dab_base <- gam(lncatch ~ factor(year) +
                       s(doy) +
-                      s(lat, lon) +
+                      s(lon, lat) +
                       s(bottom_depth, k = 4),
                     data = yoy_dab_catch[yoy_dab_catch$lncatch > 0,])
 summary(yoy_dab_base)
@@ -659,7 +659,7 @@ plot(yoy_dab_gam[[2]])
 # Base GAM
 adult_dab_base <- gam(lncatch ~ factor(year) +
                         s(doy) +
-                        s(lat, lon) +
+                        s(lon, lat) +
                         s(bottom_depth, k = 4),
                       data = adult_dab_catch[adult_dab_catch$lncatch > 0,])
 summary(adult_dab_base)
@@ -689,7 +689,7 @@ plot(adult_dab_gam[[2]])
 # Base GAM
 hake_base_t <- gam(catch + 1 ~ factor(year) +
                    s(doy) +
-                   s(lat, lon) +
+                   s(lon, lat) +
                    s(bottom_depth, k = 4),
                  family = tw(link = "log"),
                  method = 'REML',
@@ -836,11 +836,11 @@ hist(yoy_hake_sp$std_length)
 
 Split into two models
 ```{r}
-hake_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
+hake_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_hake_filtered)
-hake_upper <- gam(upper_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lat, lon, by = NPGO_pos),
+hake_upper <- gam(upper_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(doy) + s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_hake_filtered)
@@ -888,7 +888,7 @@ dev.off()
 # Base GAM
 yoy_dab_base_t <- gam(catch + 1 ~ factor(year) +
                       s(doy) +
-                      s(lat, lon) +
+                      s(lon, lat) +
                       s(bottom_depth, k = 4),
                     family = tw(link = "log"),
                     method = 'REML',
@@ -1082,7 +1082,7 @@ Use this chunk and one below if something changes to incorporate VC term
 # Base GAM
 adult_dab_base_t <- gam(catch + 1 ~ factor(year) +
                         s(doy) +
-                        s(lat, lon) +
+                        s(lon, lat) +
                         s(bottom_depth, k = 4),
                       family = tw(link = "log"),
                       method = 'REML',
