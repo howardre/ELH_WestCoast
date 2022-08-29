@@ -95,7 +95,8 @@ add_lengths <- function(species, lengths){
   yoy$upper_cpue[is.na(yoy$upper_cpue)] <- 0
   yoy$lower_cpue[is.na(yoy$lower_cpue)] <- 0
   
-  yoy_filtered <- yoy[yoy$year > min(lengths$year), ] # Length data only from 2013 onward
+  yoy_filtered <- yoy[yoy$year > min(lengths$year), ]
+  yoy_filtered$lncpue <- log(yoy_filtered$catch + 1)
   return(yoy_filtered)
 }
 ```
@@ -182,14 +183,16 @@ ctds <- tabledap(RREAS_CTD_info,
                  fields = c('cruise', 'ctd_index',
                             'temperature', 'salinity', 
                             'oxygen', 'station',
-                            'ctd_depth'),
+                            'ctd_depth', 'time'),
                  'ctd_depth<=10')
 
 cols <- c('temperature', 'salinity', 'oxygen')
 ctds[cols] <- sapply(ctds[cols], as.numeric)
 
-ctd_means <- ctds  %>%
-  group_by(cruise, ctd_index, station) %>%
+ctd_means <- ctds %>%
+  mutate(date = format(as.POSIXct(time, tz = "UTC", format = "%Y-%m-%d")),
+         year = lubridate::year(date)) %>%
+  group_by(cruise, ctd_index, year) %>%
   summarise_at(vars('temperature', 'salinity', 'oxygen'), mean) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) 
 ```
@@ -199,7 +202,7 @@ Add CTD to abundance data
 RREAS_list_env <- lapply(RREAS_list, function(x) merge(x, ctd_means,
                                                        by = c('cruise', 
                                                               'ctd_index',
-                                                              'station'),
+                                                              'year'),
                                                        all.x = T))
 ```
 
