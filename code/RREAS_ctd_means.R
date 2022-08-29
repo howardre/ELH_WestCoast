@@ -1,8 +1,11 @@
-### Libraries ----
+# Libraries 
 library(rerddap)
+library(ggplot2)
+library(lubridate)
+library(tidyverse)
+library(here)
 
-### Bering 10K model output ----
-# Using avg surface temperatures & salinity
+# Using avg surface temperatures
 RREAS_CTD_info <- info('FED_Rockfish_CTD')
 
 ctds <- tabledap(RREAS_CTD_info,
@@ -17,21 +20,12 @@ ctd_means <- ctds  %>%
   summarise_at(vars('temperature'), mean) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   mutate(date = format(as.POSIXct(time, tz = "UTC", format = "%Y-%m-%d")),
-         year = lubridate::year(date),
-         month = lubridate::month(date)) %>%
-  select(temperature, year, month) %>%
+         year = lubridate::year(date)) %>%
+  select(temperature, year) %>%
   group_by(year) %>%
   summarise_at(vars('temperature'), mean, na.rm = T)
 
-
 saveRDS(ctd_means, file = here('data', 'RREAS_ctd_means.rds'))
-
-# Check to make sure logical - use code in function to get the temp_filtered df
-# temp_filtered %>%
-#   slice(1:10000) %>%
-# ggplot(aes(x = lon, y = lat, color = temp)) +
-#   geom_point(size = 5, alpha = 0.5) +
-#   scale_color_viridis_b()
 
 # Plot the mean temps over year
 ggplot(data = ctd_means) +
