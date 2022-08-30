@@ -37,30 +37,32 @@ CPUE_hist <- function(species_subset){
 }
 
 # Gaussian GAMs
+# Need to consider whether to include oxygen, restricts the data a lot
+# Only really significant for shortbelly rockfish
 catch_GAMs <- function(species_subset){
   base_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian),
                   data = species_subset[species_subset$lncpue > 0,])
   ts_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
                   s(temperature, k = 4) + s(salinity, k = 4),
                 data = species_subset[species_subset$lncpue > 0,])  
-  tso_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-                   s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4),
-                 data = species_subset[species_subset$lncpue > 0,])  
+  #tso_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+  #                 s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4),
+  #               data = species_subset[species_subset$lncpue > 0,])  
   ts_geog_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
                        s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = mean_temp),
                      data = species_subset[species_subset$lncpue > 0,])    
-  tso_geog_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-                        s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
-                        s(longitude, latitude, by = mean_temp),
-                      data = species_subset[species_subset$lncpue > 0,])    
+  #tso_geog_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+  #                      s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
+  #                      s(longitude, latitude, by = mean_temp),
+  #                    data = species_subset[species_subset$lncpue > 0,])    
   ts_phen_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
                        s(temperature, k = 4) + s(salinity, k = 4) + s(julian, by = mean_temp),
                      data = species_subset[species_subset$lncpue > 0,])    
-  tso_phen_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-                        s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
-                        s(julian, by = mean_temp),
-                      data = species_subset[species_subset$lncpue > 0,])    
-  gam_list <- list(base_gam, ts_gam, tso_gam, ts_geog_gam, tso_geog_gam, ts_phen_gam, tso_phen_gam)
+  #tso_phen_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+  #                      s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
+  #                      s(julian, by = mean_temp),
+  #                    data = species_subset[species_subset$lncpue > 0,])    
+  gam_list <- list(base_gam, ts_gam, ts_geog_gam, ts_phen_gam)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
                                          function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
@@ -68,35 +70,26 @@ catch_GAMs <- function(species_subset){
 
 # Tweedie GAMs
 tweedie_GAMs <- function(species_subset){
-  year_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian),
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = species_subset)
-  pdo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(PDO, k = 4),
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = species_subset)
-  npgo_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(NPGO, k = 4),
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = species_subset)
-  oni_gam <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(ONI, k = 4),
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = species_subset)
-  pdo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = PDO_pos),
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = species_subset)
-  npgo_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = NPGO_pos),
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = species_subset)
-  oni_flex <- gam(catch + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = ONI_pos),
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = species_subset)
-  gam_list <- list(year_gam, pdo_gam, npgo_gam, oni_gam, pdo_flex, npgo_flex, oni_flex)
+  base_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian),
+                 family = tw(link = "log"),
+                 method = 'REML',
+                 data = species_subset)
+  ts_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                 s(temperature, k = 4) + s(salinity, k = 4),
+               family = tw(link = "log"),
+               method = 'REML',
+               data = species_subset)   
+  ts_geog_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                      s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = mean_temp),
+                    family = tw(link = "log"),
+                    method = 'REML',
+                    data = species_subset)    
+  ts_phen_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                       s(temperature, k = 4) + s(salinity, k = 4) + s(julian, by = mean_temp),
+                    family = tw(link = "log"),
+                    method = 'REML',
+                    data = species_subset)   
+  gam_list <- list(base_tw, ts_tw, ts_geog_tw, ts_phen_tw)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
                                          function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
@@ -105,10 +98,10 @@ tweedie_GAMs <- function(species_subset){
 # Calculate variable coefficient term
 variable_coefficient <- function(gam, data, variable){
   preds <- predict(gam[[2]], type = 'terms', se.fit = T)
-  pred_slope <- preds[[1]][, 5] / variable
-  pred_slope_se <- 1.96 * preds[[2]][, 5]
-  pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
-  pred_slope_low <- (preds[[1]][, 5] - pred_slope_se) / variable
+  pred_slope <- preds[[1]][, 7] / variable
+  pred_slope_se <- 1.96 * preds[[2]][, 7]
+  pred_slope_up <- (preds[[1]][, 7] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, 7] - pred_slope_se) / variable
   sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
   sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
@@ -116,10 +109,10 @@ variable_coefficient <- function(gam, data, variable){
 
 variable_coefficient2 <- function(gam, data, variable){
   preds <- predict(gam[[1]][[5]], type = 'terms', se.fit = T) # selects the PDO model
-  pred_slope <- preds[[1]][, 5] / variable
-  pred_slope_se <- 1.96 * preds[[2]][, 5]
-  pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
-  pred_slope_low <- (preds[[1]][, 5] - pred_slope_se) / variable
+  pred_slope <- preds[[1]][, 7] / variable
+  pred_slope_se <- 1.96 * preds[[2]][, 7]
+  pred_slope_up <- (preds[[1]][, 7] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, 7] - pred_slope_se) / variable
   sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
   sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
@@ -127,10 +120,10 @@ variable_coefficient2 <- function(gam, data, variable){
 
 variable_coefficient_lengths <- function(gam, data, variable){
   preds <- predict(gam, type = 'terms', se.fit = T)
-  pred_slope <- preds[[1]][, 5] / variable
-  pred_slope_se <- 1.96 * preds[[2]][, 5]
-  pred_slope_up <- (preds[[1]][, 5] + pred_slope_se) / variable
-  pred_slope_low <- (preds[[1]][, 5] - pred_slope_se) / variable
+  pred_slope <- preds[[1]][, 7] / variable
+  pred_slope_se <- 1.96 * preds[[2]][, 7]
+  pred_slope_up <- (preds[[1]][, 7] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, 7] - pred_slope_se) / variable
   sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
   sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
@@ -600,8 +593,8 @@ RREAS_list <- lapply(RREAS_list, function(x)
          lncpue = log(x$catch + 1)))
 ```
 
-Gaussian on positive catches
-YOY Hake
+### Gaussian on positive catches
+## YOY Hake
 ```{r}
 # Base GAM
 hake_base <- gam(lncpue ~ factor(year) +
@@ -636,7 +629,7 @@ dab_base <- gam(lncpue ~ factor(year) +
                   s(julian) +
                   s(longitude, latitude) +
                   s(bottom_depth, k = 4),
-                data =  yoy_dab[yoy_dab$lncpue > 0,])
+                data = RREAS_list[[2]][RREAS_list[[2]]$lncpue > 0,])
 summary(dab_base)
 
 par(mfrow = c(2, 2))
@@ -647,7 +640,7 @@ plot(dab_base)
 
 
 # Select best GAM
-dab_gam <- catch_GAMs(yoy_dab)
+dab_gam <- catch_GAMs(RREAS_list[[2]])
 summary(dab_gam[[2]])
 
 par(mfrow = c(2, 2))
@@ -658,34 +651,89 @@ plot(dab_gam[[2]])
 ```
 
 
-## Adult Sanddab
+## YOY Anchovy
 ```{r}
 # Base GAM
-adult_dab_base <- gam(lncpue ~ factor(year) +
-                        s(julian) +
-                        s(longitude, latitude) +
-                        s(bottom_depth, k = 4),
-                      data = adult_dab_catch[adult_dab_catch$lncpue > 0,])
-summary(adult_dab_base)
+anch_base <- gam(lncpue ~ factor(year) +
+                  s(julian) +
+                  s(longitude, latitude) +
+                  s(bottom_depth, k = 4),
+                data = RREAS_list[[3]][RREAS_list[[3]]$lncpue > 0,])
+summary(anch_base)
 
 par(mfrow = c(2, 2))
-gam.check(adult_dab_base)
+gam.check(anch_base)
 
 par(mfrow = c(2, 2))
-plot(adult_dab_base)
+plot(anch_base)
 
 
 # Select best GAM
-adult_dab_gam <- catch_GAMs(adult_dab_catch)
-summary(adult_dab_gam[[2]])
+anch_gam <- catch_GAMs(RREAS_list[[3]])
+summary(anch_gam[[2]])
 
 par(mfrow = c(2, 2))
-gam.check(adult_dab_gam[[2]])
+gam.check(anch_gam[[2]])
 
 par(mfrow = c(2, 2))
-plot(adult_dab_gam[[2]])
+plot(anch_gam[[2]])
 ```
 
+## YOY Widow Rockfish
+```{r}
+# Base GAM
+widow_base <- gam(lncpue ~ factor(year) +
+                  s(julian) +
+                  s(longitude, latitude) +
+                  s(bottom_depth, k = 4),
+                data = RREAS_list[[4]][RREAS_list[[4]]$lncpue > 0,])
+summary(widow_base)
+
+par(mfrow = c(2, 2))
+gam.check(widow_base)
+
+par(mfrow = c(2, 2))
+plot(widow_base)
+
+
+# Select best GAM
+widow_gam <- catch_GAMs(RREAS_list[[4]])
+summary(widow_gam[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(widow_gam[[2]])
+
+par(mfrow = c(2, 2))
+plot(widow_gam[[2]])
+```
+
+## YOY Shortbelly Rockfish
+```{r}
+# Base GAM
+sbelly_base <- gam(lncpue ~ factor(year) +
+                  s(julian) +
+                  s(longitude, latitude) +
+                  s(bottom_depth, k = 4),
+                data = RREAS_list[[5]][RREAS_list[[5]]$lncpue > 0,])
+summary(sbelly_base)
+
+par(mfrow = c(2, 2))
+gam.check(sbelly_base)
+
+par(mfrow = c(2, 2))
+plot(sbelly_base)
+
+
+# Select best GAM
+sbelly_gam <- catch_GAMs(RREAS_list[[5]])
+summary(sbelly_gam[[2]])
+
+par(mfrow = c(2, 2))
+gam.check(sbelly_gam[[2]])
+
+par(mfrow = c(2, 2))
+plot(sbelly_gam[[2]])
+```
 
 ### Tweedie on counts
 ## YOY Hake
@@ -697,7 +745,7 @@ hake_base_t <- gam(catch + 1 ~ factor(year) +
                    s(bottom_depth, k = 4),
                  family = tw(link = "log"),
                  method = 'REML',
-                 data = yoy_hake)
+                 data = RREAS_list[[1]])
 summary(hake_base_t)
 
 par(mfrow = c(2, 2))
@@ -708,11 +756,10 @@ plot(hake_base_t)
 
 
 # Select best GAM
-hake_gam_t <- tweedie_GAMs(yoy_hake)
+hake_gam_t <- tweedie_GAMs(RREAS_list[[1]])
 summary(hake_gam_t[[2]])
 
 AIC(hake_gam_t[[2]])
-AIC(hake_gam_t[[1]][[5]])
 
 par(mfrow = c(2, 2))
 gam.check(hake_gam_t[[2]])
@@ -722,9 +769,9 @@ plot(hake_gam_t[[2]])
 ```
 
 ```{r}
-pred_hake_t <- variable_coefficient(hake_gam_t, yoy_hake, yoy_hake$NPGO_pos)
+pred_hake_t <- variable_coefficient(hake_gam_t, RREAS_list[[1]], RREAS_list[[1]]$mean_temp)
 
-plot_var_coef(hake_gam_t, yoy_hake, pred_hake_t)
+plot_var_coef(hake_gam_t, RREAS_list[[1]], pred_hake_t)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
