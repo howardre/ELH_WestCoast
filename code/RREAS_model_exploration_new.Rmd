@@ -573,11 +573,11 @@ ctd_means <- readRDS(file = "../data/RREAS_ctd_means.Rds")
 ```
 
 ```{r}
-CPUE_hist(yoy_hake)
-CPUE_hist(yoy_dab)
-CPUE_hist(yoy_anch)
-CPUE_hist(yoy_widow)
-CPUE_hist(yoy_sbelly)
+CPUE_hist(RREAS_list[[1]])
+CPUE_hist(RREAS_list[[2]])
+CPUE_hist(RREAS_list[[3]])
+CPUE_hist(RREAS_list[[4]])
+CPUE_hist(RREAS_list[[5]])
 ```
 
 Match with CTD means
