@@ -68,18 +68,18 @@ merge_data <- function(data1, data2){
 }
 
 # Add the length ratios to the abundance data set
-add_lengths <- function(species, lengths){
+add_lengths <- function(species, split, lengths){
   lower <- aggregate(std_length ~ haul_no + cruise,
                          data = lengths,
                          FUN = length,
-                         subset = std_length <= median(as.numeric(std_length), na.rm = T))
+                         subset = std_length <= split)
   yoy <- merge_data(lower, species)
   names(yoy)[names(yoy) == "std_length"] <- "lower_num"
   
   upper <- aggregate(std_length ~ haul_no + cruise,
                          data = lengths,
                          FUN = length,
-                         subset = std_length > median(as.numeric(std_length), na.rm = T))
+                         subset = std_length > split)
   yoy <- merge_data(upper, yoy)
   names(yoy)[names(yoy) == "std_length"] <- "upper_num"
   
@@ -98,6 +98,30 @@ add_lengths <- function(species, lengths){
   yoy_filtered <- yoy[yoy$year > min(lengths$year), ]
   yoy_filtered$lncpue <- log(yoy_filtered$catch + 1)
   return(yoy_filtered)
+}
+
+# Add climate indices
+climate_match <- function(data){
+  data <- merge(data, npgo_index,
+                by.x = c("year", "month"),
+                by.y = c("YEAR", "MONTH"),
+                all.x = T, all.y = F)
+  data <- merge(data, pdo_index,
+                by.x = c("year", "month"),
+                by.y = c("year", "month"),
+                all.x = T, all.y = F)
+  data <- subset(data, select = -c(Date))
+  data <- merge(data, oni_matrix,
+                by.x = c("year", "month"),
+                by.y = c("year", "month"),
+                all.x = T, all.y = F)
+  match_npgo <- match(data$year, npgo_means$YEAR)
+  data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
+  match_pdo <- match(data$year, pdo_means$year)
+  data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
+  match_oni <- match(data$year, oni_means$year)
+  data$ONI_mean <- oni_means$ONI_mean[match_oni]
+  return(data)
 }
 ```
 
@@ -197,24 +221,67 @@ ctd_means <- ctds %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) 
 ```
 
+Climate indices
+```{r}
+# NPGO
+npgo_index <- read.table("../data/npgo_data.txt",
+                         header = T)
+
+# PDO
+pdo_index <- read.csv("../data/pdo_timeseries_ersstv5.csv")
+pdo_index$Date <- as.Date(pdo_index$Date, "%Y-%m-%d")
+pdo_index <- mutate(pdo_index,
+                    year = lubridate::year(Date),
+                    month = lubridate::month(Date))
+
+# ONI
+oni_index <- read.table("../data/oni_data.txt",
+                        row.names = 1)
+colnames(oni_index) <- c("01", "02", "03", "04",
+                         "05", "06", "07", "08",
+                         "09", "10", "11", "12")
+oni_matrix <- melt(as.matrix(oni_index))
+colnames(oni_matrix) <- c("year", "month", "ONI")
+
+# Means
+npgo_means <- npgo_index %>%
+  filter(MONTH >= 1 & MONTH <= 3) %>%
+  group_by(YEAR) %>%
+  summarise(NPGO_mean = mean(NPGO))
+pdo_means <- pdo_index %>%
+  filter(month >= 1 & month <= 3) %>%
+  group_by(year) %>%
+  summarise(PDO_mean = mean(PDO))
+oni_means <- oni_matrix %>%
+  filter(month >= 1 & month <= 3) %>%
+  group_by(year) %>%
+  summarise(ONI_mean = mean(ONI))
+```
+
+Add climate indices
+```{r}
+RREAS_list_clim <- lapply(RREAS_list, function(x) climate_match(x))
+```
+
 Add CTD to abundance data
 ```{r}
-RREAS_list_env <- lapply(RREAS_list, function(x) merge(x, ctd_means,
-                                                       by = c('cruise', 
-                                                              'ctd_index',
-                                                              'year'),
-                                                       all.x = T))
+RREAS_list_env <- lapply(RREAS_list_clim, function(x) merge(x, ctd_means,
+                                                             by = c('cruise',
+                                                                    'ctd_index',
+                                                                    'year'),
+                                                             all.x = T))
 ```
 
 Add length ratios
 ```{r}
 # Filter based on years with length data
-yoy_hake <- add_lengths(RREAS_list_env[[1]], length_list[[1]])
-yoy_sanddab <- add_lengths(RREAS_list_env[[2]], length_list[[2]])
-yoy_anchovy <- add_lengths(RREAS_list_env[[3]], length_list[[3]])
-yoy_widow <- add_lengths(RREAS_list_env[[4]], length_list[[4]])
-yoy_shortbelly <- add_lengths(RREAS_list_env[[5]], length_list[[5]])
+yoy_hake <- add_lengths(RREAS_list_env[[1]], 31, length_list[[1]]) # Phillips et al. (2007)
+yoy_sanddab <- add_lengths(RREAS_list_env[[2]], 30, length_list[[2]]) # Sakuma (1995)
+yoy_anchovy <- add_lengths(RREAS_list_env[[3]], 35, length_list[[3]]) # Butler et al. (1993)
+yoy_widow <- add_lengths(RREAS_list_env[[4]], 31, length_list[[4]]) # Laroche & Richardson (1981)
+yoy_shortbelly <- add_lengths(RREAS_list_env[[5]], 25, length_list[[5]]) # Norton et al. (2001)
 ```
+
 
 
 ```{r}
