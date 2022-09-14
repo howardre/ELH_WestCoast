@@ -713,7 +713,7 @@ AIC(hake_gam_t[[1]][[5]])
 par(mfrow = c(2, 2))
 gam.check(hake_gam_t[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(3, 2))
 plot(hake_gam_t[[2]])
 ```
 
