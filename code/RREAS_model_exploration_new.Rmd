@@ -8,7 +8,6 @@ output: html_document
 ```{r setup, include = FALSE}
 ### Load libraries
 library(readxl)
-library(plyr)
 library(tibble)
 library(here)
 library(ggplot2)
@@ -193,20 +192,27 @@ location_plot <- function(gam, species_subset) {
       oma = c(1, 1, 1, 1),
       mgp = c(5, 2, 0))
   myvis_gam(gam[[2]],
-            view = c('lon', 'lat'),
+            view = c('longitude', 'latitude'),
             too.far = 0.07,
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
             type = 'link',
             xlim = c(-125.7, -116.5),
-            ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
+            ylim = range(species_subset$latitude, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
             xlab = "Longitude",
             ylab = "Latitude",
             main = " ",
             cex.lab = 2.5,
             cex.axis =  2.5)
+  symbols(species_subset$longitude,
+          species_subset$latitude,
+          circle = species_subset$lncpue,
+          inches = 0.16,
+          add = T,
+          bg = alpha('dimgray', 0.4),
+          fg = alpha('black', 0.08))  
   maps::map('worldHires',
             add = T,
             col = 'antiquewhite4',
@@ -228,34 +234,34 @@ location_plot <- function(gam, species_subset) {
 }
 
 # Plot variable coefficient term
-plot_var_coef <- function(gam, data, predictions){
+plot_var_coef <- function(my_gam, data, predictions){
   par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
       oma = c(1, 1, 1, 1),
       mgp = c(5, 2, 0))
-  myvis_gam(gam[[2]],
-            view = c('lon', 'lat'),
+  myvis_gam(my_gam,
+            view = c('longitude', 'latitude'),
             too.far = 0.07,
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
             type = 'link',
             xlim = c(-125.7,-116.5),
-            ylim = range(data$lat, na.rm = TRUE) + c(-.4, .5),
+            ylim = range(data$latitude, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
             xlab = "Longitude",
             ylab = "Latitude",
             main = " ",
             cex.lab = 2.5,
             cex.axis =  2.5)
-  symbols(data$lon[predictions[[2]]],
-          data$lat[predictions[[2]]],
+  symbols(data$longitude[predictions[[2]]],
+          data$latitude[predictions[[2]]],
           circle = predictions[[3]][predictions[[2]]],
           inches = 0.12,
           add = T,
           bg = alpha('darkred', 0.4),
           fg = alpha('black', 0.08))
-  symbols(data$lon[predictions[[1]]],
-          data$lat[predictions[[1]]],
+  symbols(data$longitude[predictions[[1]]],
+          data$latitude[predictions[[1]]],
           circle = (-1) * predictions[[3]][predictions[[1]]],
           inches = 0.12,
           add = T,
@@ -274,8 +280,8 @@ plot_var_coef <- function(gam, data, predictions){
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
-             zlim = c(min(gam[[2]]$linear.predictors),
-                      max(gam[[2]]$linear.predictors)),
+             zlim = c(min(my_gam$linear.predictors),
+                      max(my_gam$linear.predictors)),
              legend.args = list("log(cpue+1)",
                                 side = 2, cex = 2,
                                 family = "serif"))
@@ -286,7 +292,7 @@ plot_var_coef2 <- function(gam, data, predictions){
       oma = c(1, 1, 1, 1),
       mgp = c(5, 2, 0))
   myvis_gam(gam[[2]],
-            view = c('lon', 'lat'),
+            view = c('longitude', 'latitude'),
             too.far = 0.07,
             plot.type = 'contour',
             contour.col = contour_col,
@@ -560,13 +566,15 @@ merge_data <- function(data1, data2){
 
 ```{r}
 # Load data
-yoy_hake <- readRDS(file = "../data/yoy_hake.Rdata")
+yoy_hake <- readRDS(file = "../data/yoy_hake.Rdata") %>% drop_na(temperature, salinity, bottom_depth)
 yoy_dab <- readRDS(file = "../data/yoy_sanddab.Rdata")
 yoy_anch <- readRDS(file = "../data/yoy_anchovy.Rdata")
 yoy_widow <- readRDS(file = "../data/yoy_widow.Rdata")
 yoy_sbelly <- readRDS(file = "../data/yoy_shortbelly.Rdata")
 RREAS_list <- readRDS(file = "../data/RREAS_list.Rdata")
 ctd_means <- readRDS(file = "../data/RREAS_ctd_means.Rds")
+
+detach("package:tidyr", unload = T)
 ```
 
 ```{r}
@@ -577,17 +585,17 @@ CPUE_hist(RREAS_list[[4]])
 CPUE_hist(RREAS_list[[5]])
 ```
 
-Match with CTD means
+Match with CTD means (uncomment if change to mean temperature for VC term)
 ```{r}
-yoy_hake$mean_temp <- ctd_means$temperature[match(yoy_hake$year, ctd_means$year)]
-yoy_dab$mean_temp <- ctd_means$temperature[match(yoy_dab$year, ctd_means$year)]
-yoy_anch$mean_temp <- ctd_means$temperature[match(yoy_anch$year, ctd_means$year)]
-yoy_widow$mean_temp <- ctd_means$temperature[match(yoy_widow$year, ctd_means$year)]
-yoy_sbelly$mean_temp <- ctd_means$temperature[match(yoy_sbelly$year, ctd_means$year)]
-
-RREAS_list <- lapply(RREAS_list, function(x)
-  mutate(x, mean_temp = ctd_means$temperature[match(x$year, ctd_means$year)],
-         lncpue = log(x$catch + 1)))
+# yoy_hake$mean_temp <- ctd_means$temperature[match(yoy_hake$year, ctd_means$year)]
+# yoy_dab$mean_temp <- ctd_means$temperature[match(yoy_dab$year, ctd_means$year)]
+# yoy_anch$mean_temp <- ctd_means$temperature[match(yoy_anch$year, ctd_means$year)]
+# yoy_widow$mean_temp <- ctd_means$temperature[match(yoy_widow$year, ctd_means$year)]
+# yoy_sbelly$mean_temp <- ctd_means$temperature[match(yoy_sbelly$year, ctd_means$year)]
+# 
+# RREAS_list <- lapply(RREAS_list, function(x)
+#   mutate(x, mean_temp = ctd_means$temperature[match(x$year, ctd_means$year)],
+#          lncpue = log(x$catch + 1)))
 ```
 
 ### Gaussian on positive catches
@@ -598,7 +606,7 @@ hake_base <- gam(lncpue ~ factor(year) +
                    s(julian) +
                    s(longitude, latitude) +
                    s(bottom_depth, k = 4),
-                 data = RREAS_list[[1]][RREAS_list[[1]]$lncpue > 0,])
+                 data = yoy_hake[yoy_hake$lncpue > 0,])
 summary(hake_base)
 
 par(mfrow = c(2, 2))
@@ -609,7 +617,7 @@ plot(hake_base)
 
 
 # Select best GAM
-hake_gam <- catch_GAMs(RREAS_list[[1]])
+hake_gam <- catch_GAMs(yoy_hake)
 summary(hake_gam[[2]])
 
 par(mfrow = c(2, 2))
@@ -626,7 +634,7 @@ dab_base <- gam(lncpue ~ factor(year) +
                   s(julian) +
                   s(longitude, latitude) +
                   s(bottom_depth, k = 4),
-                data = RREAS_list[[2]][RREAS_list[[2]]$lncpue > 0,])
+                data = yoy_dab[yoy_dab$lncpue > 0,])
 summary(dab_base)
 
 par(mfrow = c(2, 2))
@@ -637,7 +645,7 @@ plot(dab_base)
 
 
 # Select best GAM
-dab_gam <- catch_GAMs(RREAS_list[[2]])
+dab_gam <- catch_GAMs(yoy_dab)
 summary(dab_gam[[2]])
 
 par(mfrow = c(2, 2))
@@ -655,7 +663,7 @@ anch_base <- gam(lncpue ~ factor(year) +
                   s(julian) +
                   s(longitude, latitude) +
                   s(bottom_depth, k = 4),
-                data = RREAS_list[[3]][RREAS_list[[3]]$lncpue > 0,])
+                data = yoy_anch[yoy_anch$lncpue > 0,])
 summary(anch_base)
 
 par(mfrow = c(2, 2))
@@ -666,7 +674,7 @@ plot(anch_base)
 
 
 # Select best GAM
-anch_gam <- catch_GAMs(RREAS_list[[3]])
+anch_gam <- catch_GAMs(yoy_anch)
 summary(anch_gam[[2]])
 
 par(mfrow = c(2, 2))
@@ -683,7 +691,7 @@ widow_base <- gam(lncpue ~ factor(year) +
                   s(julian) +
                   s(longitude, latitude) +
                   s(bottom_depth, k = 4),
-                data = RREAS_list[[4]][RREAS_list[[4]]$lncpue > 0,])
+                data = yoy_widow[yoy_widow$lncpue > 0,])
 summary(widow_base)
 
 par(mfrow = c(2, 2))
@@ -694,7 +702,7 @@ plot(widow_base)
 
 
 # Select best GAM
-widow_gam <- catch_GAMs(RREAS_list[[4]])
+widow_gam <- catch_GAMs(yoy_widow)
 summary(widow_gam[[2]])
 
 par(mfrow = c(2, 2))
@@ -711,7 +719,7 @@ sbelly_base <- gam(lncpue ~ factor(year) +
                   s(julian) +
                   s(longitude, latitude) +
                   s(bottom_depth, k = 4),
-                data = RREAS_list[[5]][RREAS_list[[5]]$lncpue > 0,])
+                data = yoy_sbelly[yoy_sbelly$lncpue > 0,])
 summary(sbelly_base)
 
 par(mfrow = c(2, 2))
@@ -722,7 +730,7 @@ plot(sbelly_base)
 
 
 # Select best GAM
-sbelly_gam <- catch_GAMs(RREAS_list[[5]])
+sbelly_gam <- catch_GAMs(yoy_sbelly)
 summary(sbelly_gam[[2]])
 
 par(mfrow = c(2, 2))
@@ -742,18 +750,18 @@ hake_base_t <- gam(catch + 1 ~ factor(year) +
                    s(bottom_depth, k = 4),
                  family = tw(link = "log"),
                  method = 'REML',
-                 data = RREAS_list[[1]])
+                 data = yoy_hake)
 summary(hake_base_t)
 
 par(mfrow = c(2, 2))
 gam.check(hake_base_t)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(3, 2))
 plot(hake_base_t)
 
 
 # Select best GAM
-hake_gam_t <- tweedie_GAMs(RREAS_list[[1]])
+hake_gam_t <- tweedie_GAMs(yoy_hake)
 summary(hake_gam_t[[2]])
 
 AIC(hake_gam_t[[2]])
@@ -761,15 +769,15 @@ AIC(hake_gam_t[[2]])
 par(mfrow = c(2, 2))
 gam.check(hake_gam_t[[2]])
 
-par(mfrow = c(2, 2))
+par(mfrow = c(3, 2))
 plot(hake_gam_t[[2]])
 ```
 
 ```{r}
-pred_hake_t <- variable_coefficient(hake_gam_t, RREAS_list[[1]], RREAS_list[[1]]$mean_temp)
+pred_hake_t <- variable_coefficient(hake_gam_t, yoy_hake, yoy_hake$NPGO_pos)
 
-plot_var_coef(hake_gam_t, RREAS_list[[1]], pred_hake_t)
-dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef.jpg'), 
+plot_var_coef(hake_gam_t[[2]], yoy_hake, pred_hake_t)
+dev.copy(jpeg, here::here('results/yoy_hake_preliminary', 'yoy_hake_var_coef.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
 ```
@@ -778,7 +786,7 @@ dev.off()
 ```{r}
 plot_variable(hake_gam_t, 
               2, 
-              c(-3.5, 4.5), 
+              c(-4, 5.2), 
               "Depth", 
               "Species Abundance Anomalies", 
               "s")
@@ -790,11 +798,35 @@ dev.off()
 ```{r}
 plot_variable(hake_gam_t, 
               3, 
-              c(-3.5, 4.5), 
+              c(-4, 5.2), 
               "Day of Year", 
               "", 
               "n")
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_julian.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+plot_variable(hake_gam_t, 
+              4, 
+              c(-4, 5.2), 
+              "Tempterature", 
+              "", 
+              "n")
+dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_temp.jpg'), 
+         height = 10, width = 10, units = 'in', res = 200)
+dev.off()
+```
+
+```{r}
+plot_variable(hake_gam_t, 
+              5, 
+              c(-4, 5.2), 
+              "Day of Year", 
+              "", 
+              "n")
+dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_salinity.jpg'), 
          height = 10, width = 10, units = 'in', res = 200)
 dev.off()
 ```
@@ -807,98 +839,24 @@ dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_distribution.jpg')
 dev.off()
 ```
 
-Variable coefficient term for PDO model
+Split into two models (use model selected for all data)
 ```{r}
-pred_yoy_hake_t <- variable_coefficient2(hake_gam_t, yoy_hake, yoy_hake$PDO_pos)
-
-plot_var_coef_PDO(hake_gam_t, yoy_hake, pred_yoy_hake_t)
-dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef_PDO.jpg'), 
-         height = 15, width = 8, units = 'in', res = 200)
-dev.off()
-```
-
-Size-specific models
-```{r}
-hake_lower <- aggregate(std_length ~ haul_no + cruise, 
-                        data = yoy_hake_sp, 
-                        FUN = length, 
-                        subset = std_length <= 30)
-yoy_hake <- merge_data(hake_lower, yoy_hake)
-names(yoy_hake)[names(yoy_hake) == "std_length"] <- "lower_num"
-
-hake_upper <- aggregate(std_length ~ haul_no + cruise, 
-                        data = yoy_hake_sp, 
-                        FUN = length, 
-                        subset = as.numeric(std_length) > 30)
-yoy_hake <- merge_data(hake_upper, yoy_hake)
-names(yoy_hake)[names(yoy_hake) == "std_length"] <- "upper_num"
-
-hake_total <- aggregate(std_length ~ haul_no + cruise, 
-                        data = yoy_hake_sp, 
-                        FUN = length)
-yoy_hake <- merge_data(hake_total, yoy_hake)
-names(yoy_hake)[names(yoy_hake) == "std_length"] <- "total_num"
-
-yoy_hake$upper_cpue <- (yoy_hake$upper_num / yoy_hake$total_num) * yoy_hake$catch
-yoy_hake$lower_cpue <- (yoy_hake$lower_num / yoy_hake$total_num) * yoy_hake$catch
-
-yoy_hake$upper_cpue[is.na(yoy_hake$upper_cpue)] <- 0
-yoy_hake$lower_cpue[is.na(yoy_hake$lower_cpue)] <- 0
-
-yoy_hake_filtered <- yoy_hake[yoy_hake$year > 1993, ] # no length data before 1994
-```
-
-```{r}
-# Select best GAM
-yoy_hake_gam_all <- tweedie_GAMs(yoy_hake_filtered)
-summary(yoy_hake_gam_all[[2]])
-
-par(mfrow = c(2, 2))
-gam.check(yoy_hake_gam_all[[2]])
-
-par(mfrow = c(2, 2))
-plot(yoy_hake_gam_all[[2]])
-```
-
-```{r}
-pred_yoy_hake_all <- variable_coefficient(yoy_hake_gam_all, yoy_hake_filtered, yoy_hake_filtered$NPGO_pos)
-
-plot_var_coef(yoy_hake_gam_all, yoy_hake_filtered, pred_yoy_hake_all)
-dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef_all.jpg'), 
-         height = 15, width = 8, units = 'in', res = 200)
-dev.off()
-```
-
-```{r}
-location_plot(yoy_hake_gam_all,
-              yoy_hake_filtered)
-dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_distribution_all.jpg'), 
-         height = 15, width = 8, units = 'in', res = 200)
-dev.off()
-```
-
-Histogram of lengths
-```{r}
-hist(yoy_hake_sp$std_length)
-```
-
-Split into two models
-```{r}
-hake_lower <- gam(lower_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = NPGO_pos),
+hake_lower <- gam(lower_cpue + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + 
+                    s(julian) + s(temperature) + s(salinity) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
-                  data = yoy_hake_filtered)
-hake_upper <- gam(upper_cpue + 1 ~ factor(year) + s(lon, lat) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = NPGO_pos),
+                  data = yoy_hake)
+hake_upper <- gam(upper_cpue + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) + s(longitude, latitude, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
-                  data = yoy_hake_filtered)
+                  data = yoy_hake)
 summary(hake_lower)
 summary(hake_upper)
 ```
 
 ```{r}
 location_plot_lengths(hake_lower,
-              yoy_hake_filtered)
+              yoy_hake)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_lower_dis.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
@@ -906,25 +864,25 @@ dev.off()
 
 ```{r}
 location_plot_lengths(hake_upper,
-              yoy_hake_filtered)
+              yoy_hake)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_upper_dis.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
 ```
 
 ```{r}
-pred_yoy_hake_lower <- variable_coefficient_lengths(hake_lower, yoy_hake_filtered, yoy_hake_filtered$NPGO_pos)
+pred_yoy_hake_lower <- variable_coefficient_lengths(hake_lower, yoy_hake, yoy_hake_filtered$NPGO_pos)
 
-plot_var_coef_lengths(hake_lower, yoy_hake_filtered, pred_yoy_hake_lower)
+plot_var_coef_lengths(hake_lower, yoy_hake, pred_yoy_hake_lower)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef_lower.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
 ```
 
 ```{r}
-pred_yoy_hake_upper <- variable_coefficient_lengths(hake_upper, yoy_hake_filtered, yoy_hake_filtered$NPGO_pos)
+pred_yoy_hake_upper <- variable_coefficient_lengths(hake_upper, yoy_hake, yoy_hake_filtered$NPGO_pos)
 
-plot_var_coef_lengths(hake_upper, yoy_hake_filtered, pred_yoy_hake_upper)
+plot_var_coef_lengths(hake_upper, yoy_hake, pred_yoy_hake_upper)
 dev.copy(jpeg, here('results/yoy_hake_preliminary', 'yoy_hake_var_coef_upper.jpg'), 
          height = 15, width = 8, units = 'in', res = 200)
 dev.off()
