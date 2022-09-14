@@ -45,24 +45,16 @@ catch_GAMs <- function(species_subset){
   ts_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
                   s(temperature, k = 4) + s(salinity, k = 4),
                 data = species_subset[species_subset$lncpue > 0,])  
-  #tso_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-  #                 s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4),
-  #               data = species_subset[species_subset$lncpue > 0,])  
-  ts_geog_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-                       s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = mean_temp),
+  ts_NPGO_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                       s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos),
                      data = species_subset[species_subset$lncpue > 0,])    
-  #tso_geog_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-  #                      s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
-  #                      s(longitude, latitude, by = mean_temp),
-  #                    data = species_subset[species_subset$lncpue > 0,])    
-  ts_phen_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-                       s(temperature, k = 4) + s(salinity, k = 4) + s(julian, by = mean_temp),
-                     data = species_subset[species_subset$lncpue > 0,])    
-  #tso_phen_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-  #                      s(temperature, k = 4) + s(salinity, k = 4) + s(oxygen, k = 4) + 
-  #                      s(julian, by = mean_temp),
-  #                    data = species_subset[species_subset$lncpue > 0,])    
-  gam_list <- list(base_gam, ts_gam, ts_geog_gam, ts_phen_gam)
+  ts_PDO_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                       s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = PDO_pos),
+                     data = species_subset[species_subset$lncpue > 0,])   
+  ts_ONI_gam <- gam(lncpue ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                       s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = ONI_pos),
+                     data = species_subset[species_subset$lncpue > 0,])   
+  gam_list <- list(base_gam, ts_gam, ts_NPGO_gam, ts_PDO_gam, ts_ONI_gam)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
                                          function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
@@ -79,17 +71,22 @@ tweedie_GAMs <- function(species_subset){
                family = tw(link = "log"),
                method = 'REML',
                data = species_subset)   
-  ts_geog_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-                      s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = mean_temp),
+  ts_NPGO_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                      s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos),
                     family = tw(link = "log"),
                     method = 'REML',
                     data = species_subset)    
-  ts_phen_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
-                       s(temperature, k = 4) + s(salinity, k = 4) + s(julian, by = mean_temp),
+  ts_PDO_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                      s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = PDO_pos),
                     family = tw(link = "log"),
                     method = 'REML',
-                    data = species_subset)   
-  gam_list <- list(base_tw, ts_tw, ts_geog_tw, ts_phen_tw)
+                    data = species_subset) 
+  ts_ONI_tw <- gam(catch + 1 ~ factor(year) + s(longitude, latitude) + s(bottom_depth, k = 4) + s(julian) +
+                      s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = ONI_pos),
+                    family = tw(link = "log"),
+                    method = 'REML',
+                    data = species_subset) 
+  gam_list <- list(base_tw, ts_tw, ts_NPGO_tw, ts_PDO_tw, ts_ONI_tw)
   best_gam <- gam_list[[which.min(sapply(1:length(gam_list),
                                          function(x) min(gam_list[[x]]$aic)))]] 
   return_list <- list(gam_list, best_gam)
