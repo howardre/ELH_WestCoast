@@ -121,6 +121,10 @@ climate_match <- function(data){
   data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
   match_oni <- match(data$year, oni_means$year)
   data$ONI_mean <- oni_means$ONI_mean[match_oni]
+  # Convert climate indices to positive values
+  data$NPGO_pos <- data$NPGO_mean + abs(min(data$NPGO_mean))
+  data$PDO_pos <- data$PDO_mean + abs(min(data$PDO_mean))
+  data$ONI_pos <- data$ONI_mean + abs(min(data$ONI_mean))
   return(data)
 }
 ```
