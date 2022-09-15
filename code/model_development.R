@@ -33,11 +33,13 @@ hake_gams <- lapply(unique(yoy_hake$year), function(x) {
 hake_data <- split(yoy_hake, yoy_hake$year)
 
 hake_cv <- lapply(hake_gams, function(x) {
-  exp(predict(x, 
-              newdata = hake_data, 
-              type = "link"))
-})
-  
+  lapply(hake_data, function(y) {
+    y$pred <- exp(predict(x,
+                          newdata = y,
+                          type = "response",
+                          exclude = "s(year"))
+    })
+  })
   
   
 # Test prediction method (getting very large predictions that don't make sense)
