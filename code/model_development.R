@@ -9,11 +9,17 @@ library(mapdata)
 library(here)
 library(tidyr)
 library(purrr)
+library(ggplot2)
 
 # Load data
 yoy_hake <- readRDS(here('data', 'yoy_hake.rdata')) %>% 
-  drop_na(temperature, salinity, bottom_depth) %>%
-  filter(catch < 711)
+  drop_na(temperature, salinity, bottom_depth)  %>% 
+  dplyr::filter(catch < 2500)
+
+ggplot(yoy_hake) +
+  geom_point(aes(catch, bottom_depth),
+             alpha = 0.1,
+             size = 2)
 
 # Functions
 
@@ -32,31 +38,16 @@ hake_gams <- lapply(unique(yoy_hake$year), function(x) {
 
 hake_data <- split(yoy_hake, yoy_hake$year)
 
-hake_cv <- lapply(hake_gams, function(x) {
-  lapply(hake_data, function(y) {
-    y$pred <- exp(predict(x,
-                          newdata = y,
-                          type = "response",
-                          exclude = "s(year"))
-    })
-  })
-  
-  
-# Test prediction method (getting very large predictions that don't make sense)
-yoy_hake <- dplyr::filter(yoy_hake, catch < 711) # seems like the issue is with outliers?
-wo2000_gam <- gam(hake_formula,
-                  family = tw(link = "log"),
-                  method = "REML",
-                  data = yoy_hake[yoy_hake$year != 2000, ])
+# Get predictions
+hake_results <- hake_data
+for(i in seq_along(hake_gams)){
+  for(j in seq_along(hake_data)){
+  hake_results[[j]]$pred <- predict(hake_gams[[i]],
+                               newdata = hake_data[[j]],
+                               type = "response",                                   
+                               exclude = "s(year)")
+  }}
 
-data_2000 <- dplyr::filter(yoy_hake, year == 2000)
-
-data_2000$pred <- predict(wo2000_gam,
-                          newdata = data_2000,
-                          type = "response",
-                          exclude = "s(year)")
-
-sqrt(mean(data_2000$catch - data_2000$pred, na.rm = T)^2) 
 
 # Use models selected during model exploration
 hake_total <- gam(hake_formula,
