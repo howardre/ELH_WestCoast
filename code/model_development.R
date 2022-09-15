@@ -28,6 +28,23 @@ ggplot(yoy_hake) +
 hake_formula <- formula(catch + 1 ~ s(year, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
                        s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
 
+# Use models selected during model exploration
+hake_total <- gam(hake_formula,
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = yoy_hake)
+hake_lower <- gam(hake_formula,
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = yoy_hake)
+hake_upper <- gam(hake_formula,
+                  family = tw(link = "log"),
+                  method = 'REML',
+                  data = yoy_hake)
+summary(hake_total)
+summary(hake_lower)
+summary(hake_upper)
+
 # Run GAMs with each year left out
 hake_gams <- lapply(unique(yoy_hake$year), function(x) {
   output <- gam(hake_formula,
@@ -48,21 +65,8 @@ for(i in seq_along(hake_gams)){
                                exclude = "s(year)")
   }}
 
+# Calculate RMSE
 
-# Use models selected during model exploration
-hake_total <- gam(hake_formula,
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = yoy_hake)
-hake_lower <- gam(hake_formula,
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = yoy_hake)
-hake_upper <- gam(hake_formula,
-                  family = tw(link = "log"),
-                  method = 'REML',
-                  data = yoy_hake)
-summary(hake_total)
-summary(hake_lower)
-summary(hake_upper)
+
+
 
