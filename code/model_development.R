@@ -46,6 +46,7 @@ summary(hake_lower)
 summary(hake_upper)
 
 # Run GAMs with each year left out
+# Leave out one year, run model on remaining data
 hake_gams <- lapply(unique(yoy_hake$year), function(x) {
   output <- gam(hake_formula,
                 family = tw(link = "log"),
@@ -56,6 +57,7 @@ hake_gams <- lapply(unique(yoy_hake$year), function(x) {
 hake_data <- split(yoy_hake, yoy_hake$year)
 
 # Get predictions
+# Predict on the left out year's data
 hake_results <- hake_data
 for(i in seq_along(hake_gams)){
   for(j in seq_along(hake_data)){
@@ -66,7 +68,13 @@ for(i in seq_along(hake_gams)){
   }}
 
 # Calculate RMSE
+# Get values for each year and overall value
+hake_RMSE <- lapply(hake_results, function(x) {
+  sqrt(mean(x$catch - x$pred)^2)
+})
 
+mean(unlist(hake_RMSE))
 
-
+hake_df$year <- rownames(as.data.frame(do.call(rbind, hake_RMSE)))
+rownames(hake_df) <- NULL
 
