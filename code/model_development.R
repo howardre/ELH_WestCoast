@@ -15,7 +15,7 @@ library(fields)
 library(colorspace)
 
 # Load data ----
-yoy_hake <- readRDS(here('data', 'yoy_hake.rdata')) %>% 
+yoy_hake <- readRDS(here('data', 'yoy_hake.Rdata')) %>% 
   tidyr::drop_na(temperature, salinity, bottom_depth)  
 
 ctds <- readRDS(here('data', 'ctd_means.rdata'))
@@ -141,6 +141,8 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
 # Aggregate model
 hake_formula <- formula(catch + 1 ~ s(year, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
                           s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
+hake_formula_woy <- formula(catch + 1 ~ s(longitude, latitude) + s(bottom_depth, k = 4) +
+                              s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
 
 # Use models selected during model exploration
 hake_total <- gam(hake_formula,
@@ -185,6 +187,40 @@ hake_error <- as.data.frame(do.call(rbind, hake_RMSE))
 hake_error$year <- rownames(hake_error)
 rownames(hake_error) <- NULL
 colnames(hake_error)[1] <- "RMSE"
+
+# Test without year
+hake_gams_woy <- lapply(unique(yoy_hake$year), function(x) {
+  output <- gam(hake_formula_woy,
+                family = tw(link = "log"),
+                method = 'REML',
+                data = yoy_hake[yoy_hake$year != x, ])
+})
+
+# Get predictions
+# Predict on the left out year's data
+hake_results_woy <- hake_data
+for(i in seq_along(hake_gams_woy)){
+  for(j in seq_along(hake_data)){
+    hake_results_woy[[j]]$pred <- predict(hake_gams_woy[[i]],
+                                      newdata = hake_data[[j]],
+                                      type = "response",                                   
+                                      exclude = "s(year)")
+  }}
+
+# Calculate RMSE
+# Get values for each year and overall value
+hake_RMSE_woy <- lapply(hake_results_woy, function(x) {
+  rmse(x$catch, x$pred)
+})
+
+range(yoy_hake$catch)
+mean(unlist(hake_RMSE_woy))
+
+hake_error_woy <- as.data.frame(do.call(rbind, hake_RMSE_woy))
+hake_error_woy$year <- rownames(hake_error_woy)
+rownames(hake_error_woy) <- NULL
+colnames(hake_error_woy)[1] <- "RMSE"
+
 
 # Plot the RMSE for each year
 hake_error$temperature <- ctd_means$temperature[match(hake_error$year, ctd_means$year)]
