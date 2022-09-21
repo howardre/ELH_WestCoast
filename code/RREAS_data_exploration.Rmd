@@ -102,25 +102,13 @@ add_lengths <- function(species, split, lengths){
 
 # Add climate indices
 climate_match <- function(data){
-  data <- merge(data, npgo_index,
-                by.x = c("year", "month"),
-                by.y = c("YEAR", "MONTH"),
-                all.x = T, all.y = F)
-  data <- merge(data, pdo_index,
-                by.x = c("year", "month"),
-                by.y = c("year", "month"),
-                all.x = T, all.y = F)
-  data <- subset(data, select = -c(Date))
-  data <- merge(data, oni_matrix,
-                by.x = c("year", "month"),
-                by.y = c("year", "month"),
-                all.x = T, all.y = F)
+  data <- subset(data, select = -c(date))
   match_npgo <- match(data$year, npgo_means$YEAR)
-  data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
+  data$NPGO_mean <- npgo_means$NPGO[match_npgo]
   match_pdo <- match(data$year, pdo_means$year)
-  data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
+  data$PDO_mean <- pdo_means$PDO[match_pdo]
   match_oni <- match(data$year, oni_means$year)
-  data$ONI_mean <- oni_means$ONI_mean[match_oni]
+  data$ONI_mean <- oni_means$ONI[match_oni]
   # Convert climate indices to positive values
   data$NPGO_pos <- data$NPGO_mean + abs(min(data$NPGO_mean))
   data$PDO_pos <- data$PDO_mean + abs(min(data$PDO_mean))
@@ -296,18 +284,21 @@ oni_matrix <- melt(as.matrix(oni_index))
 colnames(oni_matrix) <- c("year", "month", "ONI")
 
 # Means
-npgo_means <- npgo_index %>%
+
+npgo_filtered <- npgo_index %>%
   filter(MONTH >= 1 & MONTH <= 3) %>%
-  group_by(YEAR) %>%
-  summarise(NPGO_mean = mean(NPGO))
-pdo_means <- pdo_index %>%
+  select(YEAR, NPGO) 
+npgo_means <- aggregate(NPGO ~ YEAR, npgo_filtered, mean)
+
+pdo_filtered <- pdo_index %>%
   filter(month >= 1 & month <= 3) %>%
-  group_by(year) %>%
-  summarise(PDO_mean = mean(PDO))
-oni_means <- oni_matrix %>%
+  select(year, PDO) 
+pdo_means <- aggregate(PDO ~ year, pdo_filtered, mean)
+
+oni_filtered <- oni_matrix %>%
   filter(month >= 1 & month <= 3) %>%
-  group_by(year) %>%
-  summarise(ONI_mean = mean(ONI))
+  select(year, ONI) 
+oni_means <- aggregate(ONI ~ year, oni_filtered, mean)
 ```
 
 Add climate indices
