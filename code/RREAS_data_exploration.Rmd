@@ -145,7 +145,10 @@ RREAS_length_info <- info('FED_Rockfish_Length')
 RREAS_length_list <- c('cruise', 'haul_no', 'latitude',
                        'station', 'time', 'bottom_depth',
                        'maturity', 'std_length')
+```
 
+Isolate species
+```{r}
 # Create data sets for each species YOY
 # Abundance
 RREAS_hake <- extract_ERDDAP(RREAS_info, RREAS_list,
@@ -158,7 +161,50 @@ RREAS_widow <- extract_ERDDAP(RREAS_info, RREAS_list,
                               'sci_name="Sebastes entomelas"')
 RREAS_shortbelly <- extract_ERDDAP(RREAS_info, RREAS_list,
                                    'sci_name="Sebastes jordani"')
+```
 
+Replace outliers
+```{r}
+ggplot(RREAS_hake) +
+  geom_point(aes(catch, as.numeric(bottom_depth)),
+             alpha = 0.1,
+             size = 2)
+RREAS_hake['catch'][RREAS_hake['catch'] > 4000] <- 4000
+```
+
+```{r}
+ggplot(RREAS_sanddab) +
+    geom_point(aes(catch, as.numeric(bottom_depth)),
+             alpha = 0.1,
+             size = 2)
+RREAS_sanddab['catch'][RREAS_sanddab['catch'] > 1250] <- 1250
+```
+
+```{r}
+ggplot(RREAS_anchovy) +
+    geom_point(aes(catch, as.numeric(bottom_depth)),
+             alpha = 0.1,
+             size = 2)
+RREAS_anchovy['catch'][RREAS_anchovy['catch'] > 7000] <- 7000
+```
+
+```{r}
+ggplot(RREAS_widow) +
+    geom_point(aes(catch, as.numeric(bottom_depth)),
+             alpha = 0.1,
+             size = 2)
+RREAS_widow['catch'][RREAS_widow['catch'] > 1000] <- 1000
+```
+
+```{r}
+ggplot(RREAS_shortbelly) +
+    geom_point(aes(catch, as.numeric(bottom_depth)),
+             alpha = 0.1,
+             size = 2)
+RREAS_shortbelly['catch'][RREAS_shortbelly['catch'] > 5000] <- 5000
+```
+
+```{r}
 # Change date format, add julian day
 RREAS_list <- list(RREAS_hake, RREAS_sanddab, RREAS_anchovy, RREAS_widow, RREAS_shortbelly)
 names(RREAS_list) <- c("hake", "sanddab", "anchovy", "widow", "shortbelly")
@@ -175,7 +221,9 @@ RREAS_list <- lapply(RREAS_list, function(x) {
            longitude = as.numeric(longitude),
            bottom_depth = as.numeric(bottom_depth)) 
   })
+```
 
+```{r}
 # Lengths
 length_hake <- extract_ERDDAP(RREAS_length_info, RREAS_length_list,
                              'sci_name="Merluccius productus"')
@@ -285,8 +333,6 @@ yoy_anchovy <- add_lengths(RREAS_list_env[[3]], 35, length_list[[3]]) # Butler e
 yoy_widow <- add_lengths(RREAS_list_env[[4]], 31, length_list[[4]]) # Laroche & Richardson (1981)
 yoy_shortbelly <- add_lengths(RREAS_list_env[[5]], 25, length_list[[5]]) # Norton et al. (2001)
 ```
-
-
 
 ```{r}
 # Save final dataframes
