@@ -7,7 +7,6 @@ library(mgcv)
 library(maps)
 library(mapdata)
 library(here)
-library(tidyr)
 library(purrr)
 library(ggplot2)
 library(Metrics)
@@ -17,20 +16,13 @@ library(colorspace)
 
 # Load data ----
 yoy_hake <- readRDS(here('data', 'yoy_hake.rdata')) %>% 
-  drop_na(temperature, salinity, bottom_depth)  %>% 
-  filter(catch < 2500)
+  tidyr::drop_na(temperature, salinity, bottom_depth)  
 
 ctds <- readRDS(here('data', 'ctd_means.rdata'))
 
 ctd_means <- ctds %>%
   group_by(year) %>%
   summarise(across(temperature, mean, na.rm = TRUE))
-
-# Look at outliers
-ggplot(yoy_hake) +
-  geom_point(aes(catch, bottom_depth),
-             alpha = 0.1,
-             size = 2)
 
 # Functions ----
 source(here('code/functions', 'vis_gam_COLORS.R'))
