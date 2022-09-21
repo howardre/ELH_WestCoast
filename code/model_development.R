@@ -17,6 +17,7 @@ library(colorspace)
 # Load data ----
 yoy_hake <- readRDS(here('data', 'yoy_hake.Rdata')) %>% 
   tidyr::drop_na(temperature, salinity, bottom_depth)  
+yoy_hake$year_f <- as.factor(yoy_hake$year)
 
 ctds <- readRDS(here('data', 'ctd_means.rdata'))
 
@@ -139,7 +140,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
 
 # Hake ----
 # Aggregate model
-hake_formula <- formula(catch + 1 ~ s(year, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
+hake_formula <- formula(catch + 1 ~ s(year_f, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
                           s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
 hake_formula_woy <- formula(catch + 1 ~ s(longitude, latitude) + s(bottom_depth, k = 4) +
                               s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
@@ -203,8 +204,7 @@ for(i in seq_along(hake_gams_woy)){
   for(j in seq_along(hake_data)){
     hake_results_woy[[j]]$pred <- predict(hake_gams_woy[[i]],
                                       newdata = hake_data[[j]],
-                                      type = "response",                                   
-                                      exclude = "s(year)")
+                                      type = "response")
   }}
 
 # Calculate RMSE
@@ -229,6 +229,11 @@ ggplot(hake_error) +
   geom_line(aes(year, RMSE),
              size = 1,
              group = 1) 
+
+ggplot(hake_error_woy) +
+  geom_line(aes(year, RMSE),
+            size = 1,
+            group = 1)
 
 ggplot(hake_error) +
   geom_line(aes(year, temperature),
