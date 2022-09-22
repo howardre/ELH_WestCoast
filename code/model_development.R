@@ -16,7 +16,8 @@ library(colorspace)
 
 # Load data ----
 yoy_hake <- readRDS(here('data', 'yoy_hake.Rdata')) %>% 
-  tidyr::drop_na(temperature, salinity, bottom_depth)  
+  tidyr::drop_na(temperature, salinity, bottom_depth) %>%
+  filter(catch < 2500)
 yoy_hake$year_f <- as.factor(yoy_hake$year)
 
 ctds <- readRDS(here('data', 'ctd_means.rdata'))
@@ -141,9 +142,9 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
 # Hake ----
 # Aggregate model
 hake_formula <- formula(catch + 1 ~ s(year_f, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
-                          s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
+                          s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = factor(NPGO_pos)))
 hake_formula_woy <- formula(catch + 1 ~ s(longitude, latitude) + s(bottom_depth, k = 4) +
-                              s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
+                              s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = factor(NPGO_pos)))
 
 # Use models selected during model exploration
 hake_total <- gam(hake_formula,
@@ -155,14 +156,14 @@ summary(hake_total)
 # Leave one group out cross validation
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
-hake_gams <- lapply(unique(yoy_hake$year), function(x) {
+hake_gams <- lapply(unique(yoy_hake$year_f), function(x) {
   output <- gam(hake_formula,
                 family = tw(link = "log"),
                 method = 'REML',
-                data = yoy_hake[yoy_hake$year != x, ])
+                data = yoy_hake[yoy_hake$year_f != x, ])
 })
 
-hake_data <- split(yoy_hake, yoy_hake$year)
+hake_data <- split(yoy_hake, yoy_hake$year_f)
 
 # Get predictions
 # Predict on the left out year's data
@@ -172,7 +173,7 @@ for(i in seq_along(hake_gams)){
   hake_results[[j]]$pred <- predict(hake_gams[[i]],
                                newdata = hake_data[[j]],
                                type = "response",                                   
-                               exclude = "s(year)")
+                               exclude = "s(year_f)")
   }}
 
 # Calculate RMSE
@@ -190,11 +191,11 @@ rownames(hake_error) <- NULL
 colnames(hake_error)[1] <- "RMSE"
 
 # Test without year
-hake_gams_woy <- lapply(unique(yoy_hake$year), function(x) {
+hake_gams_woy <- lapply(unique(yoy_hake$year_f), function(x) {
   output <- gam(hake_formula_woy,
                 family = tw(link = "log"),
                 method = 'REML',
-                data = yoy_hake[yoy_hake$year != x, ])
+                data = yoy_hake[yoy_hake$year_f != x, ])
 })
 
 # Get predictions
