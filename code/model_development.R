@@ -142,9 +142,9 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
 # Hake ----
 # Aggregate model
 hake_formula <- formula(catch + 1 ~ s(year_f, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
-                          s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = factor(NPGO_pos)))
+                          s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
 hake_formula_woy <- formula(catch + 1 ~ s(longitude, latitude) + s(bottom_depth, k = 4) +
-                              s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = factor(NPGO_pos)))
+                              s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
 
 # Use models selected during model exploration
 hake_total <- gam(hake_formula,
