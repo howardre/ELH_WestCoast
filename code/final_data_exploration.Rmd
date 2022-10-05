@@ -1,0 +1,373 @@
+---
+title: "RREAS Original"
+author: "Rebecca Howard"
+date: "2022-08-25"
+output: html_document
+---
+
+
+```{r setup, include = FALSE}
+### Load libraries
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(grid)
+library(reshape2)
+library(here)
+```
+
+Functions
+```{r}
+# Get data into appropriate format
+clean_catch <- function(data_list, i){
+  data_frame <- as.data.frame(data_list[[i]])
+  names(data_frame) <- tolower(names(data_frame))
+  names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
+  names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
+  names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
+  data_frame$lncatch <- log(data_frame$catch + 1)
+  return(data_frame)
+}
+
+clean_sp <- function(data_list, i){
+  data_frame <- as.data.frame(data_list[[i]])
+  names(data_frame) <- tolower(names(data_frame))
+  names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
+  names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
+  names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
+  names(data_frame)[names(data_frame) == 'nmeas'] <- 'num_measured'
+  names(data_frame)[names(data_frame) == 'exp'] <- 'haul_exp'
+  data_frame$lncatch <- log(data_frame$catch + 1)
+  return(data_frame)
+}
+
+# Plot relevant variables
+plot_variables <- function(data){
+  plot(table(data$year[data$catch > 0]),
+       ylab = 'Frequency',
+       xlab = 'Year',
+       main = '')
+  plot(table(data$jday[data$catch > 0]),
+       ylab = 'Frequency',
+       xlab = 'Day of Year',
+       main = '')
+  plot(table(data$lat[data$catch > 0]),
+       ylab = 'Frequency',
+       xlab = 'Latitude',
+       main = '')
+  plot(table(data$lon[data$catch > 0]),
+       ylab = 'Frequency',
+       xlab = 'Longitude',
+       main = '')
+  plot(table(data$strata[data$catch > 0]),
+       ylab = 'Frequency',
+       xlab = 'Strata',
+       main = '')
+  hist(data$catch, 
+       breaks = 100,
+       main = '',
+       xlab = 'Catch') 
+}
+
+merge_data <- function(data1, data2){
+  merge(data1, data2,
+        by.x = c("cruise", "haul_no"),
+        by.y = c("cruise", "haul_no"),
+        all.x = F, all.y = T)
+}
+
+
+climate_match <- function(data){
+  data <- merge(data, npgo_index,
+                by.x = c("year", "month"),
+                by.y = c("YEAR", "MONTH"),
+                all.x = T, all.y = F)
+  data <- merge(data, pdo_index,
+                by.x = c("year", "month"),
+                by.y = c("year", "month"),
+                all.x = T, all.y = F)
+  data <- subset(data, select = -c(Date))
+  data <- merge(data, oni_matrix,
+                by.x = c("year", "month"),
+                by.y = c("year", "month"),
+                all.x = T, all.y = F)
+  match_npgo <- match(data$year, npgo_means$YEAR)
+  data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
+  match_pdo <- match(data$year, pdo_means$year)
+  data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
+  match_oni <- match(data$year, oni_means$year)
+  data$ONI_mean <- oni_means$ONI_mean[match_oni]
+  return(data)
+}
+```
+
+Data from emails
+```{r}
+# Load data
+anch_exl_data <- here('data', 'anch_yoy.xlsx')
+excel_sheets(path = anch_exl_data) # view the worksheets
+anch_tab_names <- excel_sheets(path = anch_exl_data)
+
+anch_data_list <- lapply(anch_tab_names, function(x) read_excel(path = anch_exl_data, sheet = x))
+
+anch_catch <- clean_catch(anch_data_list, 1)
+anch_sp <- clean_sp(anch_data_list, 2)
+```
+
+
+Add climate indices
+```{r}
+# NPGO
+npgo_index <- read.table("../data/npgo_data.txt",
+                         header = T)
+
+# PDO
+pdo_index <- read.csv("../data/pdo_timeseries_ersstv5.csv")
+pdo_index$Date <- as.Date(pdo_index$Date, "%Y-%m-%d")
+pdo_index <- mutate(pdo_index,
+                    year = lubridate::year(Date),
+                    month = lubridate::month(Date))
+
+# ONI
+oni_index <- read.table("../data/oni_data.txt",
+                        row.names = 1)
+colnames(oni_index) <- c("01", "02", "03", "04",
+                         "05", "06", "07", "08",
+                         "09", "10", "11", "12")
+oni_matrix <- melt(as.matrix(oni_index))
+colnames(oni_matrix) <- c("year", "month", "ONI")
+
+# Means
+npgo_means <- npgo_index %>%
+  filter(MONTH >= 1 & MONTH <= 3) %>%
+  group_by(YEAR) %>%
+  summarise(NPGO_mean = mean(NPGO))
+pdo_means <- pdo_index %>%
+  filter(month >= 1 & month <= 3) %>%
+  group_by(year) %>%
+  summarise(PDO_mean = mean(PDO))
+oni_means <- oni_matrix %>%
+  filter(month >= 1 & month <= 3) %>%
+  group_by(year) %>%
+  summarise(ONI_mean = mean(ONI))
+
+# Match to dataframes
+anch_catch <- climate_match(anch_catch)
+```
+
+
+```{r}
+# Save final dataframes
+saveRDS(anch_catch, file = "../data/anch_catch.Rdata")
+```
+
+
+```{r}
+# Consolidate lengths
+anch_sizes <- anch_sp %>% mutate(size_class = case_when(std_length <= 35 ~ "small",
+                                                        std_length > 35 ~ "large")) 
+
+anch_subset <- anch_sizes %>% 
+  group_by(haul_no, cruise, size_class) %>%
+  mutate(size_class, factor(size_class, levels = c("small", "large"))) %>%
+  count(size_count = length(size_class))
+
+
+# %>%
+#   group_by(haul_no, cruise) %>%
+#   summarise(size_count = n_distinct(size_class))
+
+```
+
+```{r}
+  lower <- aggregate(std_length ~ haul_no + cruise,
+                         data = anch_sp,
+                         FUN = length,
+                         subset = std_length <= 35)
+  yoy <- merge_data(lower, species)
+  names(yoy)[names(yoy) == "std_length"] <- "lower_num"
+  
+  upper <- aggregate(std_length ~ haul_no + cruise,
+                         data = anch_sp,
+                         FUN = length,
+                         subset = std_length > 35)
+  yoy <- merge_data(upper, yoy)
+  names(yoy)[names(yoy) == "std_length"] <- "upper_num"
+  
+  total <- aggregate(std_length ~ haul_no + cruise,
+                         data = anch_sp,
+                         FUN = length)
+  yoy <- merge_data(total, yoy)
+  names(yoy)[names(yoy) == "std_length"] <- "total_num"
+  
+  yoy$upper_cpue <- (yoy$upper_num / yoy$total_num) * yoy$catch
+  yoy$lower_cpue <- (yoy$lower_num / yoy$total_num) * yoy$catch
+  
+  yoy$upper_cpue[is.na(yoy$upper_cpue)] <- 0
+  yoy$lower_cpue[is.na(yoy$lower_cpue)] <- 0
+  
+  yoy_filtered <- yoy[yoy$year > min(lengths$year), ]
+  yoy_filtered$lncpue <- log(yoy_filtered$catch + 1)
+
+
+
+
+```
+
+```{r}
+par(mfrow = c(2, 3))
+plot_variables(anch_catch)
+```
+
+```{r}
+# Look at pattern of days by latitude
+ggplot(anch_catch) +
+  geom_point(aes(jday, lat))
+```
+
+```{r}
+ggplot(anch_sp) +
+  geom_point(aes(bottom_depth, std_length),
+                 alpha = 0.1,
+                 size = 2)
+```
+
+```{r}
+anch_sp %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = c(0, 250, 500, 750,
+                                                  1000, 1250, 1500,
+                                                  1750, 2000, 2250,
+                                                  2500, 2750, 3000,
+                                                  3250, 3500, 3750))) %>% 
+  ggplot(aes(depth_cut, std_length)) +
+  geom_boxplot()
+```
+
+```{r, fig.width = 10, fig.height = 5, warning = FALSE, echo = FALSE}
+# polish boxplot for depth/length
+anch_sp %>%
+  mutate(depth_cut = cut(bottom_depth, breaks = seq(0, 3750, by = 250))) %>% 
+  ggplot() +
+  geom_boxplot(aes(depth_cut, std_length),
+               fill = "darkseagreen3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (mm)",
+       x = "Depth (m)",
+       title = "Size of YOY Anchovy by Depth") +
+  scale_x_discrete(labels = c("0-250", "250-500", "500-750", "750-1000",
+                              "1000-1250", "1250-1500", "1500-1750",
+                              "1750-2000", "2000-2250", "2250-2500",
+                              "2500-2750", "2750-3000", "3000-3250",
+                              "3250-3500", "3500-3750")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7))
+```
+
+```{r}
+# Investigate latitude
+ggplot(anch_sp) +
+  geom_point(aes(lat, std_length),
+                 alpha = 0.1,
+                 size = 2)
+```
+
+
+```{r}
+anch_sp %>%
+  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot(aes(lat_cut, std_length)) +
+  geom_boxplot()
+```
+
+```{r, fig.width = 10, fig.height = 5, warning = FALSE, echo = FALSE}
+# polish boxplot for lat/length
+anch_sp %>%
+  mutate(lat_cut = cut(lat, breaks = seq(32, 48, by = 1))) %>% 
+  ggplot() +
+  geom_boxplot(aes(lat_cut, std_length),
+               fill = "cyan3", 
+               outlier.alpha = 0.2) +  
+  labs(y = "Length (mm)",
+       x = "Latitude",
+       title = "Size of YOY Anchovy by Latitude") +
+  scale_x_discrete(labels = c("32-33", "33-34", "34-35", "35-36", "36-37",
+                              "37-38", "38-39", "39-40", "40-41", "41-42",
+                              "42-43", "43-44", "44-45", "45-46", "46-47",
+                              "47-48", "48-49")) +
+  theme_classic() +
+  theme(panel.background = element_rect(fill = "gray91", colour = "gray91"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size = 22, family = "serif", face = "bold"),
+        axis.text = element_text(family = "serif", size = 14),
+        axis.title = element_text(family = "serif", size = 18),
+        axis.text.x = element_text(angle = 45, vjust = 0.7))
+```
+
+```{r}
+# Make maps of catches
+west_coast <- map_data("usa")
+```
+
+```{r, warning = FALSE, echo = FALSE}
+ggplot() +  
+  geom_polygon(aes(long, lat, group = group), data = west_coast,
+               fill = "lightyellow4", 
+               colour = "black") +
+  geom_point(data = anch_catch, 
+            aes(lon, lat,
+                size = catch),
+            color = "salmon") +
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 48))
+
+yoy_anchplot1 <- ggplot() +  
+  geom_polygon(aes(long, lat, group = group), data = west_coast,
+               fill = "lightyellow4", 
+               colour = "black") +
+  geom_point(data = anch_catch, 
+            aes(lon, lat,
+                size = catch),
+            color = "salmon") +
+  coord_quickmap(xlim = c(-126, -123), ylim = c(42, 48))
+
+yoy_anchplot2 <- ggplot() +  
+  geom_polygon(aes(long, lat, group = group), data = west_coast,
+               fill = "lightyellow4", 
+               colour = "black") +
+  geom_point(data = anch_catch, 
+            aes(lon, lat,
+                size = catch),
+            color = "salmon") +
+  coord_quickmap(xlim = c(-126, -120), ylim = c(35, 42))
+
+yoy_anchplot3 <- ggplot() +  
+  geom_polygon(aes(long, lat, group = group), data = west_coast,
+               fill = "lightyellow4", 
+               colour = "black") +
+  geom_point(data = anch_catch, 
+            aes(lon, lat,
+                size = catch),
+            color = "salmon") +
+  coord_quickmap(xlim = c(-121.5, -117), ylim = c(32, 35))
+```
+
+```{r}
+grid.newpage()
+# Create layout : nrow = 2, ncol = 2
+pushViewport(viewport(layout = grid.layout(2, 2)))
+# A helper function to define a region on the layout
+define_region <- function(row, col){
+  viewport(layout.pos.row = row, layout.pos.col = col)
+} 
+# Arrange the plots
+print(yoy_anchplot3, vp = define_region(2, 1:2))
+print(yoy_anchplot1, vp = define_region(1, 1))
+print(yoy_anchplot2, vp = define_region(1, 2))
+```
