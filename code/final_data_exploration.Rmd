@@ -26,7 +26,6 @@ clean_catch <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
   names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
-  data_frame$lncatch <- log(data_frame$catch + 1)
   return(data_frame)
 }
 
@@ -38,7 +37,6 @@ clean_sp <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
   names(data_frame)[names(data_frame) == 'nmeas'] <- 'num_measured'
   names(data_frame)[names(data_frame) == 'exp'] <- 'haul_exp'
-  data_frame$lncatch <- log(data_frame$catch + 1)
   return(data_frame)
 }
 
@@ -113,6 +111,47 @@ anch_data_list <- lapply(anch_tab_names, function(x) read_excel(path = anch_exl_
 
 anch_catch <- clean_catch(anch_data_list, 1)
 anch_sp <- clean_sp(anch_data_list, 2)
+
+other_exl_data <- here('data', 'rockfish_dab_hake.xlsx')
+excel_sheets(path = other_exl_data) # view the worksheets
+other_tab_names <- excel_sheets(path = other_exl_data)
+
+other_data_list <- lapply(other_tab_names, 
+                          function(x) read_excel(path = other_exl_data, 
+                                                 sheet = x, 
+                                                 col_types = 'text'))
+
+other_catch <- clean_catch(other_data_list, 1)
+other_sp <- clean_sp(other_data_list, 2)
+
+col_names_catch <- c('haul_no', 'year', 'month', 'jday', 'station', 
+                     'net_in_latdd', 'net_in_londd', 'lat', 'lon', 
+                     'bottom_depth', 'station_bottom_depth', 'shortbelly',
+                     'widow', 'hake', 'dab')
+
+col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station', 
+                     'net_in_latdd', 'net_in_londd', 'lat', 'lon', 
+                     'bottom_depth', 'station_bottom_depth', 'species',
+                  'catch', 'num_measured', 'haul_exp', 'sp_no', 'std_length')
+
+other_catch[col_names_catch] <- sapply(other_catch[col_names_catch], as.numeric)
+other_sp[col_names_sp] <- sapply(other_sp[col_names_sp], as.numeric)
+
+widow_catch <- select(other_catch, -c('shortbelly', 'hake', 'dab'))
+sbly_catch <- select(other_catch, -c('widow', 'hake', 'dab'))
+dab_catch <- select(other_catch, -c('shortbelly', 'hake', 'widow'))
+hake_catch <- select(other_catch, -c('shortbelly', 'widow', 'dab'))
+
+widow_sp <- filter(other_sp, species == 597)
+sbly_sp <- filter(other_sp, species == 604)
+dab_sp <- filter(other_sp, species == 597)
+hake_sp <- filter(other_sp, species == 147)
+
+rm(list = c('anch_data_list', 'other_catch', 
+            'other_data_list', 'other_sp',
+            'anch_exl_data', 'anch_tab_names',
+            'col_names_catch', 'col_names_sp',
+            'other_exl_data', 'other_tab_names'))
 ```
 
 
@@ -156,63 +195,30 @@ oni_means <- oni_matrix %>%
 anch_catch <- climate_match(anch_catch)
 ```
 
-
-```{r}
-# Save final dataframes
-saveRDS(anch_catch, file = "../data/anch_catch.Rdata")
-```
-
-
 ```{r}
 # Consolidate lengths
 anch_sizes <- anch_sp %>% mutate(size_class = case_when(std_length <= 35 ~ "small",
                                                         std_length > 35 ~ "large")) 
 
 anch_subset <- anch_sizes %>% 
-  group_by(haul_no, cruise, size_class) %>%
-  mutate(size_class, factor(size_class, levels = c("small", "large"))) %>%
-  count(size_count = length(size_class))
+  group_by(haul_no, cruise, haul_exp, size_class) %>%
+  mutate(size_class = factor(size_class, levels = c("small", "large"))) %>%
+  summarise(size_count = length(size_class)) %>%
+  mutate(size_subset = size_count*haul_exp) %>%
+  tidyr::pivot_wider(names_from = size_class,
+                     values_from = size_subset)
 
+anch_subset[is.na(anch_subset)] <- 0
 
-# %>%
-#   group_by(haul_no, cruise) %>%
-#   summarise(size_count = n_distinct(size_class))
-
+# Match to haul level data
+yoy_anch <- merge(anch_catch,
+                  anch_subset[, c("haul_no", "cruise", "small", "large")],
+                  by = c("haul_no", "cruise"))
 ```
 
 ```{r}
-  lower <- aggregate(std_length ~ haul_no + cruise,
-                         data = anch_sp,
-                         FUN = length,
-                         subset = std_length <= 35)
-  yoy <- merge_data(lower, species)
-  names(yoy)[names(yoy) == "std_length"] <- "lower_num"
-  
-  upper <- aggregate(std_length ~ haul_no + cruise,
-                         data = anch_sp,
-                         FUN = length,
-                         subset = std_length > 35)
-  yoy <- merge_data(upper, yoy)
-  names(yoy)[names(yoy) == "std_length"] <- "upper_num"
-  
-  total <- aggregate(std_length ~ haul_no + cruise,
-                         data = anch_sp,
-                         FUN = length)
-  yoy <- merge_data(total, yoy)
-  names(yoy)[names(yoy) == "std_length"] <- "total_num"
-  
-  yoy$upper_cpue <- (yoy$upper_num / yoy$total_num) * yoy$catch
-  yoy$lower_cpue <- (yoy$lower_num / yoy$total_num) * yoy$catch
-  
-  yoy$upper_cpue[is.na(yoy$upper_cpue)] <- 0
-  yoy$lower_cpue[is.na(yoy$lower_cpue)] <- 0
-  
-  yoy_filtered <- yoy[yoy$year > min(lengths$year), ]
-  yoy_filtered$lncpue <- log(yoy_filtered$catch + 1)
-
-
-
-
+# Save final dataframes
+saveRDS(yoy_anch, file = "../data/yoy_anch.Rdata")
 ```
 
 ```{r}
