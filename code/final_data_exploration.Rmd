@@ -137,10 +137,18 @@ col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station',
 other_catch[col_names_catch] <- sapply(other_catch[col_names_catch], as.numeric)
 other_sp[col_names_sp] <- sapply(other_sp[col_names_sp], as.numeric)
 
-widow_catch <- select(other_catch, -c('shortbelly', 'hake', 'dab'))
-sbly_catch <- select(other_catch, -c('widow', 'hake', 'dab'))
-dab_catch <- select(other_catch, -c('shortbelly', 'hake', 'widow'))
-hake_catch <- select(other_catch, -c('shortbelly', 'widow', 'dab'))
+widow_catch <- other_catch %>% 
+  select(-c('shortbelly', 'hake', 'dab')) %>%
+  rename(catch = widow)
+sbly_catch <- other_catch %>% 
+  select(-c('widow', 'hake', 'dab')) %>%
+  rename(catch = shortbelly)
+dab_catch <- other_catch %>% 
+  select(-c('shortbelly', 'hake', 'widow')) %>%
+  rename(catch = dab)
+hake_catch <- other_catch %>% 
+  select(-c('shortbelly', 'widow', 'dab')) %>%
+  rename(catch = hake)
 
 widow_sp <- filter(other_sp, species == 597)
 sbly_sp <- filter(other_sp, species == 604)
@@ -193,42 +201,98 @@ oni_means <- oni_matrix %>%
 
 # Match to dataframes
 anch_catch <- climate_match(anch_catch)
+widow_catch <- climate_match(widow_catch)
+sbly_catch <- climate_match(sbly_catch)
+dab_catch <- climate_match(dab_catch)
+hake_catch <- climate_match(hake_catch)
+
+rm(list = c('oni_index', 'oni_matrix', 'oni_means',
+            'npgo_index', 'npgo_means', 'pdo_index',
+            'pdo_means'))
 ```
 
 ```{r}
 # Consolidate lengths
-anch_sizes <- anch_sp %>% mutate(size_class = case_when(std_length <= 35 ~ "small",
-                                                        std_length > 35 ~ "large")) 
+size_calc <- function(sp, size){
+  sizes <- mutate(sp, size_class = case_when(std_length <= size ~ "small",
+                                             std_length > size ~ "large")) 
+  subset <- sizes %>% 
+    group_by(haul_no, cruise, haul_exp, size_class) %>%
+    mutate(size_class = factor(size_class, levels = c("small", "large"))) %>%
+    summarise(size_count = length(size_class)) %>%
+    mutate(size_subset = size_count * haul_exp) %>%
+    tidyr::pivot_wider(names_from = size_class,
+                       values_from = size_subset)
+  return(subset)
+}
 
-anch_subset <- anch_sizes %>% 
-  group_by(haul_no, cruise, haul_exp, size_class) %>%
-  mutate(size_class = factor(size_class, levels = c("small", "large"))) %>%
-  summarise(size_count = length(size_class)) %>%
-  mutate(size_subset = size_count*haul_exp) %>%
-  tidyr::pivot_wider(names_from = size_class,
-                     values_from = size_subset)
+anch_subset <- size_calc(anch_sp, 35)
+widow_subset <- size_calc(widow_sp, 31)
+sbly_subset <- size_calc(sbly_sp, 25)
+dab_subset <- size_calc(dab_sp, 30)
+hake_subset <- size_calc(hake_sp, 31)
 
 anch_subset[is.na(anch_subset)] <- 0
+widow_subset[is.na(widow_subset)] <- 0
+sbly_subset[is.na(sbly_subset)] <- 0
+dab_subset[is.na(dab_subset)] <- 0
+hake_subset[is.na(hake_subset)] <- 0
 
 # Match to haul level data
-yoy_anch <- merge(anch_catch,
-                  anch_subset[, c("haul_no", "cruise", "small", "large")],
-                  by = c("haul_no", "cruise"))
+merge_lengths <- function(catch, subset){
+  merge(catch,
+        subset[, c("haul_no", "cruise", "small", "large")],
+        by = c("haul_no", "cruise"))
+}
+
+yoy_anch <- merge_lengths(anch_catch, anch_subset)
+yoy_widw <- merge_lengths(widow_catch, widow_subset)
+yoy_sbly <- merge_lengths(sbly_catch, sbly_subset)
+yoy_dab <- merge_lengths(dab_catch, dab_subset)
+yoy_hake <- merge_lengths(hake_catch, hake_subset)
 ```
 
 ```{r}
 # Save final dataframes
 saveRDS(yoy_anch, file = "../data/yoy_anch.Rdata")
+saveRDS(yoy_widw, file = "../data/yoy_widw.Rdata")
+saveRDS(yoy_sbly, file = "../data/yoy_sbly.Rdata")
+saveRDS(yoy_dab, file = "../data/yoy_dab.Rdata")
+saveRDS(yoy_hake, file = "../data/yoy_hake.Rdata")
 ```
 
 ```{r}
 par(mfrow = c(2, 3))
 plot_variables(anch_catch)
+
+par(mfrow = c(2, 3))
+plot_variables(widow_catch)
+
+par(mfrow = c(2, 3))
+plot_variables(sbly_catch)
+
+par(mfrow = c(2, 3))
+plot_variables(dab_catch)
+
+par(mfrow = c(2, 3))
+plot_variables(hake_catch)
 ```
 
 ```{r}
 # Look at pattern of days by latitude
 ggplot(anch_catch) +
+  geom_point(aes(jday, lat))
+
+ggplot(widow_catch) +
+  geom_point(aes(jday, lat))
+
+ggplot(sbly_catch) +
+  geom_point(aes(jday, lat))
+
+ggplot(dab_catch) +
+  geom_point(aes(jday, lat))
+
+ggplot(hake_catch) +
   geom_point(aes(jday, lat))
 ```
 
@@ -237,6 +301,26 @@ ggplot(anch_sp) +
   geom_point(aes(bottom_depth, std_length),
                  alpha = 0.1,
                  size = 2)
+
+ggplot(widow_sp) +
+  geom_point(aes(bottom_depth, std_length),
+                 alpha = 0.1,
+                 size = 2)
+
+ggplot(sbly_sp) +
+  geom_point(aes(bottom_depth, std_length),
+                 alpha = 0.1,
+                 size = 2)
+
+ggplot(dab_sp) +
+  geom_point(aes(bottom_depth, std_length),
+                 alpha = 0.1,
+                 size = 2)
+
+ggplot(hake_sp) +
+  geom_point(aes(bottom_depth, std_length),
+                 alpha = 0.1,
+                 size = 2) # may want to remove hakeover 70 mm
 ```
 
 ```{r}
