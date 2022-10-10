@@ -15,6 +15,7 @@ library(gridExtra)
 library(grid)
 library(reshape2)
 library(here)
+library(rerddap)
 ```
 
 Functions
@@ -65,10 +66,17 @@ climate_match <- function(data){
 }
 
 # Combine the grouped length data with the catch data
-merge_lengths <- function(catch, subset){
-  merge(catch,
-        subset[, c("haul_no", "cruise", "small", "large")],
-        by = c("haul_no", "cruise"))
+merge_lengths <- function(catch, subset, ctd_means){
+  data <- merge(catch,
+                subset[, c("haul_no", "cruise", "small", "large")],
+                by = c("haul_no", "cruise"))
+  data_ctd <- merge(data, 
+                    ctd_means,
+                    by = c('cruise',
+                           'ctd_index',
+                           'year'),
+                    all.x = T)
+  return(data_ctd)
 }
 
 # Group into two size classes
@@ -238,14 +246,40 @@ widow_subset[is.na(widow_subset)] <- 0
 sbly_subset[is.na(sbly_subset)] <- 0
 dab_subset[is.na(dab_subset)] <- 0
 hake_subset[is.na(hake_subset)] <- 0
-
-# Match to haul level data
-yoy_anch <- merge_lengths(anch_catch, anch_subset)
-yoy_widw <- merge_lengths(widow_catch, widow_subset)
-yoy_sbly <- merge_lengths(sbly_catch, sbly_subset)
-yoy_dab <- merge_lengths(dab_catch, dab_subset)
-yoy_hake <- merge_lengths(hake_catch, hake_subset)
 ```
+
+```{r}
+# Extract CTD data
+RREAS_CTD_info <- info('FED_Rockfish_CTD')
+
+ctds <- tabledap(RREAS_CTD_info,
+                 fields = c('cruise', 'ctd_index',
+                            'temperature', 'salinity', 
+                            'oxygen', 'station',
+                            'ctd_depth', 'time'),
+                 'ctd_depth<=10')
+
+cols <- c('temperature', 'salinity', 'oxygen')
+ctds[cols] <- sapply(ctds[cols], as.numeric)
+
+ctd_means <- ctds %>%
+  mutate(date = format(as.POSIXct(time, tz = "UTC", format = "%Y-%m-%d")),
+         year = lubridate::year(date)) %>%
+  group_by(cruise, ctd_index, year) %>%
+  summarise_at(vars('temperature', 'salinity', 'oxygen'), mean) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .)) 
+```
+
+```{r}
+# Add CTD data
+# Match to haul level data (not currently possible, no ctd_index available)
+yoy_anch <- merge_lengths(anch_catch, anch_subset, ctd_means)
+yoy_widw <- merge_lengths(widow_catch, widow_subset, ctd_means)
+yoy_sbly <- merge_lengths(sbly_catch, sbly_subset, ctd_means)
+yoy_dab <- merge_lengths(dab_catch, dab_subset, ctd_means)
+yoy_hake <- merge_lengths(hake_catch, hake_subset, ctd_means)
+```
+
 
 ```{r}
 # Save final dataframes
