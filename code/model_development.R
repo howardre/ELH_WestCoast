@@ -16,7 +16,7 @@ library(colorspace)
 
 # Load data ----
 yoy_hake <- readRDS(here('data', 'yoy_hake.Rdata')) %>% 
-  tidyr::drop_na(temperature, salinity, bottom_depth) %>%
+#  tidyr::drop_na(temperature, salinity, bottom_depth) %>% 
   filter(catch < 2500)
 yoy_hake$year_f <- as.factor(yoy_hake$year)
 
@@ -33,23 +33,23 @@ jet.colors <- colorRampPalette(c(sequential_hcl(15, palette = "Mint")))
 
 location_plot <- function(gam, species_subset, yaxis, title, value) {
   myvis_gam(gam,
-            view = c('longitude', 'latitude'),
+            view = c('lon', 'lat'),
             too.far = 0.07,
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
             type = 'link',
             xlim = c(-125.7, -116.5),
-            ylim = range(species_subset$latitude, na.rm = TRUE) + c(-.4, .5),
+            ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
-            xlab = "Longitude",
+            xlab = "lon",
             ylab = yaxis,
             main = title,
             cex.lab = 2.5,
             cex.axis =  2.5,
             cex.main = 3)
-  symbols(species_subset$longitude,
-          species_subset$latitude,
+  symbols(species_subset$lon,
+          species_subset$lat,
           circle = value,
           inches = 0.2,
           add = T,
@@ -91,29 +91,29 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
       oma = c(1, 1, 1, 1),
       mgp = c(5, 2, 0))
   myvis_gam(my_gam,
-            view = c('longitude', 'latitude'),
+            view = c('lon', 'lat'),
             too.far = 0.07,
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
             type = 'link',
             xlim = c(-125.7,-116.5),
-            ylim = range(species_subset$latitude, na.rm = TRUE) + c(-.4, .5),
+            ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
-            xlab = "Longitude",
-            ylab = "Latitude",
+            xlab = "lon",
+            ylab = "lat",
             main = " ",
             cex.lab = 2.5,
             cex.axis =  2.5)
-  symbols(species_subset$longitude[predictions[[2]]],
-          species_subset$latitude[predictions[[2]]],
+  symbols(species_subset$lon[predictions[[2]]],
+          species_subset$lat[predictions[[2]]],
           circle = predictions[[3]][predictions[[2]]],
           inches = 0.12,
           add = T,
           bg = alpha('darkred', 0.4),
           fg = alpha('black', 0.08))
-  symbols(species_subset$longitude[predictions[[1]]],
-          species_subset$latitude[predictions[[1]]],
+  symbols(species_subset$lon[predictions[[1]]],
+          species_subset$lat[predictions[[1]]],
           circle = (-1) * predictions[[3]][predictions[[1]]],
           inches = 0.12,
           add = T,
@@ -141,10 +141,8 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
 
 # Hake ----
 # Aggregate model
-hake_formula <- formula(catch + 1 ~ s(year_f, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
-                          s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
-hake_formula_woy <- formula(catch + 1 ~ s(longitude, latitude) + s(bottom_depth, k = 4) +
-                              s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
+hake_formula <- formula(catch + 1 ~ s(year_f, bs = "re") + s(lon, lat) + s(bottom_depth, k = 4) +
+                          s(jday) + s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
 hake_total <- gam(hake_formula,
@@ -244,8 +242,8 @@ ggplot(hake_error) +
 
 # Size explicit
 # Small
-hake_small_formula <- formula(lower_cpue + 1 ~ s(year, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
-                          s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
+hake_small_formula <- formula(lower_cpue + 1 ~ s(year, bs = "re") + s(lon, lat) + s(bottom_depth, k = 4) +
+                          s(jday) + s(temperature, k = 4) + s(salinity, k = 4) + s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
 hake_small <- gam(hake_small_formula,
@@ -293,8 +291,8 @@ ggplot(hake_small_error) +
             group = 1) # something weird going on in 2004
 
 # Large
-hake_large_formula <- formula(upper_cpue + 1 ~ s(year, bs = "re") + s(longitude, latitude) + s(bottom_depth, k = 4) +
-                                s(julian) + s(temperature, k = 4) + s(salinity, k = 4) + s(longitude, latitude, by = NPGO_pos))
+hake_large_formula <- formula(upper_cpue + 1 ~ s(year, bs = "re") + s(lon, lat) + s(bottom_depth, k = 4) +
+                                s(jday) + s(temperature, k = 4) + s(salinity, k = 4) + s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
 hake_large <- gam(hake_large_formula,
@@ -372,7 +370,7 @@ par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-location_plot(hake_total, yoy_hake, "Latitude", "All Sizes", yoy_hake$catch)
+location_plot(hake_total, yoy_hake, "lat", "All Sizes", yoy_hake$catch)
 location_plot(hake_large, yoy_hake, " ", "Small Sizes", yoy_hake$upper_cpue)
 location_plot(hake_small, yoy_hake, " ", "Large Sizes", yoy_hake$lower_cpue)
 dev.copy(jpeg, here('results/RREAS_preliminary', 'hake_distributions.jpg'), 
