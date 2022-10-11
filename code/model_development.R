@@ -16,7 +16,8 @@ library(colorspace)
 
 # Load data ----
 yoy_hake <- readRDS(here('data', 'yoy_hake.Rdata')) %>% 
-#  tidyr::drop_na(temperature, salinity, bottom_depth) %>% 
+#  tidyr::drop_na(temperature, salinity, bottom_depth) %>%
+  tidyr::drop_na(bottom_depth) %>%
   filter(catch < 2500)
 yoy_hake$year_f <- as.factor(yoy_hake$year)
 
@@ -141,15 +142,27 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
 
 # Hake ----
 # Aggregate model
-hake_formula <- formula(catch + 1 ~ s(year_f, bs = "re") + s(lon, lat) + s(bottom_depth, k = 4) +
-                          s(jday) + s(lon, lat, by = NPGO_pos))
+hake_formula <- formula(y_catch_adj + 1 ~ s(lon, lat) + 
+                          s(bottom_depth, k = 4) +
+                          s(jday) + 
+                          s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
-hake_total <- gam(hake_formula,
+hake_total <- gam(catch + 1 ~ factor(year) + 
+                    s(lon, lat) + 
+                    s(bottom_depth, k = 4) +
+                    s(jday) + 
+                    s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_hake)
 summary(hake_total)
+
+year_effect_hake <- predict(hake_total, 
+                            type = "terms")[, 1]
+
+yoy_hake$y_catch <- yoy_hake$catch + year_effect_hake
+yoy_hake$y_catch_adj <- yoy_hake$y_catch + abs(min(yoy_hake$y_catch))
 
 # Leave one group out cross validation
 # Run GAMs with each year left out
@@ -161,7 +174,7 @@ hake_gams <- lapply(unique(yoy_hake$year_f), function(x) {
                 data = yoy_hake[yoy_hake$year_f != x, ])
 })
 
-hake_data <- split(yoy_hake, yoy_hake$year_f)
+hake_data <- split(yoy_hake, yoy_hake$year)
 
 # Get predictions
 # Predict on the left out year's data
@@ -169,9 +182,8 @@ hake_results <- hake_data
 for(i in seq_along(hake_gams)){
   for(j in seq_along(hake_data)){
   hake_results[[j]]$pred <- predict(hake_gams[[i]],
-                               newdata = hake_data[[j]],
-                               type = "response",                                   
-                               exclude = "s(year_f)")
+                               newdata = hake_results[[j]],
+                               type = "response")
   }}
 
 # Calculate RMSE
@@ -187,38 +199,6 @@ hake_error <- as.data.frame(do.call(rbind, hake_RMSE))
 hake_error$year <- rownames(hake_error)
 rownames(hake_error) <- NULL
 colnames(hake_error)[1] <- "RMSE"
-
-# Test without year
-hake_gams_woy <- lapply(unique(yoy_hake$year_f), function(x) {
-  output <- gam(hake_formula_woy,
-                family = tw(link = "log"),
-                method = 'REML',
-                data = yoy_hake[yoy_hake$year_f != x, ])
-})
-
-# Get predictions
-# Predict on the left out year's data
-hake_results_woy <- hake_data
-for(i in seq_along(hake_gams_woy)){
-  for(j in seq_along(hake_data)){
-    hake_results_woy[[j]]$pred <- predict(hake_gams_woy[[i]],
-                                      newdata = hake_data[[j]],
-                                      type = "response")
-  }}
-
-# Calculate RMSE
-# Get values for each year and overall value
-hake_RMSE_woy <- lapply(hake_results_woy, function(x) {
-  rmse(x$catch, x$pred)
-})
-
-range(yoy_hake$catch)
-mean(unlist(hake_RMSE_woy))
-
-hake_error_woy <- as.data.frame(do.call(rbind, hake_RMSE_woy))
-hake_error_woy$year <- rownames(hake_error_woy)
-rownames(hake_error_woy) <- NULL
-colnames(hake_error_woy)[1] <- "RMSE"
 
 
 # Plot the RMSE for each year
@@ -242,15 +222,27 @@ ggplot(hake_error) +
 
 # Size explicit
 # Small
-hake_small_formula <- formula(lower_cpue + 1 ~ s(year, bs = "re") + s(lon, lat) + s(bottom_depth, k = 4) +
-                          s(jday) + s(temperature, k = 4) + s(salinity, k = 4) + s(lon, lat, by = NPGO_pos))
+hake_small_formula <- formula(y_small_adj + 1 ~ s(lon, lat) + 
+                                s(bottom_depth, k = 4) +
+                                s(jday) + 
+                                s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
-hake_small <- gam(hake_small_formula,
+hake_small <- gam(small + 1 ~ factor(year) +
+                    s(lon, lat) + 
+                    s(bottom_depth, k = 4) +
+                    s(jday) + 
+                    s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_hake)
 summary(hake_small)
+
+year_small_hake <- predict(hake_small, 
+                            type = "terms")[, 1]
+
+yoy_hake$y_small <- yoy_hake$small + year_small_hake
+yoy_hake$y_small_adj <- yoy_hake$y_small + abs(min(yoy_hake$y_small))
 
 # Leave one group out cross validation
 hake_small_gams <- lapply(unique(yoy_hake$year), function(x) {
@@ -266,15 +258,14 @@ hake_small_results <- hake_data
 for(i in seq_along(hake_small_gams)){
   for(j in seq_along(hake_data)){
     hake_small_results[[j]]$pred_small <- predict(hake_small_gams[[i]],
-                                                  newdata = hake_data[[j]],
-                                                  type = "response",
-                                                  exclude = "s(year)")
+                                                  newdata = hake_small_results[[j]],
+                                                  type = "response")
   }}
 
 # Calculate RMSE
 # Get values for each year and overall value
 hake_small_RMSE <- lapply(hake_small_results, function(x) {
-  rmse(x$lower_cpue, x$pred_small)
+  rmse(x$small, x$pred_small)
 })
 
 mean(unlist(hake_small_RMSE))
@@ -288,18 +279,30 @@ colnames(hake_small_error)[1] <- "RMSE"
 ggplot(hake_small_error) +
   geom_line(aes(year, RMSE),
             size = 1,
-            group = 1) # something weird going on in 2004
+            group = 1) 
 
 # Large
-hake_large_formula <- formula(upper_cpue + 1 ~ s(year, bs = "re") + s(lon, lat) + s(bottom_depth, k = 4) +
-                                s(jday) + s(temperature, k = 4) + s(salinity, k = 4) + s(lon, lat, by = NPGO_pos))
+hake_large_formula <- formula(y_large_adj + 1 ~ s(lon, lat) + 
+                                s(bottom_depth, k = 4) +
+                                s(jday) + 
+                                s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
-hake_large <- gam(hake_large_formula,
+hake_large <- gam(large + 1 ~ factor(year) +
+                    s(lon, lat) + 
+                    s(bottom_depth, k = 4) +
+                    s(jday) + 
+                    s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
                   data = yoy_hake)
 summary(hake_large)
+
+year_large_hake <- predict(hake_large, 
+                           type = "terms")[, 1]
+
+yoy_hake$y_large <- yoy_hake$large + year_large_hake
+yoy_hake$y_large_adj <- yoy_hake$y_large + abs(min(yoy_hake$y_large))
 
 # Leave one group out cross validation
 hake_large_gams <- lapply(unique(yoy_hake$year), function(x) {
@@ -315,15 +318,14 @@ hake_large_results <- hake_data
 for(i in seq_along(hake_large_gams)){
   for(j in seq_along(hake_data)){
     hake_large_results[[j]]$pred_large <- predict(hake_large_gams[[i]],
-                                                  newdata = hake_data[[j]],
-                                                  type = "response",
-                                                  exclude = "s(year)")
+                                                  newdata = hake_large_results[[j]],
+                                                  type = "response")
   }}
 
 # Calculate RMSE
 # Get values for each year and overall value
 hake_large_RMSE <- lapply(hake_large_results, function(x) {
-  rmse(x$upper_cpue, x$pred_large)
+  rmse(x$large, x$pred_large)
 })
 
 mean(unlist(hake_large_RMSE))
@@ -335,32 +337,6 @@ colnames(hake_large_error)[1] <- "RMSE"
 
 # Plot the RMSE for each year
 ggplot(hake_large_error) +
-  geom_line(aes(year, RMSE),
-            size = 1,
-            group = 1) 
-
-# Add the predictions for small and large together
-hake_combined_results <- map2(hake_small_results, 
-                              hake_large_results,
-                              ~ .x %>% bind_cols(.y %>% select(pred_large)))
-
-hake_combined_preds <- lapply(hake_combined_results, function(x) {
-  mutate(x, pred = pred_large + pred_small)    
-})
-
-hake_combined_RMSE <- lapply(hake_combined_preds, function(x) {
-  rmse(x$catch, x$pred)
-})
-
-mean(unlist(hake_combined_RMSE))
-
-hake_combined_error <- as.data.frame(do.call(rbind, hake_combined_RMSE))
-hake_combined_error$year <- rownames(hake_combined_error)
-rownames(hake_combined_error) <- NULL
-colnames(hake_combined_error)[1] <- "RMSE"
-
-# Plot the RMSE for each year
-ggplot(hake_combined_error) +
   geom_line(aes(year, RMSE),
             size = 1,
             group = 1) 
