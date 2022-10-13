@@ -71,7 +71,7 @@ location_plot <- function(gam, species_subset, yaxis, title, value) {
              legend.mar = 6,
              zlim = c(min(gam$linear.predictors), 
                       max(gam$linear.predictors)),
-             legend.args = list("log(cpue+1)",
+             legend.args = list("CPUE",
                                 side = 2, cex = 1.4,
                                 family = "serif"))
 }
@@ -258,7 +258,7 @@ hake_small_results <- hake_data
 for(i in seq_along(hake_small_gams)){
   for(j in seq_along(hake_data)){
     hake_small_results[[j]]$pred_small <- predict(hake_small_gams[[i]],
-                                                  newdata = hake_small_results[[j]],
+                                                  newdata = hake_data[[j]],
                                                   type = "response")
   }}
 
@@ -341,14 +341,17 @@ ggplot(hake_large_error) +
             size = 1,
             group = 1) 
 
+# Add the large and small together
+
+
 # Maps
 par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 location_plot(hake_total, yoy_hake, "lat", "All Sizes", yoy_hake$catch)
-location_plot(hake_large, yoy_hake, " ", "Small Sizes", yoy_hake$upper_cpue)
-location_plot(hake_small, yoy_hake, " ", "Large Sizes", yoy_hake$lower_cpue)
+location_plot(hake_large, yoy_hake, " ", "Small Sizes", yoy_hake$large)
+location_plot(hake_small, yoy_hake, " ", "Large Sizes", yoy_hake$small)
 dev.copy(jpeg, here('results/RREAS_preliminary', 'hake_distributions.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
