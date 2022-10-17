@@ -69,17 +69,20 @@ climate_match <- function(data){
 }
 
 # Combine the grouped length data with the catch data
-merge_lengths <- function(catch, subset){
+merge_lengths <- function(catch, hauls, subset, ctd_means){
   data <- merge(catch,
                 subset[, c("haul_no", "cruise", "small", "large")],
                 by = c("haul_no", "cruise"))
-  # data_ctd <- merge(data, 
-  #                   ctd_means,
-  #                   by = c('cruise',
-  #                          'ctd_index',
-  #                          'year'),
-  #                   all.x = T)
-  # return(data_ctd)
+  data_id <- merge(data,
+                   hauls[, c("haul_no", "cruise", "ctd_index")],
+                   by = c("haul_no", "cruise"))
+  data_ctd <- merge(data_id,
+                    ctd_means,
+                    by = c('cruise',
+                           'ctd_index',
+                           'year'),
+                    all.x = T)
+  return(data_ctd)
 }
 
 # Group into two size classes
@@ -275,12 +278,15 @@ ctd_means <- ctds %>%
 
 ```{r}
 # Add CTD data
-# Match to haul level data (not currently possible, no ctd_index available)
-yoy_anch <- merge_lengths(anch_catch, anch_subset)
-yoy_widw <- merge_lengths(widow_catch, widow_subset)
-yoy_sbly <- merge_lengths(sbly_catch, sbly_subset)
-yoy_dab <- merge_lengths(dab_catch, dab_subset)
-yoy_hake <- merge_lengths(hake_catch, hake_subset)
+# Match to haul level data 
+haul_data <- read_excel(here('data', 'haul_data_through2021.xlsx'))
+names(haul_data) <- tolower(names(haul_data))
+
+yoy_anch <- merge_lengths(anch_catch, haul_data, anch_subset, ctd_means)
+yoy_widw <- merge_lengths(widow_catch, haul_data, widow_subset, ctd_means)
+yoy_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, ctd_means)
+yoy_dab <- merge_lengths(dab_catch, haul_data, dab_subset, ctd_means)
+yoy_hake <- merge_lengths(hake_catch, haul_data, hake_subset, ctd_means)
 ```
 
 
