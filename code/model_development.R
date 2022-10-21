@@ -21,7 +21,7 @@ read_data <- function(file){
     tidyr::drop_na(temperature, salinity, bottom_depth) %>%
     tidyr::drop_na(bottom_depth) %>%
     filter(catch < 2500)
-  yoy$year_f <- as.factor(yoy$year)
+  yoy$lncpue <- log(yoy$catch + 1)
   return(yoy)
 }
 
@@ -149,46 +149,47 @@ ctd_means <- ctds %>%
   group_by(year) %>%
   summarise(across(temperature, mean, na.rm = TRUE))
 
-
-
 # Hake ----
 # Aggregate model
-hake_formula <- formula(y_catch_adj + 1 ~ s(lon, lat) + 
-                          s(bottom_depth, k = 4) +
-                          s(jday) + 
-                          s(temperature) +
-                          s(salinity) +
-                          s(lon, lat, by = NPGO_pos))
-
 # Use models selected during model exploration
-hake_total <- gam(catch + 1 ~ factor(year) + 
+hake_total <- gam(lncpue ~ factor(year) + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
-                    s(temperature) +
-                    s(salinity) +
+                    s(temperature, k = 4) +
+                    s(salinity, k = 4) +
                     s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
-                  method = 'REML',
+                  method = "REML",
                   data = yoy_hake)
 summary(hake_total)
 
-year_effect_hake <- predict(hake_total, 
-                            type = "terms")[, 1]
+test_values <- predict(hake_total, type = "response")
+
+year_effect_hake <- predict.gam(hake_total,
+                                type = "terms")[, 1]
 
 yoy_hake$y_catch <- yoy_hake$catch + year_effect_hake
-yoy_hake$y_catch_adj <- yoy_hake$y_catch + abs(min(yoy_hake$y_catch))
+yoy_hake$y_catch_adj <- yoy_hake$y_catch + abs(min(yoy_hake$y_catch)) # issue with negative values, doesn't work otherwise
 
 # Leave one group out cross validation
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
-hake_gams <- lapply(unique(yoy_hake$year_f), function(x) {
+hake_formula <- formula(y_catch_adj + 1 ~ s(lon, lat) + 
+                          s(bottom_depth, k = 4) +
+                          s(jday) + 
+                          s(temperature, k = 4) +
+                          s(salinity, k = 4) +
+                          s(lon, lat, by = NPGO_pos)) # Note no factor(year), added into response
+
+hake_gams <- lapply(unique(yoy_hake$year), function(x) {
   output <- gam(hake_formula,
                 family = tw(link = "log"),
                 method = 'REML',
-                data = yoy_hake[yoy_hake$year_f != x, ])
-})
+                data = yoy_hake[yoy_hake$year != x, ])
+}) # Gives the list of GAMs with each year left out
 
+# Create list with data from each year
 hake_data <- split(yoy_hake, yoy_hake$year)
 
 # Get predictions
@@ -199,7 +200,7 @@ for(i in seq_along(hake_gams)){
   hake_results[[j]]$pred <- predict(hake_gams[[i]],
                                newdata = hake_results[[j]],
                                type = "response")
-  }}
+  }} # Predicts on the left out year
 
 # Calculate RMSE
 # Get values for each year and overall value
@@ -235,8 +236,8 @@ ggplot(hake_error) +
 hake_small_formula <- formula(y_small_adj + 1 ~ s(lon, lat) + 
                                 s(bottom_depth, k = 4) +
                                 s(jday) + 
-                                s(temperature) +
-                                s(salinity) +
+                                s(temperature, k = 4) +
+                                s(salinity, k = 4) +
                                 s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -244,8 +245,8 @@ hake_small <- gam(small + 1 ~ factor(year) +
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
-                    s(temperature) +
-                    s(salinity) +
+                    s(temperature, k = 4) +
+                    s(salinity, k = 4) +
                     s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
@@ -299,8 +300,8 @@ ggplot(hake_small_error) +
 hake_large_formula <- formula(y_large_adj + 1 ~ s(lon, lat) + 
                                 s(bottom_depth, k = 4) +
                                 s(jday) + 
-                                s(temperature) +
-                                s(salinity) +
+                                s(temperature, k = 4) +
+                                s(salinity, k = 4) +
                                 s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -308,8 +309,8 @@ hake_large <- gam(large + 1 ~ factor(year) +
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
-                    s(temperature) +
-                    s(salinity) +
+                    s(temperature, k = 4) +
+                    s(salinity, k = 4) +
                     s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
@@ -387,8 +388,8 @@ dev.off()
 anchovy_formula <- formula(y_catch_adj + 1 ~ s(lon, lat) + 
                           s(bottom_depth, k = 4) +
                           s(jday) + 
-                          s(temperature) +
-                          s(salinity) +
+                          s(temperature, k = 4) +
+                          s(salinity, k = 4) +
                           s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -396,8 +397,8 @@ anchovy_total <- gam(catch + 1 ~ factor(year) +
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
-                    s(temperature) +
-                    s(salinity) +
+                    s(temperature, k = 4) +
+                    s(salinity, k = 4) +
                     s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
@@ -466,8 +467,8 @@ ggplot(anchovy_error) +
 anchovy_small_formula <- formula(y_small_adj + 1 ~ s(lon, lat) + 
                                 s(bottom_depth, k = 4) +
                                 s(jday) + 
-                                s(temperature) +
-                                s(salinity) +
+                                s(temperature, k = 4) +
+                                s(salinity, k = 4) +
                                 s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -475,8 +476,8 @@ anchovy_small <- gam(small + 1 ~ factor(year) +
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
-                    s(temperature) +
-                    s(salinity) +
+                    s(temperature, k = 4) +
+                    s(salinity, k = 4) +
                     s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
@@ -530,8 +531,8 @@ ggplot(anchovy_small_error) +
 anchovy_large_formula <- formula(y_large_adj + 1 ~ s(lon, lat) + 
                                 s(bottom_depth, k = 4) +
                                 s(jday) + 
-                                s(temperature) +
-                                s(salinity) +
+                                s(temperature, k = 4) +
+                                s(salinity, k = 4) +
                                 s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -539,8 +540,8 @@ anchovy_large <- gam(large + 1 ~ factor(year) +
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
-                    s(temperature) +
-                    s(salinity) +
+                    s(temperature, k = 4) +
+                    s(salinity, k = 4) +
                     s(lon, lat, by = NPGO_pos),
                   family = tw(link = "log"),
                   method = 'REML',
@@ -605,8 +606,8 @@ mean(unlist(anchovy_added_results)) # 554
 widow_formula <- formula(y_catch_adj + 1 ~ s(lon, lat) + 
                              s(bottom_depth, k = 4) +
                              s(jday) + 
-                             s(temperature) +
-                             s(salinity) +
+                             s(temperature, k = 4) +
+                             s(salinity, k = 4) +
                              s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -614,8 +615,8 @@ widow_total <- gam(catch + 1 ~ factor(year) +
                        s(lon, lat) + 
                        s(bottom_depth, k = 4) +
                        s(jday) + 
-                       s(temperature) +
-                       s(salinity) +
+                       s(temperature, k = 4) +
+                       s(salinity, k = 4) +
                        s(lon, lat, by = NPGO_pos),
                      family = tw(link = "log"),
                      method = 'REML',
@@ -684,8 +685,8 @@ ggplot(widow_error) +
 widow_small_formula <- formula(y_small_adj + 1 ~ s(lon, lat) + 
                                    s(bottom_depth, k = 4) +
                                    s(jday) + 
-                                   s(temperature) +
-                                   s(salinity) +
+                                   s(temperature, k = 4) +
+                                   s(salinity, k = 4) +
                                    s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -693,8 +694,8 @@ widow_small <- gam(small + 1 ~ factor(year) +
                        s(lon, lat) + 
                        s(bottom_depth, k = 4) +
                        s(jday) + 
-                       s(temperature) +
-                       s(salinity) +
+                       s(temperature, k = 4) +
+                       s(salinity, k = 4) +
                        s(lon, lat, by = NPGO_pos),
                      family = tw(link = "log"),
                      method = 'REML',
@@ -748,8 +749,8 @@ ggplot(widow_small_error) +
 widow_large_formula <- formula(y_large_adj + 1 ~ s(lon, lat) + 
                                    s(bottom_depth, k = 4) +
                                    s(jday) + 
-                                   s(temperature) +
-                                   s(salinity) +
+                                   s(temperature, k = 4) +
+                                   s(salinity, k = 4) +
                                    s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -757,8 +758,8 @@ widow_large <- gam(large + 1 ~ factor(year) +
                        s(lon, lat) + 
                        s(bottom_depth, k = 4) +
                        s(jday) + 
-                       s(temperature) +
-                       s(salinity) +
+                       s(temperature, k = 4) +
+                       s(salinity, k = 4) +
                        s(lon, lat, by = NPGO_pos),
                      family = tw(link = "log"),
                      method = 'REML',
@@ -823,8 +824,8 @@ mean(unlist(widow_added_results)) # 22
 shortbelly_formula <- formula(y_catch_adj + 1 ~ s(lon, lat) + 
                            s(bottom_depth, k = 4) +
                            s(jday) + 
-                           s(temperature) +
-                           s(salinity) +
+                           s(temperature, k = 4) +
+                           s(salinity, k = 4) +
                            s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -832,8 +833,8 @@ shortbelly_total <- gam(catch + 1 ~ factor(year) +
                      s(lon, lat) + 
                      s(bottom_depth, k = 4) +
                      s(jday) + 
-                     s(temperature) +
-                     s(salinity) +
+                     s(temperature, k = 4) +
+                     s(salinity, k = 4) +
                      s(lon, lat, by = NPGO_pos),
                    family = tw(link = "log"),
                    method = 'REML',
@@ -902,8 +903,8 @@ ggplot(shortbelly_error) +
 shortbelly_small_formula <- formula(y_small_adj + 1 ~ s(lon, lat) + 
                                  s(bottom_depth, k = 4) +
                                  s(jday) + 
-                                 s(temperature) +
-                                 s(salinity) +
+                                 s(temperature, k = 4) +
+                                 s(salinity, k = 4) +
                                  s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -911,8 +912,8 @@ shortbelly_small <- gam(small + 1 ~ factor(year) +
                      s(lon, lat) + 
                      s(bottom_depth, k = 4) +
                      s(jday) + 
-                     s(temperature) +
-                     s(salinity) +
+                     s(temperature, k = 4) +
+                     s(salinity, k = 4) +
                      s(lon, lat, by = NPGO_pos),
                    family = tw(link = "log"),
                    method = 'REML',
@@ -966,8 +967,8 @@ ggplot(shortbelly_small_error) +
 shortbelly_large_formula <- formula(y_large_adj + 1 ~ s(lon, lat) + 
                                  s(bottom_depth, k = 4) +
                                  s(jday) + 
-                                 s(temperature) +
-                                 s(salinity) +
+                                 s(temperature, k = 4) +
+                                 s(salinity, k = 4) +
                                  s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -975,8 +976,8 @@ shortbelly_large <- gam(large + 1 ~ factor(year) +
                      s(lon, lat) + 
                      s(bottom_depth, k = 4) +
                      s(jday) + 
-                     s(temperature) +
-                     s(salinity) +
+                     s(temperature, k = 4) +
+                     s(salinity, k = 4) +
                      s(lon, lat, by = NPGO_pos),
                    family = tw(link = "log"),
                    method = 'REML',
@@ -1041,8 +1042,8 @@ mean(unlist(shortbelly_added_results)) # 106
 sdab_formula <- formula(y_catch_adj + 1 ~ s(lon, lat) + 
                                 s(bottom_depth, k = 4) +
                                 s(jday) + 
-                                s(temperature) +
-                                s(salinity) +
+                                s(temperature, k = 4) +
+                                s(salinity, k = 4) +
                                 s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -1050,8 +1051,8 @@ sdab_total <- gam(catch + 1 ~ factor(year) +
                           s(lon, lat) + 
                           s(bottom_depth, k = 4) +
                           s(jday) + 
-                          s(temperature) +
-                          s(salinity) +
+                          s(temperature, k = 4) +
+                          s(salinity, k = 4) +
                           s(lon, lat, by = NPGO_pos),
                         family = tw(link = "log"),
                         method = 'REML',
@@ -1120,8 +1121,8 @@ ggplot(sdab_error) +
 sdab_small_formula <- formula(y_small_adj + 1 ~ s(lon, lat) + 
                                       s(bottom_depth, k = 4) +
                                       s(jday) + 
-                                      s(temperature) +
-                                      s(salinity) +
+                                      s(temperature, k = 4) +
+                                      s(salinity, k = 4) +
                                       s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -1129,8 +1130,8 @@ sdab_small <- gam(small + 1 ~ factor(year) +
                           s(lon, lat) + 
                           s(bottom_depth, k = 4) +
                           s(jday) + 
-                          s(temperature) +
-                          s(salinity) +
+                          s(temperature, k = 4) +
+                          s(salinity, k = 4) +
                           s(lon, lat, by = NPGO_pos),
                         family = tw(link = "log"),
                         method = 'REML',
@@ -1184,8 +1185,8 @@ ggplot(sdab_small_error) +
 sdab_large_formula <- formula(y_large_adj + 1 ~ s(lon, lat) + 
                                       s(bottom_depth, k = 4) +
                                       s(jday) + 
-                                      s(temperature) +
-                                      s(salinity) +
+                                      s(temperature, k = 4) +
+                                      s(salinity, k = 4) +
                                       s(lon, lat, by = NPGO_pos))
 
 # Use models selected during model exploration
@@ -1193,8 +1194,8 @@ sdab_large <- gam(large + 1 ~ factor(year) +
                           s(lon, lat) + 
                           s(bottom_depth, k = 4) +
                           s(jday) + 
-                          s(temperature) +
-                          s(salinity) +
+                          s(temperature, k = 4) +
+                          s(salinity, k = 4) +
                           s(lon, lat, by = NPGO_pos),
                         family = tw(link = "log"),
                         method = 'REML',
