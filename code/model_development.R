@@ -235,6 +235,7 @@ LOYO_preds_large <- function(gam_list, data, results){
 yoy_hake <- read_data('yoy_hake.Rdata')
 yoy_anchovy <- read_data('yoy_anch.Rdata')
 yoy_widow <- read_data('yoy_widw.Rdata')
+yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- read_data('yoy_dab.Rdata')
 
@@ -247,7 +248,7 @@ ctd_means <- ctds %>%
 # Hake ----
 # Aggregate model
 # Use models selected during model exploration
-hake_total <- gam(y_catch ~ year_f + 
+hake_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -285,6 +286,7 @@ hake_results <- LOYO_preds(hake_gams, hake_data, hake_results)
 # Calculate RMSE
 # Get values for each year and overall value
 hake_error <- RMSE_calc(hake_results, yoy_hake)
+mean(hake_error[[2]]$RMSE)
 
 # Plot the RMSE for each year
 hake_error[[2]]$temperature <- ctd_means$temperature[match(hake_error[[2]]$year, ctd_means$year)]
@@ -430,7 +432,7 @@ dev.off()
 # Anchovy ----
 # Aggregate model
 # Use models selected during model exploration
-anchovy_total <- gam(y_catch ~ year_f + 
+anchovy_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -468,6 +470,7 @@ anchovy_results <- LOYO_preds(anchovy_gams, anchovy_data, anchovy_results)
 # Calculate RMSE
 # Get values for each year and overall value
 anchovy_error <- RMSE_calc(anchovy_results, yoy_anchovy)
+mean(anchovy_error[[2]]$RMSE) #371
 
 # Plot the RMSE for each year
 anchovy_error[[2]]$temperature <- ctd_means$temperature[match(anchovy_error[[2]]$year, ctd_means$year)]
@@ -595,7 +598,7 @@ anchovy_added_results <- lapply(anchovy_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(anchovy_added_results)) # 182
+mean(unlist(anchovy_added_results)) # 321
 
 # Maps
 par(mfrow = c(1, 3),
@@ -612,7 +615,7 @@ dev.off()
 # Widow Rockfish ----
 # Aggregate model
 # Use models selected during model exploration
-widow_total <- gam(y_catch ~ year_f + 
+widow_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -650,6 +653,7 @@ widow_results <- LOYO_preds(widow_gams, widow_data, widow_results)
 # Calculate RMSE
 # Get values for each year and overall value
 widow_error <- RMSE_calc(widow_results, yoy_widow)
+mean(widow_error[[2]]$RMSE) #485
 
 # Plot the RMSE for each year
 widow_error[[2]]$temperature <- ctd_means$temperature[match(widow_error[[2]]$year, ctd_means$year)]
@@ -777,7 +781,9 @@ widow_added_results <- lapply(widow_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(widow_added_results)) # 182
+mean(unlist(widow_added_results)) # 25
+# When including the outliers, splitting up the data into size bins drastically improves the RMSE
+# When aggregated with the outliers, the RMSE is extremely high
 
 # Maps
 par(mfrow = c(1, 3),
@@ -794,7 +800,7 @@ dev.off()
 # Shortbelly Rockfish ----
 # Aggregate model
 # Use models selected during model exploration
-shortbelly_total <- gam(y_catch ~ year_f + 
+shortbelly_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -832,6 +838,7 @@ shortbelly_results <- LOYO_preds(shortbelly_gams, shortbelly_data, shortbelly_re
 # Calculate RMSE
 # Get values for each year and overall value
 shortbelly_error <- RMSE_calc(shortbelly_results, yoy_shortbelly)
+mean(shortbelly_error[[2]]$RMSE) #111
 
 # Plot the RMSE for each year
 shortbelly_error[[2]]$temperature <- ctd_means$temperature[match(shortbelly_error[[2]]$year, ctd_means$year)]
@@ -959,7 +966,7 @@ shortbelly_added_results <- lapply(shortbelly_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(shortbelly_added_results)) # 182
+mean(unlist(shortbelly_added_results)) # 110
 
 # Maps
 par(mfrow = c(1, 3),
@@ -976,7 +983,7 @@ dev.off()
 # Pacific Sanddab ----
 # Aggregate model
 # Use models selected during model exploration
-sdab_total <- gam(y_catch ~ year_f + 
+sdab_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -1014,6 +1021,7 @@ sdab_results <- LOYO_preds(sdab_gams, sdab_data, sdab_results)
 # Calculate RMSE
 # Get values for each year and overall value
 sdab_error <- RMSE_calc(sdab_results, yoy_sdab)
+mean(sdab_error[[2]]$RMSE) #65
 
 # Plot the RMSE for each year
 sdab_error[[2]]$temperature <- ctd_means$temperature[match(sdab_error[[2]]$year, ctd_means$year)]
@@ -1141,7 +1149,7 @@ sdab_added_results <- lapply(sdab_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(sdab_added_results)) # 182
+mean(unlist(sdab_added_results)) # 54
 
 # Maps
 par(mfrow = c(1, 3),
