@@ -13,6 +13,7 @@ library(Metrics)
 library(dplyr)
 library(fields)
 library(colorspace)
+library(ggthemes)
 
 # Functions ----
 source(here('code/functions', 'vis_gam_COLORS.R'))
@@ -86,10 +87,7 @@ variable_coefficient <- function(gam, data, variable){
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
 }
 
-plot_var_coef <- function(my_gam, species_subset, predictions){
-  par(mar = c(6.4, 7.2, .5, 0.6) + 0.1,
-      oma = c(1, 1, 1, 1),
-      mgp = c(5, 2, 0))
+plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
   myvis_gam(my_gam,
             view = c('lon', 'lat'),
             too.far = 0.07,
@@ -97,14 +95,15 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
             contour.col = contour_col,
             color = "jet" ,
             type = 'link',
-            xlim = c(-125.7,-116.5),
+            xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
-            xlab = "lon",
-            ylab = "lat",
-            main = " ",
-            cex.lab = 2.5,
-            cex.axis =  2.5)
+            xlab = "Longitude",
+            ylab = yaxis,
+            main = size,
+            cex.lab = 3.1,
+            cex.axis =  2.8,
+            cex.main = 3.5)
   symbols(species_subset$lon[predictions[[2]]],
           species_subset$lat[predictions[[2]]],
           circle = predictions[[3]][predictions[[2]]],
@@ -119,24 +118,132 @@ plot_var_coef <- function(my_gam, species_subset, predictions){
           add = T,
           bg = alpha('navy', 0.4),
           fg = alpha('black', 0.08))
-  map("worldHires",
+  maps::map("worldHires",
       fill = T,
       col = "wheat4",
       add = T)
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
-             smallplot = c(.28, .31, .11, .24),
-             legend.cex = 1.3,
-             axis.args = list(cex.axis = 1.8,
+             smallplot = c(.24, .29, .08, .21),
+             legend.cex = 2.2,
+             axis.args = list(cex.axis = 2.5,
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(my_gam$linear.predictors),
                       max(my_gam$linear.predictors)),
              legend.args = list("log(cpue+1)",
-                                side = 2, cex = 2,
-                                family = "serif"))
+                                side = 2, 
+                                cex = 2,
+                                family = "serif",
+                                line = 1.5))
+}
+
+plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
+  myvis_gam(my_gam,
+            view = c('lon', 'lat'),
+            too.far = 0.07,
+            plot.type = 'contour',
+            contour.col = contour_col,
+            color = "jet" ,
+            type = 'link',
+            xlim = c(-125.7, -116.5),
+            ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
+            family = "serif",
+            xlab = "Longitude",
+            ylab = yaxis,
+            main = size,
+            cex.lab = 3.1,
+            cex.axis =  2.8,
+            cex.main = 3.5)
+  # symbols(species_subset$lon[predictions[[2]]],
+  #         species_subset$lat[predictions[[2]]],
+  #         circle = predictions[[3]][predictions[[2]]],
+  #         inches = 0.12,
+  #         add = T,
+  #         bg = alpha('darkred', 0.4),
+  #         fg = alpha('black', 0.08))
+  symbols(species_subset$lon[predictions[[1]]],
+          species_subset$lat[predictions[[1]]],
+          circle = (-1) * predictions[[3]][predictions[[1]]],
+          inches = 0.12,
+          add = T,
+          bg = alpha('navy', 0.4),
+          fg = alpha('black', 0.08))
+  maps::map("worldHires",
+            fill = T,
+            col = "wheat4",
+            add = T)
+  image.plot(legend.only = T,
+             col = jet.colors(100),
+             legend.shrink = 0.2,
+             smallplot = c(.24, .29, .08, .21),
+             legend.cex = 2.2,
+             axis.args = list(cex.axis = 2.5,
+                              family = "serif"),
+             legend.width = 0.8,
+             legend.mar = 6,
+             zlim = c(min(my_gam$linear.predictors),
+                      max(my_gam$linear.predictors)),
+             legend.args = list("log(cpue+1)",
+                                side = 2, 
+                                cex = 2,
+                                family = "serif",
+                                line = 1.5))
+}
+
+plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
+  myvis_gam(my_gam,
+            view = c('lon', 'lat'),
+            too.far = 0.07,
+            plot.type = 'contour',
+            contour.col = contour_col,
+            color = "jet" ,
+            type = 'link',
+            xlim = c(-125.7, -116.5),
+            ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
+            family = "serif",
+            xlab = "Longitude",
+            ylab = yaxis,
+            main = size,
+            cex.lab = 3.1,
+            cex.axis =  2.8,
+            cex.main = 3.5)
+  symbols(species_subset$lon[predictions[[2]]],
+          species_subset$lat[predictions[[2]]],
+          circle = predictions[[3]][predictions[[2]]],
+          inches = 0.12,
+          add = T,
+          bg = alpha('darkred', 0.4),
+          fg = alpha('black', 0.08))
+  # symbols(species_subset$lon[predictions[[1]]],
+  #         species_subset$lat[predictions[[1]]],
+  #         circle = (-1) * predictions[[3]][predictions[[1]]],
+  #         inches = 0.12,
+  #         add = T,
+  #         bg = alpha('navy', 0.4),
+  #         fg = alpha('black', 0.08))
+  maps::map("worldHires",
+            fill = T,
+            col = "wheat4",
+            add = T)
+  image.plot(legend.only = T,
+             col = jet.colors(100),
+             legend.shrink = 0.2,
+             smallplot = c(.24, .29, .08, .21),
+             legend.cex = 2.2,
+             axis.args = list(cex.axis = 2.5,
+                              family = "serif"),
+             legend.width = 0.8,
+             legend.mar = 6,
+             zlim = c(min(my_gam$linear.predictors),
+                      max(my_gam$linear.predictors)),
+             legend.args = list("log(cpue+1)",
+                                side = 2, 
+                                cex = 2,
+                                family = "serif",
+                                line = 1.5))
 }
 
 RMSE_calc <- function(results, data){
@@ -416,7 +523,28 @@ hake_added_results <- lapply(hake_combined_results, function(x){
 
 mean(unlist(hake_added_results)) # 182
 
+hake_combined_df <- data.frame(year = names(hake_added_results), 
+                               RMSE = unlist(hake_added_results))
+
+
+ggplot(hake_combined_df) +
+  geom_line(aes(year, RMSE),
+            size = 1.3,
+            group = 1,
+            color = "maroon4") +
+  labs(x = "Year",
+       y = "RMSE",
+       title = "Yearly Error for Pacific Hake") +
+  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 24,
+                                  color = "maroon4"),
+        axis.text = element_text(size = 20),
+        plot.title = element_text(size = 28, face = "bold"),
+        axis.line = element_line(color = "black"))
+
 # Maps
+# General distributions
 par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
@@ -428,6 +556,22 @@ dev.copy(jpeg, here('results/RREAS_preliminary', 'hake_distributions.jpg'),
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
+# Variable coefficient plots
+pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$NPGO_pos)
+pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$NPGO_pos)
+pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$NPGO_pos)
+
+windows()
+par(mfrow = c(1, 3),
+    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0))
+plot_var_coef(hake_total, yoy_hake, pred_hake_all, "Latitude", "All Sizes")
+plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes")
+plot_var_coef2(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes")
+dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_hake_var_coef.jpg'), 
+         height = 15, width = 20, units = 'in', res = 200)
+dev.off()
 
 # Anchovy ----
 # Aggregate model
@@ -576,6 +720,25 @@ anchovy_large_results <- LOYO_preds_large(anchovy_large_gams, anchovy_data, anch
 # Get values for each year and overall value
 anchovy_large_error <- RMSE_calc_large(anchovy_large_results, yoy_anchovy)
 
+anchovy_combined_df <- data.frame(year = names(anchovy_added_results), 
+                               RMSE = unlist(anchovy_added_results))
+
+
+ggplot(anchovy_combined_df) +
+  geom_line(aes(year, RMSE),
+            size = 1.3,
+            group = 1,
+            color = "maroon4") +
+  labs(x = "Year",
+       y = "RMSE",
+       title = "Yearly RMSE for Northern Anchovy") +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 24,
+                                  color = "maroon4"),
+        axis.text = element_text(size = 20),
+        plot.title = element_text(size = 36),
+        axis.line = element_line(color = "black"))
+
 # Plot the RMSE for each year
 anchovy_large_error[[2]]$temperature <- ctd_means$temperature[match(anchovy_large_error[[2]]$year, ctd_means$year)]
 
@@ -600,6 +763,24 @@ anchovy_added_results <- lapply(anchovy_combined_results, function(x){
 
 mean(unlist(anchovy_added_results)) # 321
 
+anchovy_combined_df <- data.frame(year = names(anchovy_added_results), 
+                               RMSE = unlist(anchovy_added_results))
+
+ggplot(anchovy_combined_df) +
+  geom_line(aes(year, RMSE),
+            size = 1.3,
+            group = 1,
+            color = "maroon4") +
+  labs(x = "Year",
+       y = "RMSE",
+       title = "Yearly RMSE for Northern Anchovy") +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 24,
+                                  color = "maroon4"),
+        axis.text = element_text(size = 20),
+        plot.title = element_text(size = 36),
+        axis.line = element_line(color = "black"))
+
 # Maps
 par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
@@ -609,6 +790,23 @@ location_plot(anchovy_total, yoy_anchovy, "lat", "All Sizes", yoy_anchovy$catch)
 location_plot(anchovy_large, yoy_anchovy, " ", "Small Sizes", yoy_anchovy$large)
 location_plot(anchovy_small, yoy_anchovy, " ", "Large Sizes", yoy_anchovy$small)
 dev.copy(jpeg, here('results/RREAS_preliminary', 'anchovy_distributions.jpg'), 
+         height = 15, width = 20, units = 'in', res = 200)
+dev.off()
+
+# Variable coefficient plots
+pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$NPGO_pos)
+pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$NPGO_pos)
+pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$NPGO_pos)
+
+windows()
+par(mfrow = c(1, 3),
+    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0))
+plot_var_coef3(anchovy_total, yoy_anchovy, pred_anchovy_all, "Latitude", "All Sizes")
+plot_var_coef3(anchovy_small, yoy_anchovy, pred_anchovy_small, "", "Small Sizes")
+plot_var_coef3(anchovy_large, yoy_anchovy, pred_anchovy_large, "", "Large Sizes")
+dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_anchovy_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -785,6 +983,25 @@ mean(unlist(widow_added_results)) # 25
 # When including the outliers, splitting up the data into size bins drastically improves the RMSE
 # When aggregated with the outliers, the RMSE is extremely high
 
+widow_combined_df <- data.frame(year = names(widow_added_results), 
+                               RMSE = unlist(widow_added_results))
+
+ggplot(widow_combined_df) +
+  geom_line(aes(year, RMSE),
+            size = 1.3,
+            group = 1,
+            color = "maroon4") +
+  labs(x = "Year",
+       y = "RMSE",
+       title = "Yearly RMSE for Widow Rockfish") +
+  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 24,
+                                  color = "maroon4"),
+        axis.text = element_text(size = 20),
+        plot.title = element_text(size = 36),
+        axis.line = element_line(color = "black"))
+
 # Maps
 par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
@@ -796,6 +1013,24 @@ location_plot(widow_small, yoy_widow, " ", "Large Sizes", yoy_widow$small)
 dev.copy(jpeg, here('results/RREAS_preliminary', 'widow_distributions.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
+
+# Variable coefficient plots
+pred_widow_all <- variable_coefficient(widow_total, yoy_widow, yoy_widow$ONI_pos)
+pred_widow_small <- variable_coefficient(widow_small, yoy_widow, yoy_widow$ONI_pos)
+pred_widow_large <- variable_coefficient(widow_large, yoy_widow, yoy_widow$ONI_pos)
+
+windows()
+par(mfrow = c(1, 3),
+    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0))
+plot_var_coef(widow_total, yoy_widow, pred_widow_all, "Latitude", "All Sizes")
+plot_var_coef(widow_small, yoy_widow, pred_widow_small, "", "Small Sizes")
+plot_var_coef3(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes")
+dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_widow_var_coef.jpg'), 
+         height = 15, width = 20, units = 'in', res = 200)
+dev.off()
+
 
 # Shortbelly Rockfish ----
 # Aggregate model
@@ -968,6 +1203,26 @@ shortbelly_added_results <- lapply(shortbelly_combined_results, function(x){
 
 mean(unlist(shortbelly_added_results)) # 110
 
+shortbelly_combined_df <- data.frame(year = names(shortbelly_added_results), 
+                               RMSE = unlist(shortbelly_added_results))
+
+
+ggplot(shortbelly_combined_df) +
+  geom_line(aes(year, RMSE),
+            size = 1.3,
+            group = 1,
+            color = "maroon4") +
+  labs(x = "Year",
+       y = "RMSE",
+       title = "Yearly Error for Shortbelly Rockfish") +
+  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 24,
+                                  color = "maroon4"),
+        axis.text = element_text(size = 20),
+        plot.title = element_text(size = 28, face = "bold"),
+        axis.line = element_line(color = "black"))
+
 # Maps
 par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
@@ -977,6 +1232,23 @@ location_plot(shortbelly_total, yoy_shortbelly, "lat", "All Sizes", yoy_shortbel
 location_plot(shortbelly_large, yoy_shortbelly, " ", "Small Sizes", yoy_shortbelly$large)
 location_plot(shortbelly_small, yoy_shortbelly, " ", "Large Sizes", yoy_shortbelly$small)
 dev.copy(jpeg, here('results/RREAS_preliminary', 'shortbelly_distributions.jpg'), 
+         height = 15, width = 20, units = 'in', res = 200)
+dev.off()
+
+# Variable coefficient plots
+pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$PDO_pos)
+pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$PDO_pos)
+pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$PDO_pos)
+
+windows()
+par(mfrow = c(1, 3),
+    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0))
+plot_var_coef(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
+plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes")
+plot_var_coef3(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes")
+dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_shortbelly_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -1028,8 +1300,19 @@ sdab_error[[2]]$temperature <- ctd_means$temperature[match(sdab_error[[2]]$year,
 
 ggplot(sdab_error[[2]]) +
   geom_line(aes(year, RMSE),
-            size = 1,
-            group = 1) 
+            size = 1.3,
+            group = 1,
+            color = "darkslategray4") +
+  labs(x = "Year",
+       y = "RMSE",
+       title = "Aggregate Pacific Sanddab") +
+  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 24,
+                                  color = "darkslategray4"),
+        axis.text = element_text(size = 20),
+        plot.title = element_text(size = 36),
+        axis.line = element_line(color = "black"))
 
 ggplot(sdab_error[[2]]) +
   geom_line(aes(year, temperature),
@@ -1151,6 +1434,25 @@ sdab_added_results <- lapply(sdab_combined_results, function(x){
 
 mean(unlist(sdab_added_results)) # 54
 
+sdab_combined_df <- data.frame(year = names(sdab_added_results), 
+                               RMSE = unlist(sdab_added_results))
+
+ggplot(sdab_combined_df) +
+  geom_line(aes(year, RMSE),
+            size = 1.3,
+            group = 1,
+            color = "maroon4") +
+  labs(x = "Year",
+       y = "RMSE",
+       title = "Yearly RMSE for Pacific Sanddab") +
+  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 24,
+                                  color = "maroon4"),
+        axis.text = element_text(size = 20),
+        plot.title = element_text(size = 36),
+        axis.line = element_line(color = "black"))
+
 # Maps
 par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
@@ -1160,5 +1462,22 @@ location_plot(sdab_total, yoy_sdab, "lat", "All Sizes", yoy_sdab$catch)
 location_plot(sdab_large, yoy_sdab, " ", "Small Sizes", yoy_sdab$large)
 location_plot(sdab_small, yoy_sdab, " ", "Large Sizes", yoy_sdab$small)
 dev.copy(jpeg, here('results/RREAS_preliminary', 'sdab_distributions.jpg'), 
+         height = 15, width = 20, units = 'in', res = 200)
+dev.off()
+
+# Variable coefficient plots
+pred_sdab_all <- variable_coefficient(sdab_total, yoy_sdab, yoy_sdab$NPGO_pos)
+pred_sdab_small <- variable_coefficient(sdab_small, yoy_sdab, yoy_sdab$NPGO_pos)
+pred_sdab_large <- variable_coefficient(sdab_large, yoy_sdab, yoy_sdab$NPGO_pos)
+
+windows()
+par(mfrow = c(1, 3),
+    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0))
+plot_var_coef2(sdab_total, yoy_sdab, pred_sdab_all, "Latitude", "All Sizes")
+plot_var_coef(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes")
+plot_var_coef3(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes")
+dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_sdab_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
