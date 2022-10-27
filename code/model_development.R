@@ -30,7 +30,7 @@ read_data <- function(file){
 }
 
 contour_col <- rgb(0, 0, 255, max = 255, alpha = 0, names = "white")
-jet.colors <- colorRampPalette(c(sequential_hcl(15, palette = "Mint")))
+jet.colors <- colorRampPalette(c(sequential_hcl(15, palette = "BurgYl")))
 
 location_plot <- function(gam, species_subset, yaxis, title, value) {
   myvis_gam(gam,
@@ -97,13 +97,13 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
             type = 'link',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
-            family = "serif",
+            family = "Lato",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
-            cex.lab = 3.1,
-            cex.axis =  2.8,
-            cex.main = 3.5)
+            cex.lab = 7.5,
+            cex.axis =  7,
+            cex.main = 8)
   symbols(species_subset$lon[predictions[[2]]],
           species_subset$lat[predictions[[2]]],
           circle = predictions[[3]][predictions[[2]]],
@@ -128,23 +128,23 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
        state_labels$name, 
        pos = 1,
        col = "black",
-       cex = 2.5,
-       family = "serif")
+       cex = 6,
+       family = "Lato")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
-             legend.cex = 2.2,
-             axis.args = list(cex.axis = 2.5,
-                              family = "serif"),
+             legend.cex = 4,
+             axis.args = list(cex.axis = 5,
+                              family = "Lato"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(my_gam$linear.predictors),
                       max(my_gam$linear.predictors)),
              legend.args = list("log(cpue+1)",
                                 side = 2, 
-                                cex = 2,
-                                family = "serif",
+                                cex = 4,
+                                family = "Lato",
                                 line = 1.5))
 }
 
@@ -158,13 +158,13 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
             type = 'link',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
-            family = "serif",
+            family = "Lato",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
-            cex.lab = 3.1,
-            cex.axis =  2.8,
-            cex.main = 3.5)
+            cex.lab = 7.5,
+            cex.axis =  7,
+            cex.main = 8)
   # symbols(species_subset$lon[predictions[[2]]],
   #         species_subset$lat[predictions[[2]]],
   #         circle = predictions[[3]][predictions[[2]]],
@@ -189,23 +189,23 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
        state_labels$name, 
        pos = 1,
        col = "black",
-       cex = 2.5,
-       family = "serif")
+       cex = 6,
+       family = "Lato")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
-             legend.cex = 2.2,
-             axis.args = list(cex.axis = 2.5,
-                              family = "serif"),
+             legend.cex = 4,
+             axis.args = list(cex.axis = 5,
+                              family = "Lato"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(my_gam$linear.predictors),
                       max(my_gam$linear.predictors)),
              legend.args = list("log(cpue+1)",
                                 side = 2, 
-                                cex = 2,
-                                family = "serif",
+                                cex = 4,
+                                family = "Lato",
                                 line = 1.5))
 }
 
@@ -219,13 +219,13 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
             type = 'link',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
-            family = "serif",
+            family = "Lato",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
-            cex.lab = 3.1,
-            cex.axis =  2.8,
-            cex.main = 3.5)
+            cex.lab = 7.5,
+            cex.axis =  7,
+            cex.main = 8)
   symbols(species_subset$lon[predictions[[2]]],
           species_subset$lat[predictions[[2]]],
           circle = predictions[[3]][predictions[[2]]],
@@ -250,23 +250,23 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
        state_labels$name, 
        pos = 1,
        col = "black",
-       cex = 2.5,
-       family = "serif")
+       cex = 6,
+       family = "Lato")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
-             legend.cex = 2.2,
-             axis.args = list(cex.axis = 2.5,
-                              family = "serif"),
+             legend.cex = 4,
+             axis.args = list(cex.axis = 5,
+                              family = "Lato"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(my_gam$linear.predictors),
                       max(my_gam$linear.predictors)),
              legend.args = list("log(cpue+1)",
                                 side = 2, 
-                                cex = 2,
-                                family = "serif",
+                                cex = 4,
+                                family = "Lato",
                                 line = 1.5))
 }
 
@@ -379,6 +379,9 @@ ctd_means <- ctds %>%
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(46.4, 44.0, 37.0),
                            lon = c(-121.0, -121.0, -120.0))
+
+sysfonts::font_add_google("Lato")
+showtext::showtext_auto()
 
 # Hake ----
 # Aggregate model
@@ -565,10 +568,14 @@ ggplot(hake_combined_df) +
        title = "Yearly Error for Pacific Hake") +
   scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
   theme_tufte() +
-  theme(axis.title = element_text(size = 24,
-                                  color = "maroon4"),
-        axis.text = element_text(size = 20),
-        plot.title = element_text(size = 28, face = "bold"),
+  theme(axis.title = element_text(size = 26,
+                                  color = "maroon4",
+                                  family = "Lato"),
+        axis.text = element_text(size = 22,
+                                 family = "Lato"),
+        plot.title = element_text(size = 28, 
+                                  face = "bold",
+                                  family = "Lato"),
         axis.line = element_line(color = "black"))
 
 # Maps
@@ -1245,10 +1252,14 @@ ggplot(shortbelly_combined_df) +
        title = "Yearly Error for Shortbelly Rockfish") +
   scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
   theme_tufte() +
-  theme(axis.title = element_text(size = 24,
-                                  color = "maroon4"),
-        axis.text = element_text(size = 20),
-        plot.title = element_text(size = 28, face = "bold"),
+  theme(axis.title = element_text(size = 26,
+                                  color = "maroon4",
+                                  family = "Lato"),
+        axis.text = element_text(size = 22,
+                                 family = "Lato"),
+        plot.title = element_text(size = 28, 
+                                  face = "bold",
+                                  family = "Lato"),
         axis.line = element_line(color = "black"))
 
 # Maps
