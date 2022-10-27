@@ -118,10 +118,18 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
           add = T,
           bg = alpha('navy', 0.4),
           fg = alpha('black', 0.08))
-  maps::map("worldHires",
-      fill = T,
-      col = "wheat4",
-      add = T)
+  maps::map("state",
+            boundary = FALSE,
+            fill = TRUE,
+            col = "wheat4",
+            add = TRUE)
+  text(x = state_labels$lon, 
+       y = state_labels$lat,
+       state_labels$name, 
+       pos = 1,
+       col = "black",
+       cex = 2.5,
+       family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
@@ -171,10 +179,18 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
           add = T,
           bg = alpha('navy', 0.4),
           fg = alpha('black', 0.08))
-  maps::map("worldHires",
-            fill = T,
+  maps::map("state",
+            boundary = FALSE,
+            fill = TRUE,
             col = "wheat4",
-            add = T)
+            add = TRUE)
+  text(x = state_labels$lon, 
+       y = state_labels$lat,
+       state_labels$name, 
+       pos = 1,
+       col = "black",
+       cex = 2.5,
+       family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
@@ -224,10 +240,18 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
   #         add = T,
   #         bg = alpha('navy', 0.4),
   #         fg = alpha('black', 0.08))
-  maps::map("worldHires",
-            fill = T,
+  maps::map("state",
+            boundary = FALSE,
+            fill = TRUE,
             col = "wheat4",
-            add = T)
+            add = TRUE)
+  text(x = state_labels$lon, 
+       y = state_labels$lat,
+       state_labels$name, 
+       pos = 1,
+       col = "black",
+       cex = 2.5,
+       family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
@@ -351,6 +375,10 @@ ctds <- readRDS(here('data', 'ctd_means.rdata'))
 ctd_means <- ctds %>%
   group_by(year) %>%
   summarise(across(temperature, mean, na.rm = TRUE))
+
+state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
+                           lat = c(46.4, 44.0, 37.0),
+                           lon = c(-121.0, -121.0, -120.0))
 
 # Hake ----
 # Aggregate model
