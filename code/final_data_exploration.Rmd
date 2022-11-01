@@ -180,8 +180,8 @@ hake_catch <- other_catch %>%
 
 widow_sp <- filter(other_sp, species == 597)
 sbly_sp <- filter(other_sp, species == 604)
-dab_sp <- filter(other_sp, species == 597)
-hake_sp <- filter(other_sp, species == 147)
+dab_sp <- filter(other_sp, species == 147)
+hake_sp <- filter(other_sp, species == 382)
 
 rm(list = c('anch_data_list', 'other_catch', 
             'other_data_list', 'other_sp',
