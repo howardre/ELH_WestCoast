@@ -116,7 +116,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
           circle = (-1) * predictions[[3]][predictions[[1]]],
           inches = 0.12,
           add = T,
-          bg = alpha('navy', 0.4),
+          bg = alpha('deepskyblue4', 0.4),
           fg = alpha('black', 0.08))
   maps::map("state",
             boundary = FALSE,
@@ -177,7 +177,7 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
           circle = (-1) * predictions[[3]][predictions[[1]]],
           inches = 0.12,
           add = T,
-          bg = alpha('navy', 0.4),
+          bg = alpha('deepskyblue4', 0.4),
           fg = alpha('black', 0.08))
   maps::map("state",
             boundary = FALSE,
@@ -602,8 +602,8 @@ par(mfrow = c(1, 3),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef(hake_total, yoy_hake, pred_hake_all, "Latitude", "All Sizes")
-plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes")
-plot_var_coef2(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes")
+plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes (7-31 mm)")
+plot_var_coef(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (32-134 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_hake_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
@@ -839,8 +839,8 @@ par(mfrow = c(1, 3),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef3(anchovy_total, yoy_anchovy, pred_anchovy_all, "Latitude", "All Sizes")
-plot_var_coef3(anchovy_small, yoy_anchovy, pred_anchovy_small, "", "Small Sizes")
-plot_var_coef3(anchovy_large, yoy_anchovy, pred_anchovy_large, "", "Large Sizes")
+plot_var_coef3(anchovy_small, yoy_anchovy, pred_anchovy_small, "", "Small Sizes (15-35 mm)")
+plot_var_coef3(anchovy_large, yoy_anchovy, pred_anchovy_large, "", "Large Sizes (36-92 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_anchovy_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
@@ -1060,8 +1060,8 @@ par(mfrow = c(1, 3),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef(widow_total, yoy_widow, pred_widow_all, "Latitude", "All Sizes")
-plot_var_coef(widow_small, yoy_widow, pred_widow_small, "", "Small Sizes")
-plot_var_coef3(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes")
+plot_var_coef(widow_small, yoy_widow, pred_widow_small, "", "Small Sizes (11-31 mm)")
+plot_var_coef3(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes (32-73 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_widow_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
@@ -1285,8 +1285,8 @@ par(mfrow = c(1, 3),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
-plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes")
-plot_var_coef3(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes")
+plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes (8-25 mm)")
+plot_var_coef3(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes (26-85 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_shortbelly_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
@@ -1515,8 +1515,8 @@ par(mfrow = c(1, 3),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef2(sdab_total, yoy_sdab, pred_sdab_all, "Latitude", "All Sizes")
-plot_var_coef(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes")
-plot_var_coef3(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes")
+plot_var_coef(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes (11-30 mm)")
+plot_var_coef2(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (30-82 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_sdab_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
