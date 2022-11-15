@@ -30,7 +30,7 @@ read_data <- function(file){
 }
 
 contour_col <- rgb(0, 0, 255, max = 255, alpha = 0, names = "white")
-jet.colors <- colorRampPalette(c(sequential_hcl(15, palette = "BurgYl")))
+jet.colors <- colorRampPalette(c(sequential_hcl(15, palette = "BluGrn")))
 
 location_plot <- function(gam, species_subset, yaxis, title, value) {
   myvis_gam(gam,
