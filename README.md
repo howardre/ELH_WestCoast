@@ -4,7 +4,6 @@ The is part of an NSF funded project that will create species distribution maps 
 
 ### Data
 Multiple data sources have potential applications to this project. Currently we are using:
-- The NOAA **West Coast Groundfish Bottom Trawl Survey** which is available from [NMFS FRAM Data Warehouse](https://www.webapps.nwfsc.noaa.gov/data/map) for 2003-2021. Additional surveys are also available, but only the current survey is being used for this research. These data are for larger individuals, including adults and juveniles for some species. Length data availability is variable depending on the species.
 - The NOAA **Rockfish Recruitment and Ecosystem Assessment Survey**, data for which are available upon request. This survey largely target pre-recruits.
 - The **CalCOFI Surveys**, which provide one of the longest fisheries time series available. Data can be accessed on their [website](https://calcofi.org).
 - The **Newport Hydrographic Line Surveys** data which are collected by Oregon State University scientists off the Oregon Coast near Newport.
