@@ -27,6 +27,8 @@ clean_catch <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
   names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
+  data_frame <- filter(data_frame, 
+                       active == 'Y')
   return(data_frame)
 }
 
@@ -38,6 +40,8 @@ clean_sp <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
   names(data_frame)[names(data_frame) == 'nmeas'] <- 'num_measured'
   names(data_frame)[names(data_frame) == 'exp'] <- 'haul_exp'
+  data_frame <- filter(data_frame, 
+                       active == 'Y')
   return(data_frame)
 }
 
@@ -126,6 +130,18 @@ plot_variables <- function(data){
        main = '',
        xlab = 'Catch') 
 }
+
+# Filter out needed pre-recruit species
+species_filter <- function(data, species){
+  data %>%
+    select(c('cruise', 'date', 'year', 'month',
+             'day', 'tow_depth', 'latitude', 
+             'longitude', 'surface_temp', 
+             species)) %>%
+    rename(larval_count = species) %>%
+    mutate(larval_count = ifelse(is.na(larval_count), 0, larval_count)) %>%
+    mutate(larval_count = as.numeric(as.character(larval_count)))
+  }
 ```
 
 Data from emails
@@ -241,11 +257,11 @@ rm(list = c('oni_index', 'oni_matrix', 'oni_means',
 
 ```{r}
 # Consolidate lengths
-anch_subset <- size_calc(anch_sp, 35)
-widow_subset <- size_calc(widow_sp, 31)
-sbly_subset <- size_calc(sbly_sp, 25)
-dab_subset <- size_calc(dab_sp, 30)
-hake_subset <- size_calc(hake_sp, 31)
+anch_subset <- size_calc(anch_sp, 25)
+widow_subset <- size_calc(widow_sp, 55)
+sbly_subset <- size_calc(sbly_sp, 30)
+dab_subset <- size_calc(dab_sp, 39)
+hake_subset <- size_calc(hake_sp, 35)
 
 anch_subset[is.na(anch_subset)] <- 0
 widow_subset[is.na(widow_subset)] <- 0
@@ -256,24 +272,34 @@ hake_subset[is.na(hake_subset)] <- 0
 
 ```{r}
 # Extract CTD data
+# RREAS
 RREAS_CTD_info <- info('FED_Rockfish_CTD')
 
-ctds <- tabledap(RREAS_CTD_info,
-                 fields = c('cruise', 'ctd_index',
-                            'temperature', 'salinity', 
-                            'oxygen', 'station',
-                            'ctd_depth', 'time'),
-                 'ctd_depth<=10')
+RREAS_ctds <- tabledap(RREAS_CTD_info,
+                       fields = c('cruise', 'ctd_index',
+                                  'temperature', 'salinity', 
+                                  'oxygen', 'station',
+                                  'ctd_depth', 'time'),
+                       'ctd_depth<=10')
 
-cols <- c('temperature', 'salinity', 'oxygen')
-ctds[cols] <- sapply(ctds[cols], as.numeric)
+RREAS_cols <- c('temperature', 'salinity', 'oxygen')
+RREAS_ctds[RREAS_cols] <- sapply(RREAS_ctds[RREAS_cols], as.numeric)
 
-ctd_means <- ctds %>%
+RREAS_ctd_means <- RREAS_ctds %>%
   mutate(date = format(as.POSIXct(time, tz = "UTC", format = "%Y-%m-%d")),
          year = lubridate::year(date)) %>%
   group_by(cruise, ctd_index, year) %>%
   summarise_at(vars('temperature', 'salinity', 'oxygen'), mean) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) 
+
+# Pre-recruit
+PRS_ctds <- read.csv(here::here('data', 'Prerecruit_env.csv'))[, -1]
+
+PRS_avg_ctds <- PRS_ctds %>%
+  filter(depth_m <= 10) %>%
+  group_by(date, swfcs.station) %>%
+  summarise_at(vars('temperature_c', 'salinity_psu', 'dissolved_oxygen'), mean) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .))
 ```
 
 ```{r}
