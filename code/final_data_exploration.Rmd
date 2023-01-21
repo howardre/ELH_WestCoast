@@ -27,8 +27,10 @@ clean_catch <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
   names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
-  data_frame <- filter(data_frame, 
-                       active == 'Y')
+  data_frame <- data_frame %>% filter(active == 'Y') %>%
+    mutate(numeric_date = as.numeric(format(as.POSIXct(haul_date, 
+                                                      format = "%Y-%m-%d"), 
+                                           "%m%d%Y")))
   return(data_frame)
 }
 
@@ -40,8 +42,10 @@ clean_sp <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
   names(data_frame)[names(data_frame) == 'nmeas'] <- 'num_measured'
   names(data_frame)[names(data_frame) == 'exp'] <- 'haul_exp'
-  data_frame <- filter(data_frame, 
-                       active == 'Y')
+  data_frame <- data_frame %>% filter(active == 'Y') %>%
+    mutate(numeric_date = as.numeric(format(as.POSIXct(haul_date, 
+                                                      format = "%Y-%m-%d %H:%M:%S"), 
+                                           "%m%d%Y")))
   return(data_frame)
 }
 
@@ -73,20 +77,31 @@ climate_match <- function(data){
 }
 
 # Combine the grouped length data with the catch data
-merge_lengths <- function(catch, hauls, subset, ctd_means){
+merge_lengths <- function(catch, hauls, subset, RREAS_means, PRS_means){
   data <- merge(catch,
                 subset[, c("haul_no", "cruise", "small", "large")],
-                by = c("haul_no", "cruise"))
-  data_id <- merge(data,
-                   hauls[, c("haul_no", "cruise", "ctd_index")],
-                   by = c("haul_no", "cruise"))
+                by = c("haul_no", "cruise")) # Add the catch info to the length data
+  data_id <- merge(hauls[, c("haul_no", "cruise", "ctd_index")],
+                   data,
+                   by = c("haul_no", "cruise"),
+                   all.y = T) # add in ctd_index for RREAS
   data_ctd <- merge(data_id,
-                    ctd_means,
+                    RREAS_means,
                     by = c('cruise',
                            'ctd_index',
-                           'year'),
+                           'year'), # match the RREAS ctds
                     all.x = T)
-  return(data_ctd)
+  data_ctd_all <- merge(data_ctd,
+                        PRS_means,
+                        by.x = c("numeric_date", "station"),
+                        by.y = c("date", "swfcs.station"),
+                        all.x = T) # Add the pre-recruit CTD data
+  data_comb <- mutate(data_ctd_all,
+                      temperature = coalesce(temperature, temperature_c),
+                      salinity = coalesce(salinity, salinity_psu),
+                      oxygen = coalesce(oxygen, dissolved_oxygen)) # Combine env data
+  data_final <- data_comb[-c(36, 37, 38)]
+  return(data_final)
 }
 
 # Group into two size classes
@@ -94,7 +109,7 @@ size_calc <- function(sp, size){
   sizes <- mutate(sp, size_class = case_when(std_length <= size ~ "small",
                                              std_length > size ~ "large")) 
   subset <- sizes %>% 
-    group_by(haul_no, cruise, haul_exp, size_class) %>%
+    group_by(numeric_date, station, haul_no, cruise, haul_exp, size_class) %>%
     mutate(size_class = factor(size_class, levels = c("small", "large"))) %>%
     summarise(size_count = length(size_class)) %>%
     mutate(size_subset = size_count * haul_exp) %>%
@@ -298,6 +313,9 @@ PRS_ctds <- read.csv(here::here('data', 'Prerecruit_env.csv'))[, -1]
 PRS_avg_ctds <- PRS_ctds %>%
   filter(depth_m <= 10) %>%
   group_by(date, swfcs.station) %>%
+  mutate(date = as.numeric(format(as.Date(date, 
+                                             format = "%Y-%m-%d"),
+                                  "%m%d%Y"))) %>%
   summarise_at(vars('temperature_c', 'salinity_psu', 'dissolved_oxygen'), mean) %>%
   mutate_all(~ifelse(is.nan(.), NA, .))
 ```
@@ -308,11 +326,11 @@ PRS_avg_ctds <- PRS_ctds %>%
 haul_data <- read_excel(here('data', 'haul_data_through2021.xlsx'))
 names(haul_data) <- tolower(names(haul_data))
 
-yoy_anch <- merge_lengths(anch_catch, haul_data, anch_subset, ctd_means)
-yoy_widw <- merge_lengths(widow_catch, haul_data, widow_subset, ctd_means)
-yoy_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, ctd_means)
-yoy_dab <- merge_lengths(dab_catch, haul_data, dab_subset, ctd_means)
-yoy_hake <- merge_lengths(hake_catch, haul_data, hake_subset, ctd_means)
+yoy_anch <- merge_lengths(anch_catch, haul_data, anch_subset, RREAS_ctd_means, PRS_avg_ctds)
+yoy_widw <- merge_lengths(widow_catch, haul_data, widow_subset, RREAS_ctd_means, PRS_avg_ctds)
+yoy_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, RREAS_ctd_means, PRS_avg_ctds)
+yoy_dab <- merge_lengths(dab_catch, haul_data, dab_subset, RREAS_ctd_means, PRS_avg_ctds)
+yoy_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means, PRS_avg_ctds)
 ```
 
 
