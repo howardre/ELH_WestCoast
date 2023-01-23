@@ -16,6 +16,9 @@ library(grid)
 library(reshape2)
 library(here)
 library(rerddap)
+library(tidync)
+library(ncdf4)
+library(sf)
 ```
 
 Functions
@@ -27,10 +30,7 @@ clean_catch <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
   names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
-  data_frame <- data_frame %>% filter(active == 'Y') %>%
-    mutate(numeric_date = as.numeric(format(as.POSIXct(haul_date, 
-                                                      format = "%Y-%m-%d"), 
-                                           "%m%d%Y")))
+  data_frame <- data_frame %>% filter(active == 'Y') 
   return(data_frame)
 }
 
@@ -42,10 +42,7 @@ clean_sp <- function(data_list, i){
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
   names(data_frame)[names(data_frame) == 'nmeas'] <- 'num_measured'
   names(data_frame)[names(data_frame) == 'exp'] <- 'haul_exp'
-  data_frame <- data_frame %>% filter(active == 'Y') %>%
-    mutate(numeric_date = as.numeric(format(as.POSIXct(haul_date, 
-                                                      format = "%Y-%m-%d %H:%M:%S"), 
-                                           "%m%d%Y")))
+  data_frame <- data_frame %>% filter(active == 'Y') 
   return(data_frame)
 }
 
@@ -156,7 +153,17 @@ species_filter <- function(data, species){
     rename(larval_count = species) %>%
     mutate(larval_count = ifelse(is.na(larval_count), 0, larval_count)) %>%
     mutate(larval_count = as.numeric(as.character(larval_count)))
-  }
+}
+
+# Match ROMS hindcast to the fish data
+hindcast_match <- function(data, roms){
+  data[, c(36, 37)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'numeric_date')],
+                                                   data[, c('lat', 'lon', 'numeric_date')],
+                                                   k = 1))
+  data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 2] # Match nearest temp
+  data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 1] # Match nearest temp
+  data <- data[-c(36, 37)] # remove extra columns before predicting
+}
 ```
 
 Data from emails
@@ -194,7 +201,14 @@ col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station',
                   'catch', 'num_measured', 'haul_exp', 'sp_no', 'std_length')
 
 other_catch[col_names_catch] <- sapply(other_catch[col_names_catch], as.numeric)
+other_catch <- other_catch %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
+other_catch$numeric_date <- as.numeric(format(as.Date(other_catch$date, format = "%Y%j"),
+                                           "%m%d%Y"))
+
 other_sp[col_names_sp] <- sapply(other_sp[col_names_sp], as.numeric)
+other_sp <- other_sp %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
+other_sp$numeric_date <- as.numeric(format(as.Date(other_sp$date, format = "%Y%j"),
+                                           "%m%d%Y"))
 
 widow_catch <- other_catch %>% 
   select(-c('shortbelly', 'hake', 'dab')) %>%
@@ -326,11 +340,56 @@ PRS_avg_ctds <- PRS_ctds %>%
 haul_data <- read_excel(here('data', 'haul_data_through2021.xlsx'))
 names(haul_data) <- tolower(names(haul_data))
 
-yoy_anch <- merge_lengths(anch_catch, haul_data, anch_subset, RREAS_ctd_means, PRS_avg_ctds)
-yoy_widw <- merge_lengths(widow_catch, haul_data, widow_subset, RREAS_ctd_means, PRS_avg_ctds)
-yoy_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, RREAS_ctd_means, PRS_avg_ctds)
-yoy_dab <- merge_lengths(dab_catch, haul_data, dab_subset, RREAS_ctd_means, PRS_avg_ctds)
-yoy_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_anch <- merge_lengths(anch_catch, haul_data, anch_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_widw <- merge_lengths(widow_catch, haul_data, widow_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_dab <- merge_lengths(dab_catch, haul_data, dab_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means, PRS_avg_ctds)
+```
+
+```{r}
+# Add ROMS hindcast
+nc <- nc_open(here('data','nep_srf_1995-2020.nc'))
+lats <- ncvar_get(nc,"lat_rho")
+lons <- ncvar_get(nc,"lon_rho")
+nc_close(nc)
+
+nep <- tidync(here('data','nep_srf_1995-2020.nc'))
+nep_hindcast <- nep %>% hyper_tibble()
+
+# Currently only one layer of s_rho, will need to extract top layer if this changes
+nep_hindcast$lon <- lons[cbind(nep_hindcast$xi_rho, nep_hindcast$eta_rho)]
+nep_hindcast$lat <- lats[cbind(nep_hindcast$xi_rho, nep_hindcast$eta_rho)]
+
+nep_hindcast$datetime <- as.POSIXct(nep_hindcast$ocean_time, origin = "1900-01-01", tz = "GMT")
+
+nep_hindcast$date <- as.Date(nep_hindcast$datetime) 
+nep_hindcast$month <- month(nep_hindcast$date)
+nep_hindcast$week <- week(nep_hindcast$date) 
+nep_hindcast$year <- year(nep_hindcast$date)
+
+months <- c(4:7)
+lat_lim <- c(29:49)
+lon_lim <- c(-127:-116)
+
+hindcast_trim <- nep_hindcast %>%
+  filter(., month %in% months |
+           lat %in% lat_lim |
+           lon %in% lon_lim) %>%
+  mutate(numeric_date = as.numeric(format(as.Date(date, 
+                                                  format = "%Y-%m-%d"),
+                                          "%m%d%Y")),
+         lon = case_when(lon >= 180 ~ lon - 360,
+                         lon < 180 ~ lon))
+```
+
+```{r}
+# Match to the fish data
+yoy_anch <- hindcast_match(merge_anch, hindcast_trim)
+yoy_dab <- hindcast_match(merge_dab, hindcast_trim)
+yoy_hake <- hindcast_match(merge_hake, hindcast_trim)
+yoy_sbly <- hindcast_match(merge_sbly, hindcast_trim)
+yoy_widw <- hindcast_match(merge_widw, hindcast_trim)
 ```
 
 
