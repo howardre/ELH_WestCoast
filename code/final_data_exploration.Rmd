@@ -102,6 +102,10 @@ merge_lengths <- function(catch, hauls, subset, RREAS_means, PRS_means){
 }
 
 # Group into two size classes
+coalesce_by_column <- function(data) {
+  return(dplyr::coalesce(!!! as.list(data)))
+  }
+  
 size_calc <- function(sp, size){
   sizes <- mutate(sp, size_class = case_when(std_length <= size ~ "small",
                                              std_length > size ~ "large")) 
@@ -111,8 +115,11 @@ size_calc <- function(sp, size){
     summarise(size_count = length(size_class)) %>%
     mutate(size_subset = size_count * haul_exp) %>%
     tidyr::pivot_wider(names_from = size_class,
-                       values_from = size_subset)
-  return(subset)
+                       values_from = size_subset) %>%
+    tidyr::drop_na(haul_exp)
+  subset_coalesce <- subset %>% group_by(numeric_date, station, haul_no, cruise, haul_exp) %>%
+    summarise_all(coalesce_by_column) 
+  return(subset_coalesce)
 }
 
 # Plot relevant variables
@@ -149,20 +156,21 @@ species_filter <- function(data, species){
     select(c('cruise', 'date', 'year', 'month',
              'day', 'tow_depth', 'latitude', 
              'longitude', 'surface_temp', 
-             species)) %>%
+             'species', 'numeric_date')) %>%
     rename(larval_count = species) %>%
     mutate(larval_count = ifelse(is.na(larval_count), 0, larval_count)) %>%
     mutate(larval_count = as.numeric(as.character(larval_count)))
 }
 
 # Match ROMS hindcast to the fish data
-hindcast_match <- function(data, roms){
-  data[, c(36, 37)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'numeric_date')],
+hindcast_match <- function(data, roms, a, b){
+  data[, c(a, b)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'numeric_date')],
                                                    data[, c('lat', 'lon', 'numeric_date')],
                                                    k = 1))
   data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 2] # Match nearest temp
   data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 1] # Match nearest temp
-  data <- data[-c(36, 37)] # remove extra columns before predicting
+  data$mean_temp <- as.data.frame(roms)[c(data$nn.idx), 15]
+  data <- data[-c(a, b)] # remove extra columns before predicting
 }
 ```
 
@@ -176,7 +184,11 @@ anch_tab_names <- excel_sheets(path = anch_exl_data)
 anch_data_list <- lapply(anch_tab_names, function(x) read_excel(path = anch_exl_data, sheet = x))
 
 anch_catch <- clean_catch(anch_data_list, 1)
+anch_catch$numeric_date <- as.numeric(format(as.Date(anch_catch$haul_date, format = "%Y-%m-%d"),
+                                           "%m%d%Y"))
 anch_sp <- clean_sp(anch_data_list, 2)
+anch_sp$numeric_date <- as.numeric(format(as.Date(anch_sp$haul_date, format = "%Y-%m-%d"),
+                                           "%m%d%Y"))
 
 other_exl_data <- here('data', 'rockfish_dab_hake.xlsx')
 excel_sheets(path = other_exl_data) # view the worksheets
@@ -384,12 +396,18 @@ hindcast_trim <- nep_hindcast %>%
 ```
 
 ```{r}
+hindcast_means <- hindcast_trim %>%
+  group_by(year) %>%
+  mutate(mean_temp = mean(temp, na.rm = TRUE))
+```
+
+```{r}
 # Match to the fish data
-yoy_anch <- hindcast_match(merge_anch, hindcast_trim)
-yoy_dab <- hindcast_match(merge_dab, hindcast_trim)
-yoy_hake <- hindcast_match(merge_hake, hindcast_trim)
-yoy_sbly <- hindcast_match(merge_sbly, hindcast_trim)
-yoy_widw <- hindcast_match(merge_widw, hindcast_trim)
+yoy_anch <- hindcast_match(merge_anch, hindcast_means, 36, 37)
+yoy_dab <- hindcast_match(merge_dab, hindcast_means, 37, 38)
+yoy_hake <- hindcast_match(merge_hake, hindcast_means, 37, 38)
+yoy_sbly <- hindcast_match(merge_sbly, hindcast_means, 37, 38)
+yoy_widw <- hindcast_match(merge_widw, hindcast_means, 37, 38)
 ```
 
 
