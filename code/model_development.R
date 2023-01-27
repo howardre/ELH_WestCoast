@@ -22,7 +22,6 @@ read_data <- function(file){
     tidyr::drop_na(roms_temperature, roms_salinity, bottom_depth) %>%
     tidyr::drop_na(bottom_depth) %>%
     filter(catch < 2500)
-  yoy$year_f <- as.factor(yoy$year)
   yoy$catch1 <- yoy$catch + 1
   yoy$small_catch1 <- yoy$small + 1
   yoy$large_catch1 <- yoy$large + 1
@@ -318,18 +317,18 @@ RMSE_calc_large <- function(results, data){
 year_adjust <- function(gam, data){
   year_pred <- predict.gam(gam,
                            type = "terms",
-                           terms = "year_f")
+                           terms = "year")
   year_effect <- gam$family$linkinv(year_pred)
 }
 
 LOYO_validation <- function(data, formula){
-  hake_gams <- lapply(unique(data$year_f), function(x) {
+  gams <- lapply(unique(data$year), function(x) {
     output <- gam(formula,
                   family = tw(link = "log"),
                   method = 'REML',
-                  data = data[data$year_f != x,])
+                  data = data[data$year != x,])
   }) # Gives the list of GAMs with each year left out
-  return(hake_gams)
+  return(gams)
 }
 
 LOYO_preds <- function(gam_list, data, results){
@@ -370,11 +369,11 @@ yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused hu
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- read_data('yoy_dab.Rdata')
 
-ctds <- readRDS(here('data', 'ctd_means.rdata'))
-
-ctd_means <- ctds %>%
-  group_by(year) %>%
-  summarise(across(roms_temperature, mean, na.rm = TRUE))
+# ctds <- readRDS(here('data', 'ctd_means.rdata'))
+# 
+# ctd_means <- ctds %>%
+#   group_by(year) %>%
+#   summarise(across(roms_temperature, mean, na.rm = TRUE))
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(46.4, 44.0, 37.0),
@@ -386,7 +385,7 @@ showtext::showtext_auto()
 # Hake ----
 # Aggregate model
 # Use models selected during model exploration
-hake_total <- gam(catch1 ~ year_f + 
+hake_total <- gam(catch1 ~ year + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -414,7 +413,7 @@ hake_formula <- formula(y_catch ~ s(lon, lat) +
 hake_gams <- LOYO_validation(yoy_hake, hake_formula)
 
 # Create list with data from each year
-hake_data <- split(yoy_hake, yoy_hake$year_f)
+hake_data <- split(yoy_hake, yoy_hake$year)
 
 # Get predictions
 # Predict on the left out year's data
@@ -427,7 +426,7 @@ hake_error <- RMSE_calc(hake_results, yoy_hake)
 mean(hake_error[[2]]$RMSE)
 
 # Plot the RMSE for each year
-hake_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(hake_error[[2]]$year, ctd_means$year)]
+hake_error[[2]]$roms_temperature <- yoy_hake$roms_temperature[match(hake_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -443,7 +442,7 @@ ggplot(hake_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-hake_small <- gam(small_catch1 ~ year_f +
+hake_small <- gam(small_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -494,7 +493,7 @@ ggplot(hake_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-hake_large <- gam(large_catch1 ~ year_f +
+hake_large <- gam(large_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -611,7 +610,7 @@ dev.off()
 # Anchovy ----
 # Aggregate model
 # Use models selected during model exploration
-anchovy_total <- gam(catch1 ~ year_f + 
+anchovy_total <- gam(catch1 ~ year + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -639,7 +638,7 @@ anchovy_formula <- formula(y_catch ~ s(lon, lat) +
 anchovy_gams <- LOYO_validation(yoy_anchovy, anchovy_formula)
 
 # Create list with data from each year
-anchovy_data <- split(yoy_anchovy, yoy_anchovy$year_f)
+anchovy_data <- split(yoy_anchovy, yoy_anchovy$year)
 
 # Get predictions
 # Predict on the left out year's data
@@ -668,7 +667,7 @@ ggplot(anchovy_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-anchovy_small <- gam(small_catch1 ~ year_f +
+anchovy_small <- gam(small_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -719,7 +718,7 @@ ggplot(anchovy_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-anchovy_large <- gam(large_catch1 ~ year_f +
+anchovy_large <- gam(large_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -848,7 +847,7 @@ dev.off()
 # Widow Rockfish ----
 # Aggregate model
 # Use models selected during model exploration
-widow_total <- gam(catch1 ~ year_f + 
+widow_total <- gam(catch1 ~ year + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -876,7 +875,7 @@ widow_formula <- formula(y_catch ~ s(lon, lat) +
 widow_gams <- LOYO_validation(yoy_widow, widow_formula)
 
 # Create list with data from each year
-widow_data <- split(yoy_widow, yoy_widow$year_f)
+widow_data <- split(yoy_widow, yoy_widow$year)
 
 # Get predictions
 # Predict on the left out year's data
@@ -905,7 +904,7 @@ ggplot(widow_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-widow_small <- gam(small_catch1 ~ year_f +
+widow_small <- gam(small_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -956,7 +955,7 @@ ggplot(widow_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-widow_large <- gam(large_catch1 ~ year_f +
+widow_large <- gam(large_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -1070,7 +1069,7 @@ dev.off()
 # Shortbelly Rockfish ----
 # Aggregate model
 # Use models selected during model exploration
-shortbelly_total <- gam(catch1 ~ year_f + 
+shortbelly_total <- gam(catch1 ~ year + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -1098,7 +1097,7 @@ shortbelly_formula <- formula(y_catch ~ s(lon, lat) +
 shortbelly_gams <- LOYO_validation(yoy_shortbelly, shortbelly_formula)
 
 # Create list with data from each year
-shortbelly_data <- split(yoy_shortbelly, yoy_shortbelly$year_f)
+shortbelly_data <- split(yoy_shortbelly, yoy_shortbelly$year)
 
 # Get predictions
 # Predict on the left out year's data
@@ -1127,7 +1126,7 @@ ggplot(shortbelly_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-shortbelly_small <- gam(small_catch1 ~ year_f +
+shortbelly_small <- gam(small_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -1178,7 +1177,7 @@ ggplot(shortbelly_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-shortbelly_large <- gam(large_catch1 ~ year_f +
+shortbelly_large <- gam(large_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -1294,7 +1293,7 @@ dev.off()
 # Pacific Sanddab ----
 # Aggregate model
 # Use models selected during model exploration
-sdab_total <- gam(catch1 ~ year_f + 
+sdab_total <- gam(catch1 ~ year + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -1322,7 +1321,7 @@ sdab_formula <- formula(y_catch ~ s(lon, lat) +
 sdab_gams <- LOYO_validation(yoy_sdab, sdab_formula)
 
 # Create list with data from each year
-sdab_data <- split(yoy_sdab, yoy_sdab$year_f)
+sdab_data <- split(yoy_sdab, yoy_sdab$year)
 
 # Get predictions
 # Predict on the left out year's data
@@ -1362,7 +1361,7 @@ ggplot(sdab_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-sdab_small <- gam(small_catch1 ~ year_f +
+sdab_small <- gam(small_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -1413,7 +1412,7 @@ ggplot(sdab_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-sdab_large <- gam(large_catch1 ~ year_f +
+sdab_large <- gam(large_catch1 ~ year +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
