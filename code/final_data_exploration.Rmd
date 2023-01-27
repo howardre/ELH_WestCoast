@@ -19,6 +19,7 @@ library(rerddap)
 library(tidync)
 library(ncdf4)
 library(sf)
+library(lubridate)
 ```
 
 Functions
@@ -410,7 +411,6 @@ yoy_sbly <- hindcast_match(merge_sbly, hindcast_means, 37, 38)
 yoy_widw <- hindcast_match(merge_widw, hindcast_means, 37, 38)
 ```
 
-
 ```{r}
 # Save final dataframes
 saveRDS(yoy_anch, file = "../data/yoy_anch.Rdata")
@@ -419,6 +419,26 @@ saveRDS(yoy_sbly, file = "../data/yoy_sbly.Rdata")
 saveRDS(yoy_dab, file = "../data/yoy_dab.Rdata")
 saveRDS(yoy_hake, file = "../data/yoy_hake.Rdata")
 ```
+
+```{r}
+# Make maps of catches
+west_coast <- map_data("usa")
+```
+
+```{r}
+ggplot() +  
+  geom_polygon(aes(long, lat, group = group), data = west_coast,
+               fill = "lightyellow4", 
+               colour = "black") +
+  geom_polygon(data = west_coast,
+               aes(x = long, y = lat, group = group)) +
+  geom_point(data = hindcast_trim, aes(x = lon, y = lat, color = temp),
+             size = 5, alpha = 1 / 15, shape = 19) +
+  scale_color_gradient(low = "#023858", high = "#ece7f2") +
+  coord_equal() +
+  coord_quickmap(xlim = c(-126, -117), ylim = c(32, 48))
+```
+
 
 ```{r}
 par(mfrow = c(2, 3))
@@ -829,11 +849,6 @@ hake_sp %>%
         axis.text = element_text(family = "serif", size = 14),
         axis.title = element_text(family = "serif", size = 18),
         axis.text.x = element_text(angle = 45, vjust = 0.7))
-```
-
-```{r}
-# Make maps of catches
-west_coast <- map_data("usa")
 ```
 
 ```{r, warning = FALSE, echo = FALSE}
