@@ -397,6 +397,25 @@ hindcast_trim <- nep_hindcast %>%
 ```
 
 ```{r}
+df1 <- hindcast_trim %>%
+  st_as_sf(coords = c("lon", "lat"),
+           remove = FALSE) %>%
+  st_set_crs("WGS84")
+
+df2 <- merge_hake %>%
+  st_as_sf(coords = c("lon", "lat"),
+           remove = FALSE) %>%
+  st_set_crs("WGS84")
+
+res <- do.call('rbind', lapply(split(df1, 1:nrow(df1)), function(x) {
+  st_join(x, df2[df2$numeric_date == unique(x$numeric_date), ], join = st_nearest_feature)
+}))
+
+res
+```
+
+
+```{r}
 hindcast_means <- hindcast_trim %>%
   group_by(year) %>%
   mutate(mean_temp = mean(temp, na.rm = TRUE))
@@ -410,6 +429,13 @@ yoy_hake <- hindcast_match(merge_hake, hindcast_means, 37, 38)
 yoy_sbly <- hindcast_match(merge_sbly, hindcast_means, 37, 38)
 yoy_widw <- hindcast_match(merge_widw, hindcast_means, 37, 38)
 ```
+
+```{r}
+ggplot(yoy_hake, aes(temperature, roms_temperature)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE)
+```
+
 
 ```{r}
 # Save final dataframes
@@ -434,8 +460,7 @@ ggplot() +
                aes(x = long, y = lat, group = group)) +
   geom_point(data = hindcast_trim, aes(x = lon, y = lat, color = temp),
              size = 5, alpha = 1 / 15, shape = 19) +
-  scale_color_gradient(low = "#023858", high = "#ece7f2") +
-  coord_equal() +
+  scale_color_gradient(low = "#023858", high = "red4") +
   coord_quickmap(xlim = c(-126, -117), ylim = c(32, 48))
 ```
 
