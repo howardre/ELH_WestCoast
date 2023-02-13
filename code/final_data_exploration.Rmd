@@ -340,7 +340,7 @@ PRS_avg_ctds <- PRS_ctds %>%
   filter(depth_m <= 10) %>%
   group_by(date, swfcs.station) %>%
   mutate(date = as.numeric(format(as.Date(date, 
-                                             format = "%Y-%m-%d"),
+                                          format = "%Y-%m-%d"),
                                   "%m%d%Y"))) %>%
   summarise_at(vars('temperature_c', 'salinity_psu', 'dissolved_oxygen'), mean) %>%
   mutate_all(~ifelse(is.nan(.), NA, .))
@@ -373,27 +373,57 @@ nep_hindcast <- nep %>% hyper_tibble()
 nep_hindcast$lon <- lons[cbind(nep_hindcast$xi_rho, nep_hindcast$eta_rho)]
 nep_hindcast$lat <- lats[cbind(nep_hindcast$xi_rho, nep_hindcast$eta_rho)]
 
-nep_hindcast$datetime <- as.POSIXct(nep_hindcast$ocean_time, origin = "1900-01-01", tz = "GMT")
+nep_hindcast$datetime <- as.POSIXct(nep_hindcast$ocean_time, origin = "1900-01-01 00:00:00", tz = "GMT")
 
-nep_hindcast$date <- as.Date(nep_hindcast$datetime) 
+nep_hindcast$time <- as.Date(nep_hindcast$datetime) 
 nep_hindcast$month <- month(nep_hindcast$date)
-nep_hindcast$week <- week(nep_hindcast$date) 
+nep_hindcast$week <- week(nep_hindcast$date)
 nep_hindcast$year <- year(nep_hindcast$date)
 
-months <- c(4:7)
-lat_lim <- c(29:49)
-lon_lim <- c(-127:-116)
-
+# Reduce to only data near the sample locations
 hindcast_trim <- nep_hindcast %>%
-  filter(., month %in% months |
-           lat %in% lat_lim |
-           lon %in% lon_lim) %>%
   mutate(numeric_date = as.numeric(format(as.Date(date, 
                                                   format = "%Y-%m-%d"),
                                           "%m%d%Y")),
          lon = case_when(lon >= 180 ~ lon - 360,
-                         lon < 180 ~ lon))
+                         lon < 180 ~ lon)) %>%
+  filter(between(month, 4, 7) & # must use between no %in% for numeric
+           between(lat, 32.7, 47.6) &
+           between(lon, -125.4, -117.3))
 ```
+
+```{r}
+hindcast_sf <- st_as_sf(x = hindcast_trim,
+                        coords = c("lon", "lat"),
+                        crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+
+ggplot(data = subset(hindcast_sf, year == 2011, month = 5)) +
+  geom_sf(aes(color = temp), size = 2)
+```
+
+```{r}
+library(stars)
+filter_anch <- merge_anch %>%
+  mutate(time = as.Date(haul_date,
+                        format = "%Y-%m-%d")) %>%
+  filter(year == 2016)
+
+sf_anch <- st_as_sf(filter_anch,
+                    coords = c("lon", "lat"))
+st_anch <- st_as_stars(sf_anch,
+                       name = attr(sf_anch, "geometry"))
+
+
+st_crs(hindcast_sf) <- 4269 # maybe not correct
+st_crs(st_anch) <- 4269
+
+test_df <- st_extract(x = st_anch,
+                      at = hindcast_sf,
+                      time_column = "time",
+                      interpolate_time = TRUE,
+                      point = TRUE)
+```
+
 
 ```{r}
 df1 <- hindcast_trim %>%
