@@ -385,10 +385,10 @@ showtext::showtext_auto()
 # Hake ----
 # Aggregate model
 # Use models selected during model exploration
-hake_total <- gam(catch1 ~ year + 
-                    s(lon, lat) + 
+hake_total <- gam(catch1 ~ year +
+                    s(lon, lat) +
                     s(bottom_depth, k = 4) +
-                    s(jday) + 
+                    s(jday) +
                     s(roms_temperature, k = 4) +
                     s(roms_salinity, k = 4) +
                     s(lon, lat, by = mean_temp),
