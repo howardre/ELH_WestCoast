@@ -367,7 +367,17 @@ lons <- ncvar_get(nc,"lon_rho")
 nc_close(nc)
 
 nep <- tidync(here('data','nep_srf_1995-2020.nc'))
-nep_hindcast <- nep %>% hyper_tibble()
+nep_var <- nep %>% 
+  hyper_tibble() 
+
+nep_var <- nep_var %>%
+  dplyr::select(-s_rho)
+
+nep_height <- nep %>% 
+  activate(zeta) %>% 
+  hyper_tibble()
+
+nep_hindcast <- merge(nep_var, nep_height, by = c("xi_rho", "eta_rho", "ocean_time"))
 
 # Currently only one layer of s_rho, will need to extract top layer if this changes
 nep_hindcast$lon <- lons[cbind(nep_hindcast$xi_rho, nep_hindcast$eta_rho)]
@@ -375,7 +385,8 @@ nep_hindcast$lat <- lats[cbind(nep_hindcast$xi_rho, nep_hindcast$eta_rho)]
 
 nep_hindcast$datetime <- as.POSIXct(nep_hindcast$ocean_time, origin = "1900-01-01 00:00:00", tz = "GMT")
 
-nep_hindcast$time <- as.Date(nep_hindcast$datetime) 
+# Split out months, weeks, years
+nep_hindcast$date <- as.Date(nep_hindcast$datetime) 
 nep_hindcast$month <- month(nep_hindcast$date)
 nep_hindcast$week <- week(nep_hindcast$date)
 nep_hindcast$year <- year(nep_hindcast$date)
@@ -387,41 +398,148 @@ hindcast_trim <- nep_hindcast %>%
                                           "%m%d%Y")),
          lon = case_when(lon >= 180 ~ lon - 360,
                          lon < 180 ~ lon)) %>%
-  filter(between(month, 4, 7) & # must use between no %in% for numeric
+  filter(between(month, 4, 7) & # must use between, no %in% for numeric
            between(lat, 32.7, 47.6) &
            between(lon, -125.4, -117.3))
+
+hindcast_trim$weekyear <- do.call(paste, c(hindcast_trim[c("week", "year")], sep = ""))
 ```
 
 ```{r}
 hindcast_sf <- st_as_sf(x = hindcast_trim,
                         coords = c("lon", "lat"),
-                        crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+                        remove = FALSE)
 
 ggplot(data = subset(hindcast_sf, year == 2011, month = 5)) +
   geom_sf(aes(color = temp), size = 2)
 ```
 
 ```{r}
+merge_anch[, c(37, 38)] <- as.data.frame(RANN::nn2(hindcast_trim[, c('lat', 'lon')],
+                                                  merge_anch[, c('lat', 'lon')],
+                                                  k = 1))
+merge_anch$roms_temperature <- hindcast_trim[c(merge_anch$nn.idx), 5] # Match nearest temp
+merge_anch$roms_salinity <- hindcast_trim[c(merge_anch$nn.idx), 4] # Match nearest temp
+merge_anch <- merge_anch[-c(6:8)]
+which(filter_anch$weekyear == hindcast_trim$weekyear)
+```
+
+
+```{r}
+test <- do.call('rbind', lapply(split(hindcast_sf, 1:nrow(hindcast_sf)), function(x) {
+  st_join(x, sf_anch[sf_anch$weekyear == unique(x$weekyear), ], join = st_nearest_feature)
+}))
+
+test <- st_join(sf_anch, hindcast_sf, join = st_nearest_feature) %>%
+  filter(weekyear.x == weekyear.y)
+```
+
+
+```{r}
+library(raster)
+hindcast_coord <- as.data.frame(hindcast_trim)
+coordinates(hindcast_coord) <- ~ lon + lat
+proj4string(hindcast_coord) = CRS("+init=epsg:4326")
+hindcast_coord = spTransform(hindcast_coord, CRS("+init=epsg:4326"))
+gridded(hindcast_coord) <- TRUE
+
+hindcast_raster <- raster()
+extent(hindcast_raster) <- extent(hindcast_coord)
+raster_temp <- rasterize(hindcast_coord, 
+                         hindcast_raster, 
+                         hindcast_coord$temp, 
+                         fun = mean)
+
+raster_salt <- rasterize(hindcast_coord, 
+                         hindcast_raster, 
+                         hindcast_coord$salt, 
+                         fun = mean)
+
+raster_temp
+```
+
+```{r}
+# Attempt matching with rasters
+coordinates()
+b <- raster::stack(here('data','nep_srf_1995-2020.nc'), 
+                   varname = 'temp',
+                   dims = c())
+extent(b) = c(-180, 180, -90, 90)
+test <- extract(b, sf_anch, method = "simple")
+```
+
+```{r}
+filter_anch$roms_temperature = 0
+filter_anch$roms_salinity = 0
+filter_anch$roms_ssh = 0
+  
+  ### Match satellite data to sampling locations
+  for (i in 1:nrow(filter_anch)) {
+    
+    # Cancel current iteration if year is out of range
+    if (filter_anch$year[i] < min(hindcast_trim$year) | filter_anch$year[i] > max(hindcast_trim$year)) 
+      next
+    
+    target_lat = filter_anch$lat[i]
+    
+    # Get the best date match (ROMS output is monthly)
+    date_index <- which(filter_anch$weekyear[i] == hindcast_trim$weekyear)
+    
+    # Find all ROMS lat/lons within 0.1 deg of the sampling point
+    lat_ind <- which(abs(hindcast_trim$lat - filter_anch$lat[i]) <= min(abs(hindcast_trim$lat - filter_anch$lat[i]) + 0.5))
+    lon_ind <- which(abs(hindcast_trim$lon - filter_anch$lon[i]) <= min(abs(hindcast_trim$lon - filter_anch$lon[i]) + 0.5))
+    
+    # Find potential nearby points with valid latitude/longitudes
+    match_ind <- which(lat_ind %in% lon_ind == TRUE)
+    
+    # Calculate the best match (assumed to be the one with the closest latitude)
+    differences = hindcast_trim$lat[lat_ind[match_ind]] - target_lat
+    best_match = match_ind[which(abs(differences) == min(abs(differences)))]
+    
+    # Get the matching latitude
+    match_lat = hindcast_trim$lat[lat_ind[best_match]]
+    
+    # Get row/column info (necessary for accessing the sst/ssh matrices)
+    #row = which(hindcast_trim$lat == match_lat, arr.ind = TRUE)[1]
+    #column = which(hindcast_trim$lat == match_lat, arr.ind = TRUE)[2]
+    
+    # Extract sst and ssh data
+    filter_anch$roms_temperature[i] = hindcast_trim$temp
+    filter_anch$roms_salinity[i] = hindcast_trim$salt
+    filter_anch$roms_ssh[i] = hindcast_trim$zeta
+    }
+```
+
+
+```{r}
+# Attempt to do matching a different way
 library(stars)
+merge_anch$week <- week(merge_anch$haul_date)
 filter_anch <- merge_anch %>%
-  mutate(time = as.Date(haul_date,
+  mutate(date = as.Date(haul_date,
                         format = "%Y-%m-%d")) %>%
   filter(year == 2016)
+filter_anch$weekyear <- do.call(paste, c(filter_anch[c("week", "year")], sep = ""))
 
 sf_anch <- st_as_sf(filter_anch,
-                    coords = c("lon", "lat"))
+                    coords = c("lon", "lat"),
+                    remove = FALSE)
 st_anch <- st_as_stars(sf_anch,
                        name = attr(sf_anch, "geometry"))
 
+hindcast_st <- st_as_stars(hindcast_trim,
+                           coords = c("lon", "lat", "date"))
 
 st_crs(hindcast_sf) <- 4269 # maybe not correct
-st_crs(st_anch) <- 4269
+st_crs(sf_anch) <- 4269
+```
 
-test_df <- st_extract(x = st_anch,
-                      at = hindcast_sf,
-                      time_column = "time",
-                      interpolate_time = TRUE,
-                      point = TRUE)
+
+```{r}
+test_df <- st_extract(x = hindcast_st,
+                      at = sf_anch,
+                      time_column = "date",
+                      interpolate_time = TRUE) %>% st_as_sf()
 ```
 
 
