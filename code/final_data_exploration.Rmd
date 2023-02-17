@@ -110,16 +110,18 @@ coalesce_by_column <- function(data) {
 size_calc <- function(sp, size){
   sizes <- mutate(sp, size_class = case_when(std_length <= size ~ "small",
                                              std_length > size ~ "large")) 
-  subset <- sizes %>% 
+  sizes %>% 
     group_by(numeric_date, station, haul_no, cruise, haul_exp, size_class) %>%
     mutate(size_class = factor(size_class, levels = c("small", "large"))) %>%
     summarise(size_count = length(size_class)) %>%
     mutate(size_subset = size_count * haul_exp) %>%
     tidyr::pivot_wider(names_from = size_class,
                        values_from = size_subset) %>%
-    tidyr::drop_na(haul_exp)
-  subset_coalesce <- subset %>% group_by(numeric_date, station, haul_no, cruise, haul_exp) %>%
+    mutate_at(c("small", "large"), ~tidyr::replace_na(., 0))
+
+subset_coalesce <- subset %>% group_by(numeric_date, station, haul_no, cruise) %>%
     summarise_all(coalesce_by_column) 
+
   return(subset_coalesce)
 }
 
@@ -171,7 +173,8 @@ hindcast_match <- function(data, roms, a, b){
   data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 5] # Match nearest temp
   data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 4] # Match nearest temp
   data$roms_ssh <- as.data.frame(roms)[c(data$nn.idx), 6]
-  data$mean_temp <- as.data.frame(roms)[c(data$nn.idx), 15]
+  data$mean_temp <- as.data.frame(roms)[c(data$nn.idx), 16]
+  data$mean_ssh <- as.data.frame(roms)[c(data$nn.idx), 15]
   data <- data[-c(a, b)] # remove extra columns before predicting
 }
 ```
@@ -300,7 +303,7 @@ rm(list = c('oni_index', 'oni_matrix', 'oni_means',
 ```{r}
 # Consolidate lengths
 anch_subset <- size_calc(anch_sp, 25)
-widow_subset <- size_calc(widow_sp, 55)
+widow_subset <- size_calc(widow_sp, 45) # reevaluate this one
 sbly_subset <- size_calc(sbly_sp, 30)
 dab_subset <- size_calc(dab_sp, 39)
 hake_subset <- size_calc(hake_sp, 35)
@@ -407,7 +410,10 @@ hindcast_trim <- nep_hindcast %>%
 ```{r}
 hindcast_means <- hindcast_trim %>%
   group_by(year) %>%
-  mutate(mean_temp = mean(temp, na.rm = TRUE))
+  mutate(mean_ssh = mean(zeta, na.rm = TRUE),
+         mean_temp = mean(temp, na.rm = TRUE))
+
+saveRDS(hindcast_means, file = "../data/hindcast_means.Rdata")
 ```
 
 ```{r}
@@ -419,8 +425,8 @@ yoy_sbly <- hindcast_match(merge_sbly, hindcast_means, 37, 38)
 yoy_widw <- hindcast_match(merge_widw, hindcast_means, 37, 38)
 ```
 
-```{r}
-ggplot(yoy_dab, aes(temperature, roms_temperature)) +
+```{r, warning = FALSE}
+ggplot(yoy_sbly, aes(temperature, roms_temperature)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE)
 ```
