@@ -168,8 +168,9 @@ hindcast_match <- function(data, roms, a, b){
   data[, c(a, b)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'numeric_date')],
                                                    data[, c('lat', 'lon', 'numeric_date')],
                                                    k = 1))
-  data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 2] # Match nearest temp
-  data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 1] # Match nearest temp
+  data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 5] # Match nearest temp
+  data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 4] # Match nearest temp
+  data$roms_ssh <- as.data.frame(roms)[c(data$nn.idx), 6]
   data$mean_temp <- as.data.frame(roms)[c(data$nn.idx), 15]
   data <- data[-c(a, b)] # remove extra columns before predicting
 }
@@ -224,16 +225,16 @@ other_sp$numeric_date <- as.numeric(format(as.Date(other_sp$date, format = "%Y%j
                                            "%m%d%Y"))
 
 widow_catch <- other_catch %>% 
-  select(-c('shortbelly', 'hake', 'dab')) %>%
+  dplyr::select(-c('shortbelly', 'hake', 'dab')) %>%
   rename(catch = widow)
 sbly_catch <- other_catch %>% 
-  select(-c('widow', 'hake', 'dab')) %>%
+  dplyr::select(-c('widow', 'hake', 'dab')) %>%
   rename(catch = shortbelly)
 dab_catch <- other_catch %>% 
-  select(-c('shortbelly', 'hake', 'widow')) %>%
+  dplyr::select(-c('shortbelly', 'hake', 'widow')) %>%
   rename(catch = dab)
 hake_catch <- other_catch %>% 
-  select(-c('shortbelly', 'widow', 'dab')) %>%
+  dplyr::select(-c('shortbelly', 'widow', 'dab')) %>%
   rename(catch = hake)
 
 widow_sp <- filter(other_sp, species == 597)
@@ -401,164 +402,6 @@ hindcast_trim <- nep_hindcast %>%
   filter(between(month, 4, 7) & # must use between, no %in% for numeric
            between(lat, 32.7, 47.6) &
            between(lon, -125.4, -117.3))
-
-hindcast_trim$weekyear <- do.call(paste, c(hindcast_trim[c("week", "year")], sep = ""))
-```
-
-```{r}
-hindcast_sf <- st_as_sf(x = hindcast_trim,
-                        coords = c("lon", "lat"),
-                        remove = FALSE)
-
-ggplot(data = subset(hindcast_sf, year == 2011, month = 5)) +
-  geom_sf(aes(color = temp), size = 2)
-```
-
-```{r}
-merge_anch[, c(37, 38)] <- as.data.frame(RANN::nn2(hindcast_trim[, c('lat', 'lon')],
-                                                  merge_anch[, c('lat', 'lon')],
-                                                  k = 1))
-merge_anch$roms_temperature <- hindcast_trim[c(merge_anch$nn.idx), 5] # Match nearest temp
-merge_anch$roms_salinity <- hindcast_trim[c(merge_anch$nn.idx), 4] # Match nearest temp
-merge_anch <- merge_anch[-c(6:8)]
-which(filter_anch$weekyear == hindcast_trim$weekyear)
-```
-
-
-```{r}
-test <- do.call('rbind', lapply(split(hindcast_sf, 1:nrow(hindcast_sf)), function(x) {
-  st_join(x, sf_anch[sf_anch$weekyear == unique(x$weekyear), ], join = st_nearest_feature)
-}))
-
-test <- st_join(sf_anch, hindcast_sf, join = st_nearest_feature) %>%
-  filter(weekyear.x == weekyear.y)
-```
-
-
-```{r}
-library(raster)
-hindcast_coord <- as.data.frame(hindcast_trim)
-coordinates(hindcast_coord) <- ~ lon + lat
-proj4string(hindcast_coord) = CRS("+init=epsg:4326")
-hindcast_coord = spTransform(hindcast_coord, CRS("+init=epsg:4326"))
-gridded(hindcast_coord) <- TRUE
-
-hindcast_raster <- raster()
-extent(hindcast_raster) <- extent(hindcast_coord)
-raster_temp <- rasterize(hindcast_coord, 
-                         hindcast_raster, 
-                         hindcast_coord$temp, 
-                         fun = mean)
-
-raster_salt <- rasterize(hindcast_coord, 
-                         hindcast_raster, 
-                         hindcast_coord$salt, 
-                         fun = mean)
-
-raster_temp
-```
-
-```{r}
-# Attempt matching with rasters
-coordinates()
-b <- raster::stack(here('data','nep_srf_1995-2020.nc'), 
-                   varname = 'temp',
-                   dims = c())
-extent(b) = c(-180, 180, -90, 90)
-test <- extract(b, sf_anch, method = "simple")
-```
-
-```{r}
-filter_anch$roms_temperature = 0
-filter_anch$roms_salinity = 0
-filter_anch$roms_ssh = 0
-  
-  ### Match satellite data to sampling locations
-  for (i in 1:nrow(filter_anch)) {
-    
-    # Cancel current iteration if year is out of range
-    if (filter_anch$year[i] < min(hindcast_trim$year) | filter_anch$year[i] > max(hindcast_trim$year)) 
-      next
-    
-    target_lat = filter_anch$lat[i]
-    
-    # Get the best date match (ROMS output is monthly)
-    date_index <- which(filter_anch$weekyear[i] == hindcast_trim$weekyear)
-    
-    # Find all ROMS lat/lons within 0.1 deg of the sampling point
-    lat_ind <- which(abs(hindcast_trim$lat - filter_anch$lat[i]) <= min(abs(hindcast_trim$lat - filter_anch$lat[i]) + 0.5))
-    lon_ind <- which(abs(hindcast_trim$lon - filter_anch$lon[i]) <= min(abs(hindcast_trim$lon - filter_anch$lon[i]) + 0.5))
-    
-    # Find potential nearby points with valid latitude/longitudes
-    match_ind <- which(lat_ind %in% lon_ind == TRUE)
-    
-    # Calculate the best match (assumed to be the one with the closest latitude)
-    differences = hindcast_trim$lat[lat_ind[match_ind]] - target_lat
-    best_match = match_ind[which(abs(differences) == min(abs(differences)))]
-    
-    # Get the matching latitude
-    match_lat = hindcast_trim$lat[lat_ind[best_match]]
-    
-    # Get row/column info (necessary for accessing the sst/ssh matrices)
-    #row = which(hindcast_trim$lat == match_lat, arr.ind = TRUE)[1]
-    #column = which(hindcast_trim$lat == match_lat, arr.ind = TRUE)[2]
-    
-    # Extract sst and ssh data
-    filter_anch$roms_temperature[i] = hindcast_trim$temp
-    filter_anch$roms_salinity[i] = hindcast_trim$salt
-    filter_anch$roms_ssh[i] = hindcast_trim$zeta
-    }
-```
-
-
-```{r}
-# Attempt to do matching a different way
-library(stars)
-merge_anch$week <- week(merge_anch$haul_date)
-filter_anch <- merge_anch %>%
-  mutate(date = as.Date(haul_date,
-                        format = "%Y-%m-%d")) %>%
-  filter(year == 2016)
-filter_anch$weekyear <- do.call(paste, c(filter_anch[c("week", "year")], sep = ""))
-
-sf_anch <- st_as_sf(filter_anch,
-                    coords = c("lon", "lat"),
-                    remove = FALSE)
-st_anch <- st_as_stars(sf_anch,
-                       name = attr(sf_anch, "geometry"))
-
-hindcast_st <- st_as_stars(hindcast_trim,
-                           coords = c("lon", "lat", "date"))
-
-st_crs(hindcast_sf) <- 4269 # maybe not correct
-st_crs(sf_anch) <- 4269
-```
-
-
-```{r}
-test_df <- st_extract(x = hindcast_st,
-                      at = sf_anch,
-                      time_column = "date",
-                      interpolate_time = TRUE) %>% st_as_sf()
-```
-
-
-```{r}
-df1 <- hindcast_trim %>%
-  st_as_sf(coords = c("lon", "lat"),
-           remove = FALSE) %>%
-  st_set_crs("WGS84")
-
-df2 <- merge_hake %>%
-  st_as_sf(coords = c("lon", "lat"),
-           remove = FALSE) %>%
-  st_set_crs("WGS84")
-
-res <- do.call('rbind', lapply(split(df1, 1:nrow(df1)), function(x) {
-  st_join(x, df2[df2$numeric_date == unique(x$numeric_date), ], join = st_nearest_feature)
-}))
-
-res
 ```
 
 ```{r}
@@ -577,7 +420,7 @@ yoy_widw <- hindcast_match(merge_widw, hindcast_means, 37, 38)
 ```
 
 ```{r}
-ggplot(yoy_hake, aes(temperature, roms_temperature)) +
+ggplot(yoy_dab, aes(temperature, roms_temperature)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE)
 ```
