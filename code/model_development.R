@@ -392,7 +392,7 @@ hake_total <- gam(catch1 ~ year +
                     s(roms_temperature) +
                     s(roms_salinity) +
                     s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_temp),
+                    s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_hake)
@@ -404,13 +404,13 @@ yoy_hake$y_catch <- yoy_hake$catch1 + hake_year_effect[, 1]
 # Leave one group out cross validation
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
-hake_formula <- formula(y_catch ~ s(lon, lat) + 
+hake_formula <- formula(y_catch ~ s(lon, lat) +
                           s(bottom_depth, k = 4) +
-                          s(jday) + 
+                          s(jday) +
                           s(roms_temperature, k = 4) +
                           s(roms_salinity, k = 4) +
                           s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_temp)) # Note no factor(year), added into response
+                          s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 hake_gams <- LOYO_validation(yoy_hake, hake_formula)
 
@@ -451,7 +451,7 @@ hake_small <- gam(small_catch1 ~ year +
                     s(roms_temperature, k = 4) +
                     s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_temp),
+                    s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_hake)
@@ -469,7 +469,7 @@ hake_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                 s(roms_temperature, k = 4) +
                                 s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 hake_small_gams <- LOYO_validation(yoy_hake, hake_small_formula)
 
@@ -504,7 +504,7 @@ hake_large <- gam(large_catch1 ~ year +
                     s(roms_temperature, k = 4) +
                     s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_temp),
+                    s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_hake)
@@ -522,7 +522,7 @@ hake_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                 s(roms_temperature, k = 4) +
                                 s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 hake_large_gams <- LOYO_validation(yoy_hake, hake_large_formula)
 
@@ -597,9 +597,9 @@ dev.copy(jpeg, here('results/RREAS_preliminary', 'hake_distributions.jpg'),
 dev.off()
 
 # Variable coefficient plots
-pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$mean_temp)
-pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$mean_temp)
-pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$mean_temp)
+pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$mean_ssh)
+pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$mean_ssh)
+pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$mean_ssh)
 
 windows()
 par(mfrow = c(1, 3),
@@ -623,7 +623,7 @@ anchovy_total <- gam(catch1 ~ year +
                        s(roms_temperature, k = 4) +
                        s(roms_salinity, k = 4) +
                        s(roms_ssh, k = 4) +
-                       s(lon, lat, by = mean_temp),
+                       s(lon, lat, by = mean_ssh),
                      family = tw(link = "log"),
                      method = "REML",
                      data =  yoy_anchovy)
@@ -641,7 +641,7 @@ anchovy_formula <- formula(y_catch ~ s(lon, lat) +
                              s(roms_temperature, k = 4) +
                              s(roms_salinity, k = 4) +
                              s(roms_ssh, k = 4) +
-                             s(lon, lat, by = mean_temp)) # Note no factor(year), added into response
+                             s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 anchovy_gams <- LOYO_validation(yoy_anchovy, anchovy_formula)
 
@@ -682,7 +682,7 @@ anchovy_small <- gam(small_catch1 ~ year +
                        s(roms_temperature, k = 4) +
                        s(roms_salinity, k = 4) +
                        s(roms_ssh, k = 4) +
-                       s(lon, lat, by = mean_temp),
+                       s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_anchovy)
@@ -700,7 +700,7 @@ anchovy_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                    s(roms_temperature, k = 4) +
                                    s(roms_salinity, k = 4) +
                                    s(roms_ssh, k = 4) +
-                                   s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                   s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 anchovy_small_gams <- LOYO_validation(yoy_anchovy, anchovy_small_formula)
 
@@ -735,7 +735,7 @@ anchovy_large <- gam(large_catch1 ~ year +
                        s(roms_temperature, k = 4) +
                        s(roms_salinity, k = 4) +
                        s(roms_ssh, k = 4) +
-                       s(lon, lat, by = mean_temp),
+                       s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_anchovy)
@@ -753,7 +753,7 @@ anchovy_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                    s(roms_temperature, k = 4) +
                                    s(roms_salinity, k = 4) +
                                    s(roms_ssh, k = 4) +
-                                   s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                   s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 anchovy_large_gams <- LOYO_validation(yoy_anchovy, anchovy_large_formula)
 
@@ -840,9 +840,9 @@ dev.copy(jpeg, here('results/RREAS_preliminary', 'anchovy_distributions.jpg'),
 dev.off()
 
 # Variable coefficient plots
-pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$mean_temp)
-pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$mean_temp)
-pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$mean_temp)
+pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$mean_ssh)
+pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$mean_ssh)
+pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$mean_ssh)
 
 windows()
 par(mfrow = c(1, 3),
@@ -866,7 +866,7 @@ widow_total <- gam(catch1 ~ year +
                      s(roms_temperature, k = 4) +
                      s(roms_salinity, k = 4) +
                      s(roms_ssh, k = 4) +
-                     s(lon, lat, by = mean_temp),
+                     s(lon, lat, by = mean_ssh),
                    family = tw(link = "log"),
                    method = "REML",
                    data = yoy_widow)
@@ -884,7 +884,7 @@ widow_formula <- formula(y_catch ~ s(lon, lat) +
                            s(roms_temperature, k = 4) +
                            s(roms_salinity, k = 4) +
                            s(roms_ssh, k = 4) +
-                           s(lon, lat, by = mean_temp)) # Note no factor(year), added into response
+                           s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 widow_gams <- LOYO_validation(yoy_widow, widow_formula)
 
@@ -925,7 +925,7 @@ widow_small <- gam(small_catch1 ~ year +
                      s(roms_temperature, k = 4) +
                      s(roms_salinity, k = 4) +
                      s(roms_ssh, k = 4) +
-                     s(lon, lat, by = mean_temp),
+                     s(lon, lat, by = mean_ssh),
                    family = tw(link = "log"),
                    method = "REML",
                    data = yoy_widow)
@@ -943,7 +943,7 @@ widow_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                  s(roms_temperature, k = 4) +
                                  s(roms_salinity, k = 4) +
                                  s(roms_ssh, k = 4) +
-                                 s(lon, lat,  by = mean_temp)) # Note no year factor, added into response
+                                 s(lon, lat,  by = mean_ssh)) # Note no year factor, added into response
 
 widow_small_gams <- LOYO_validation(yoy_widow, widow_small_formula)
 
@@ -978,7 +978,7 @@ widow_large <- gam(large_catch1 ~ year +
                      s(roms_temperature, k = 4) +
                      s(roms_salinity, k = 4) +
                      s(roms_ssh, k = 4) +
-                     s(lon, lat, by = mean_temp),
+                     s(lon, lat, by = mean_ssh),
                    family = tw(link = "log"),
                    method = "REML",
                    data = yoy_widow)
@@ -996,7 +996,7 @@ widow_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                  s(roms_temperature, k = 4) +
                                  s(roms_salinity, k = 4) +
                                  s(roms_ssh, k = 4) +
-                                 s(lon, lat,  by = mean_temp)) # Note no year factor, added into response
+                                 s(lon, lat,  by = mean_ssh)) # Note no year factor, added into response
 
 widow_large_gams <- LOYO_validation(yoy_widow, widow_large_formula)
 
@@ -1067,9 +1067,9 @@ dev.copy(jpeg, here('results/RREAS_preliminary', 'widow_distributions.jpg'),
 dev.off()
 
 # Variable coefficient plots
-pred_widow_all <- variable_coefficient(widow_total, yoy_widow, yoy_widow$mean_temp)
-pred_widow_small <- variable_coefficient(widow_small, yoy_widow, yoy_widow$mean_temp)
-pred_widow_large <- variable_coefficient(widow_large, yoy_widow, yoy_widow$mean_temp)
+pred_widow_all <- variable_coefficient(widow_total, yoy_widow, yoy_widow$mean_ssh)
+pred_widow_small <- variable_coefficient(widow_small, yoy_widow, yoy_widow$mean_ssh)
+pred_widow_large <- variable_coefficient(widow_large, yoy_widow, yoy_widow$mean_ssh)
 
 windows()
 par(mfrow = c(1, 3),
@@ -1094,7 +1094,7 @@ shortbelly_total <- gam(catch1 ~ year +
                           s(roms_temperature, k = 4) +
                           s(roms_salinity, k = 4) +
                           s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_temp),
+                          s(lon, lat, by = mean_ssh),
                         family = tw(link = "log"),
                         method = "REML",
                         data = yoy_shortbelly)
@@ -1112,7 +1112,7 @@ shortbelly_formula <- formula(y_catch ~ s(lon, lat) +
                                 s(roms_temperature, k = 4) +
                                 s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_temp)) # Note no factor(year), added into response
+                                s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 shortbelly_gams <- LOYO_validation(yoy_shortbelly, shortbelly_formula)
 
@@ -1153,7 +1153,7 @@ shortbelly_small <- gam(small_catch1 ~ year +
                           s(roms_temperature, k = 4) +
                           s(roms_salinity, k = 4) +
                           s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_temp),
+                          s(lon, lat, by = mean_ssh),
                         family = tw(link = "log"),
                         method = "REML",
                         data = yoy_shortbelly)
@@ -1171,7 +1171,7 @@ shortbelly_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                       s(roms_temperature, k = 4) +
                                       s(roms_salinity, k = 4) +
                                       s(roms_ssh, k = 4) +
-                                      s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                      s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 shortbelly_small_gams <- LOYO_validation(yoy_shortbelly, shortbelly_small_formula)
 
@@ -1206,7 +1206,7 @@ shortbelly_large <- gam(large_catch1 ~ year +
                           s(roms_temperature, k = 4) +
                           s(roms_salinity, k = 4) +
                           s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_temp),
+                          s(lon, lat, by = mean_ssh),
                         family = tw(link = "log"),
                         method = "REML",
                         data = yoy_shortbelly)
@@ -1224,7 +1224,7 @@ shortbelly_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                       s(roms_temperature, k = 4) +
                                       s(roms_salinity, k = 4) +
                                       s(roms_ssh, k = 4) +
-                                      s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                      s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 shortbelly_large_gams <- LOYO_validation(yoy_shortbelly, shortbelly_large_formula)
 
@@ -1298,9 +1298,9 @@ dev.copy(jpeg, here('results/RREAS_preliminary', 'shortbelly_distributions.jpg')
 dev.off()
 
 # Variable coefficient plots
-pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$mean_temp)
-pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$mean_temp)
-pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$mean_temp)
+pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$mean_ssh)
+pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$mean_ssh)
+pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$mean_ssh)
 
 windows()
 par(mfrow = c(1, 3),
@@ -1324,7 +1324,7 @@ sdab_total <- gam(catch1 ~ year +
                     s(roms_temperature, k = 4) +
                     s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_temp),
+                    s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_sdab)
@@ -1342,7 +1342,7 @@ sdab_formula <- formula(y_catch ~ s(lon, lat) +
                           s(roms_temperature, k = 4) +
                           s(roms_salinity, k = 4) +
                           s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_temp)) # Note no factor(year), added into response
+                          s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 sdab_gams <- LOYO_validation(yoy_sdab, sdab_formula)
 
@@ -1393,7 +1393,7 @@ sdab_small <- gam(small_catch1 ~ year +
                     s(jday) +
                     s(roms_temperature, k = 4) +
                     s(roms_salinity, k = 4) +
-                    s(lon, lat, by = mean_temp),
+                    s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_sdab)
@@ -1411,7 +1411,7 @@ sdab_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                 s(roms_temperature, k = 4) +
                                 s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 sdab_small_gams <- LOYO_validation(yoy_sdab, sdab_small_formula)
 
@@ -1446,7 +1446,7 @@ sdab_large <- gam(large_catch1 ~ year +
                     s(roms_temperature, k = 4) +
                     s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_temp),
+                    s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_sdab)
@@ -1464,7 +1464,7 @@ sdab_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                 s(roms_temperature, k = 4) +
                                 s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_temp)) # Note no year factor, added into response
+                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
 sdab_large_gams <- LOYO_validation(yoy_sdab, sdab_large_formula)
 
@@ -1533,9 +1533,9 @@ dev.copy(jpeg, here('results/RREAS_preliminary', 'sdab_distributions.jpg'),
 dev.off()
 
 # Variable coefficient plots
-pred_sdab_all <- variable_coefficient(sdab_total, yoy_sdab, yoy_sdab$mean_temp)
-pred_sdab_small <- variable_coefficient(sdab_small, yoy_sdab, yoy_sdab$mean_temp)
-pred_sdab_large <- variable_coefficient(sdab_large, yoy_sdab, yoy_sdab$mean_temp)
+pred_sdab_all <- variable_coefficient(sdab_total, yoy_sdab, yoy_sdab$mean_ssh)
+pred_sdab_small <- variable_coefficient(sdab_small, yoy_sdab, yoy_sdab$mean_ssh)
+pred_sdab_large <- variable_coefficient(sdab_large, yoy_sdab, yoy_sdab$mean_ssh)
 
 windows()
 par(mfrow = c(1, 3),
