@@ -24,7 +24,8 @@ read_data <- function(file){
   yoy$catch1 <- yoy$catch + 1
   yoy$small_catch1 <- yoy$small + 1
   yoy$large_catch1 <- yoy$large + 1
-  yoy$year <- as.factor(yoy$year)
+  yoy$year_f <- as.factor(yoy$year)
+#  yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
   return(yoy)
 }
 
@@ -317,16 +318,16 @@ RMSE_calc_large <- function(results, data){
 year_adjust <- function(gam, data){
   year_pred <- predict.gam(gam,
                            type = "terms",
-                           terms = "year")
+                           terms = "year_f")
   year_effect <- gam$family$linkinv(year_pred)
 }
 
 LOYO_validation <- function(data, formula){
-  gams <- lapply(unique(data$year), function(x) {
+  gams <- lapply(unique(data$year_f), function(x) {
     output <- gam(formula,
                   family = tw(link = "log"),
                   method = 'REML',
-                  data = data[data$year != x,])
+                  data = data[data$year_f != x,])
   }) # Gives the list of GAMs with each year left out
   return(gams)
 }
@@ -362,18 +363,18 @@ LOYO_preds_large <- function(gam_list, data, results){
 }
 
 # Load data ----
-yoy_hake <- read_data('yoy_hake.Rdata')
-yoy_anchovy <- read_data('yoy_anch.Rdata')
-yoy_widow <- read_data('yoy_widw.Rdata')
-yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
-yoy_shortbelly <- read_data('yoy_sbly.Rdata')
-yoy_sdab <- read_data('yoy_dab.Rdata')
-
-# ctds <- readRDS(here('data', 'ctd_means.rdata'))
-# 
-# ctd_means <- ctds %>%
-#   group_by(year) %>%
-#   summarise(across(roms_temperature, mean, na.rm = TRUE))
+yoy_hake <- read_data('yoy_hake.Rdata') %>%
+  filter(year > 2010)
+yoy_anchovy <- read_data('yoy_anch.Rdata') %>%
+  filter(year > 2010)
+yoy_widow <- read_data('yoy_widw.Rdata') %>%
+  filter(year > 2010)
+yoy_widow <- filter(yoy_widow, catch < 2000) %>%
+  filter(year > 2010) # two large hauls in 2016 caused huge errors
+yoy_shortbelly <- read_data('yoy_sbly.Rdata') %>%
+  filter(year > 2010)
+yoy_sdab <- read_data('yoy_dab.Rdata') %>%
+  filter(year > 2010)
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(46.4, 44.0, 37.0),
@@ -385,12 +386,12 @@ showtext::showtext_auto()
 # Hake ----
 # Aggregate model
 # Use models selected during model exploration
-hake_total <- gam(catch1 ~ year +
+hake_total <- gam(catch1 ~ year_f +
                     s(lon, lat) +
-                    s(bottom_depth) +
+                    s(bottom_depth, k = 4) +
                     s(jday) +
-                    s(roms_temperature) +
-                    s(roms_salinity) +
+                    s(roms_temperature, k = 4) +
+                    s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -444,7 +445,7 @@ ggplot(hake_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-hake_small <- gam(small_catch1 ~ year +
+hake_small <- gam(small_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -483,7 +484,7 @@ hake_small_results <- LOYO_preds_small(hake_small_gams, hake_data, hake_small_re
 hake_small_error <- RMSE_calc_small(hake_small_results, yoy_hake)
 
 # Plot the RMSE for each year
-hake_small_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(hake_small_error[[2]]$year, ctd_means$year)]
+hake_small_error[[2]]$roms_salinity <- yoy_hake$roms_salinity[match(hake_small_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -491,13 +492,13 @@ ggplot(hake_small_error[[2]]) +
             group = 1) 
 
 ggplot(hake_small_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
 # Large
 # Use models selected during model exploration
-hake_large <- gam(large_catch1 ~ year +
+hake_large <- gam(large_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -536,7 +537,7 @@ hake_large_results <- LOYO_preds_large(hake_large_gams, hake_data, hake_large_re
 hake_large_error <- RMSE_calc_large(hake_large_results, yoy_hake)
 
 # Plot the RMSE for each year
-hake_large_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(hake_large_error[[2]]$year, ctd_means$year)]
+hake_large_error[[2]]$roms_ssh <- yoy_hake$roms_ssh[match(hake_large_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -544,7 +545,7 @@ ggplot(hake_large_error[[2]]) +
             group = 1) 
 
 ggplot(hake_large_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -571,7 +572,7 @@ ggplot(hake_combined_df) +
   labs(x = "Year",
        y = "RMSE",
        title = "Yearly Error for Pacific Hake") +
-  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+ # scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
   theme_tufte() +
   theme(axis.title = element_text(size = 26,
                                   color = "maroon4",
@@ -608,7 +609,7 @@ par(mfrow = c(1, 3),
     mgp = c(5, 2, 0))
 plot_var_coef(hake_total, yoy_hake, pred_hake_all, "Latitude", "All Sizes")
 plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes (7-31 mm)")
-plot_var_coef3(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (32-134 mm)")
+plot_var_coef(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (32-134 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_hake_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
@@ -616,7 +617,7 @@ dev.off()
 # Anchovy ----
 # Aggregate model
 # Use models selected during model exploration
-anchovy_total <- gam(catch1 ~ year +
+anchovy_total <- gam(catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
@@ -659,7 +660,7 @@ anchovy_error <- RMSE_calc(anchovy_results, yoy_anchovy)
 mean(anchovy_error[[2]]$RMSE) #212
 
 # Plot the RMSE for each year
-anchovy_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(anchovy_error[[2]]$year, ctd_means$year)]
+anchovy_error[[2]]$roms_temperature <- yoy_anchovy$roms_temperature[match(anchovy_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -675,7 +676,7 @@ ggplot(anchovy_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-anchovy_small <- gam(small_catch1 ~ year +
+anchovy_small <- gam(small_catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
@@ -714,7 +715,7 @@ anchovy_small_results <- LOYO_preds_small(anchovy_small_gams, anchovy_data, anch
 anchovy_small_error <- RMSE_calc_small(anchovy_small_results, yoy_anchovy)
 
 # Plot the RMSE for each year
-anchovy_small_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(anchovy_small_error[[2]]$year, ctd_means$year)]
+anchovy_small_error[[2]]$roms_salinity <- yoy_anchovy$roms_salinity[match(anchovy_small_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -722,13 +723,13 @@ ggplot(anchovy_small_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_small_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
 # Large
 # Use models selected during model exploration
-anchovy_large <- gam(large_catch1 ~ year +
+anchovy_large <- gam(large_catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
@@ -766,27 +767,8 @@ anchovy_large_results <- LOYO_preds_large(anchovy_large_gams, anchovy_data, anch
 # Get values for each year and overall value
 anchovy_large_error <- RMSE_calc_large(anchovy_large_results, yoy_anchovy)
 
-anchovy_combined_df <- data.frame(year = names(anchovy_added_results), 
-                               RMSE = unlist(anchovy_added_results))
-
-
-ggplot(anchovy_combined_df) +
-  geom_line(aes(year, RMSE),
-            size = 1.3,
-            group = 1,
-            color = "maroon4") +
-  labs(x = "Year",
-       y = "RMSE",
-       title = "Yearly RMSE for Northern Anchovy") +
-  theme_tufte() +
-  theme(axis.title = element_text(size = 24,
-                                  color = "maroon4"),
-        axis.text = element_text(size = 20),
-        plot.title = element_text(size = 36),
-        axis.line = element_line(color = "black"))
-
 # Plot the RMSE for each year
-anchovy_large_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(anchovy_large_error[[2]]$year, ctd_means$year)]
+anchovy_large_error[[2]]$roms_ssh <- yoy_anchovy$roms_ssh[match(anchovy_large_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -794,7 +776,7 @@ ggplot(anchovy_large_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_large_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -810,7 +792,7 @@ anchovy_added_results <- lapply(anchovy_combined_results, function(x){
 mean(unlist(anchovy_added_results)) # 211
 
 anchovy_combined_df <- data.frame(year = names(anchovy_added_results), 
-                               RMSE = unlist(anchovy_added_results))
+                                  RMSE = unlist(anchovy_added_results))
 
 ggplot(anchovy_combined_df) +
   geom_line(aes(year, RMSE),
@@ -821,11 +803,16 @@ ggplot(anchovy_combined_df) +
        y = "RMSE",
        title = "Yearly RMSE for Northern Anchovy") +
   theme_tufte() +
-  theme(axis.title = element_text(size = 24,
-                                  color = "maroon4"),
-        axis.text = element_text(size = 20),
-        plot.title = element_text(size = 36),
+  theme(axis.title = element_text(size = 26,
+                                  color = "maroon4",
+                                  family = "Lato"),
+        axis.text = element_text(size = 22,
+                                 family = "Lato"),
+        plot.title = element_text(size = 28, 
+                                  face = "bold",
+                                  family = "Lato"),
         axis.line = element_line(color = "black"))
+
 
 # Maps
 par(mfrow = c(1, 3),
@@ -859,7 +846,7 @@ dev.off()
 # Widow Rockfish ----
 # Aggregate model
 # Use models selected during model exploration
-widow_total <- gam(catch1 ~ year +
+widow_total <- gam(catch1 ~ year_f +
                      s(lon, lat) +
                      s(bottom_depth, k = 4) +
                      s(jday) +
@@ -918,7 +905,7 @@ ggplot(widow_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-widow_small <- gam(small_catch1 ~ year +
+widow_small <- gam(small_catch1 ~ year_f +
                      s(lon, lat) +
                      s(bottom_depth, k = 4) +
                      s(jday) +
@@ -971,7 +958,7 @@ ggplot(widow_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-widow_large <- gam(large_catch1 ~ year +
+widow_large <- gam(large_catch1 ~ year_f +
                      s(lon, lat) +
                      s(bottom_depth, k = 4) +
                      s(jday) +
@@ -1046,12 +1033,16 @@ ggplot(widow_combined_df) +
   labs(x = "Year",
        y = "RMSE",
        title = "Yearly RMSE for Widow Rockfish") +
-  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+#  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
   theme_tufte() +
-  theme(axis.title = element_text(size = 24,
-                                  color = "maroon4"),
-        axis.text = element_text(size = 20),
-        plot.title = element_text(size = 36),
+  theme(axis.title = element_text(size = 26,
+                                  color = "maroon4",
+                                  family = "Lato"),
+        axis.text = element_text(size = 22,
+                                 family = "Lato"),
+        plot.title = element_text(size = 28, 
+                                  face = "bold",
+                                  family = "Lato"),
         axis.line = element_line(color = "black"))
 
 # Maps
@@ -1076,9 +1067,9 @@ par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-plot_var_coef2(widow_total, yoy_widow, pred_widow_all, "Latitude", "All Sizes")
+plot_var_coef(widow_total, yoy_widow, pred_widow_all, "Latitude", "All Sizes")
 plot_var_coef(widow_small, yoy_widow, pred_widow_small, "", "Small Sizes (11-31 mm)")
-plot_var_coef3(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes (32-73 mm)")
+plot_var_coef(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes (32-73 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_widow_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
@@ -1087,7 +1078,7 @@ dev.off()
 # Shortbelly Rockfish ----
 # Aggregate model
 # Use models selected during model exploration
-shortbelly_total <- gam(catch1 ~ year +
+shortbelly_total <- gam(catch1 ~ year_f +
                           s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
@@ -1146,7 +1137,7 @@ ggplot(shortbelly_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-shortbelly_small <- gam(small_catch1 ~ year +
+shortbelly_small <- gam(small_catch1 ~ year_f +
                           s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
@@ -1199,7 +1190,7 @@ ggplot(shortbelly_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-shortbelly_large <- gam(large_catch1 ~ year +
+shortbelly_large <- gam(large_catch1 ~ year_f +
                           s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
@@ -1252,8 +1243,8 @@ ggplot(shortbelly_large_error[[2]]) +
 
 # Add the large and small together
 shortbelly_combined_results <- map2(shortbelly_large_results, 
-                              shortbelly_small_results, 
-                              ~left_join(.x, .y))
+                                    shortbelly_small_results, 
+                                    ~left_join(.x, .y))
 
 shortbelly_added_results <- lapply(shortbelly_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
@@ -1273,7 +1264,7 @@ ggplot(shortbelly_combined_df) +
   labs(x = "Year",
        y = "RMSE",
        title = "Yearly Error for Shortbelly Rockfish") +
-  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+#  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
   theme_tufte() +
   theme(axis.title = element_text(size = 26,
                                   color = "maroon4",
@@ -1307,9 +1298,9 @@ par(mfrow = c(1, 3),
     mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-plot_var_coef(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
+plot_var_coef2(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
 plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes (8-25 mm)")
-plot_var_coef3(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes (26-85 mm)")
+plot_var_coef(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes (26-85 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_shortbelly_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
@@ -1317,7 +1308,7 @@ dev.off()
 # Pacific Sanddab ----
 # Aggregate model
 # Use models selected during model exploration
-sdab_total <- gam(catch1 ~ year + 
+sdab_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
                     s(bottom_depth, k = 4) +
                     s(jday) + 
@@ -1387,12 +1378,13 @@ ggplot(sdab_error[[2]]) +
 # Size explicit
 # Small
 # Use models selected during model exploration
-sdab_small <- gam(small_catch1 ~ year +
+sdab_small <- gam(small_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
                     s(roms_temperature, k = 4) +
                     s(roms_salinity, k = 4) +
+                    s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
@@ -1439,7 +1431,7 @@ ggplot(sdab_small_error[[2]]) +
 
 # Large
 # Use models selected during model exploration
-sdab_large <- gam(large_catch1 ~ year +
+sdab_large <- gam(large_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
@@ -1512,12 +1504,16 @@ ggplot(sdab_combined_df) +
   labs(x = "Year",
        y = "RMSE",
        title = "Yearly RMSE for Pacific Sanddab") +
-  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+# scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
   theme_tufte() +
-  theme(axis.title = element_text(size = 24,
-                                  color = "maroon4"),
-        axis.text = element_text(size = 20),
-        plot.title = element_text(size = 36),
+  theme(axis.title = element_text(size = 26,
+                                  color = "maroon4",
+                                  family = "Lato"),
+        axis.text = element_text(size = 22,
+                                 family = "Lato"),
+        plot.title = element_text(size = 28, 
+                                  face = "bold",
+                                  family = "Lato"),
         axis.line = element_line(color = "black"))
 
 # Maps
@@ -1544,7 +1540,7 @@ par(mfrow = c(1, 3),
     mgp = c(5, 2, 0))
 plot_var_coef2(sdab_total, yoy_sdab, pred_sdab_all, "Latitude", "All Sizes")
 plot_var_coef(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes (11-30 mm)")
-plot_var_coef2(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (30-82 mm)")
+plot_var_coef(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (30-82 mm)")
 dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_sdab_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
