@@ -97,7 +97,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
             type = 'link',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
-            family = "Lato",
+            family = "serif",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
@@ -129,14 +129,14 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
        pos = 1,
        col = "black",
        cex = 6,
-       family = "Lato")
+       family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
              legend.cex = 4,
              axis.args = list(cex.axis = 5,
-                              family = "Lato"),
+                              family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(my_gam$linear.predictors),
@@ -144,7 +144,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
              legend.args = list("log(cpue+1)",
                                 side = 2, 
                                 cex = 4,
-                                family = "Lato",
+                                family = "serif",
                                 line = 1.5))
 }
 
@@ -158,7 +158,7 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
             type = 'link',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
-            family = "Lato",
+            family = "serif",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
@@ -190,14 +190,14 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
        pos = 1,
        col = "black",
        cex = 6,
-       family = "Lato")
+       family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
              legend.cex = 4,
              axis.args = list(cex.axis = 5,
-                              family = "Lato"),
+                              family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(my_gam$linear.predictors),
@@ -205,7 +205,7 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
              legend.args = list("log(cpue+1)",
                                 side = 2, 
                                 cex = 4,
-                                family = "Lato",
+                                family = "serif",
                                 line = 1.5))
 }
 
@@ -219,7 +219,7 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
             type = 'link',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
-            family = "Lato",
+            family = "serif",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
@@ -251,14 +251,14 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
        pos = 1,
        col = "black",
        cex = 6,
-       family = "Lato")
+       family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
              legend.cex = 4,
              axis.args = list(cex.axis = 5,
-                              family = "Lato"),
+                              family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(my_gam$linear.predictors),
@@ -266,7 +266,7 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
              legend.args = list("log(cpue+1)",
                                 side = 2, 
                                 cex = 4,
-                                family = "Lato",
+                                family = "serif",
                                 line = 1.5))
 }
 
@@ -379,9 +379,6 @@ yoy_sdab <- read_data('yoy_dab.Rdata') %>%
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(46.4, 44.0, 37.0),
                            lon = c(-121.0, -121.0, -120.0))
-
-sysfonts::font_add_google("Lato")
-showtext::showtext_auto()
 
 # Hake ----
 # Aggregate model
@@ -558,7 +555,7 @@ hake_added_results <- lapply(hake_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(hake_added_results)) # 261
+mean(unlist(hake_added_results)) # 233
 
 hake_combined_df <- data.frame(year = names(hake_added_results), 
                                RMSE = unlist(hake_added_results))
@@ -576,12 +573,12 @@ ggplot(hake_combined_df) +
   theme_tufte() +
   theme(axis.title = element_text(size = 26,
                                   color = "maroon4",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.text = element_text(size = 22,
-                                 family = "Lato"),
+                                 family = "serif"),
         plot.title = element_text(size = 28, 
                                   face = "bold",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.line = element_line(color = "black"))
 
 # Maps
@@ -805,12 +802,12 @@ ggplot(anchovy_combined_df) +
   theme_tufte() +
   theme(axis.title = element_text(size = 26,
                                   color = "maroon4",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.text = element_text(size = 22,
-                                 family = "Lato"),
+                                 family = "serif"),
         plot.title = element_text(size = 28, 
                                   face = "bold",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.line = element_line(color = "black"))
 
 
@@ -1037,12 +1034,12 @@ ggplot(widow_combined_df) +
   theme_tufte() +
   theme(axis.title = element_text(size = 26,
                                   color = "maroon4",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.text = element_text(size = 22,
-                                 family = "Lato"),
+                                 family = "serif"),
         plot.title = element_text(size = 28, 
                                   face = "bold",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.line = element_line(color = "black"))
 
 # Maps
@@ -1268,12 +1265,12 @@ ggplot(shortbelly_combined_df) +
   theme_tufte() +
   theme(axis.title = element_text(size = 26,
                                   color = "maroon4",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.text = element_text(size = 22,
-                                 family = "Lato"),
+                                 family = "serif"),
         plot.title = element_text(size = 28, 
                                   face = "bold",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.line = element_line(color = "black"))
 
 # Maps
@@ -1508,12 +1505,12 @@ ggplot(sdab_combined_df) +
   theme_tufte() +
   theme(axis.title = element_text(size = 26,
                                   color = "maroon4",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.text = element_text(size = 22,
-                                 family = "Lato"),
+                                 family = "serif"),
         plot.title = element_text(size = 28, 
                                   face = "bold",
-                                  family = "Lato"),
+                                  family = "serif"),
         axis.line = element_line(color = "black"))
 
 # Maps
