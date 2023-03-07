@@ -1,8 +1,6 @@
 # Load libraries ----
 library(maps)
 library(mapdata)
-library(marmap)
-library(raster)
 library(ncdf4)
 library(fields)
 library(pracma)
@@ -150,12 +148,13 @@ windows(height = 28, width = 20, family = "serif")
 annual_temps(48, '12')
 
 # Gif
+# Requires installation of Ghostscript and ImageMagick on machine
+# Make sure Ghostscript is up to date
 base_dir <- getwd()
-temp_dir_out <- file.path(base_dir, 'results', 'ROMS_hindcast')
-temp_imgs <- list.files(temp_dir_out, full.names = TRUE, all.files = TRUE)
+temp_dir_out <- file.path(base_dir, 'results', 'ROMS', 'ROMS_hindcast')
+temp_imgs <- list.files(temp_dir_out, full.names = TRUE)
 temp_img_list <- lapply(temp_imgs, image_read)
 temp_img_joined <- image_join(temp_img_list)
 temp_img_animated <- image_animate(temp_img_joined, fps = 1)
 image_write(image = temp_img_animated,
-            path = here('results', 'ROMS_hindcast', "temp_avgs.gif"))
-
+            path = here('results', 'ROMS', "temp_avgs.gif"))
