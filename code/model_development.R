@@ -45,19 +45,19 @@ location_plot <- function(gam, species_subset, yaxis, title, value) {
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
-            xlab = "lon",
+            xlab = "Longitude",
             ylab = yaxis,
             main = title,
-            cex.lab = 2.5,
-            cex.axis =  2.5,
-            cex.main = 3)
+            cex.lab = 4.5,
+            cex.axis =  4.2,
+            cex.main = 4.8)
   symbols(species_subset$lon,
           species_subset$lat,
           circle = value,
-          inches = 0.2,
+          inches = 0.3,
           add = T,
-          bg = alpha('dimgray', 0.4),
-          fg = alpha('black', 0.1))  
+          bg = alpha('violetred3', 0.4),
+          fg = alpha('violetred4', 0.1))  
   maps::map('worldHires',
             add = T,
             col = 'antiquewhite4',
@@ -65,25 +65,27 @@ location_plot <- function(gam, species_subset, yaxis, title, value) {
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
-             smallplot = c(.28, .31, .11, .24),
-             legend.cex = 1.3,
-             axis.args = list(cex.axis = 1.8,
+             smallplot = c(.24, .29, .08, .21),
+             legend.cex = 2.5,
+             axis.args = list(cex.axis = 3.5,
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
-             zlim = c(min(gam$linear.predictors), 
+             zlim = c(min(gam$linear.predictors),
                       max(gam$linear.predictors)),
-             legend.args = list("CPUE",
-                                side = 2, cex = 1.4,
-                                family = "serif"))
+             legend.args = list("log(cpue+1)",
+                                side = 2, 
+                                cex = 2.5,
+                                family = "serif",
+                                line = 1.5))
 }
 
-variable_coefficient <- function(gam, data, variable){
+variable_coefficient <- function(gam, data, variable, number){
   preds <- predict(gam, type = 'terms', se.fit = T)
-  pred_slope <- preds[[1]][, 8] / variable
-  pred_slope_se <- 1.96 * preds[[2]][, 8]
-  pred_slope_up <- (preds[[1]][, 8] + pred_slope_se) / variable
-  pred_slope_low <- (preds[[1]][, 8] - pred_slope_se) / variable
+  pred_slope <- preds[[1]][, number] / variable # change number depending on if terms are removed
+  pred_slope_se <- 1.96 * preds[[2]][, number]
+  pred_slope_up <- (preds[[1]][, number] + pred_slope_se) / variable
+  pred_slope_low <- (preds[[1]][, number] - pred_slope_se) / variable
   sign_slope_pos <- (1:length(pred_slope))[pred_slope_low > 0]
   sign_slope_neg <- (1:length(pred_slope))[pred_slope_up < 0]
   return(list(sign_slope_neg, sign_slope_pos, pred_slope))
@@ -103,9 +105,9 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
-            cex.lab = 7.5,
-            cex.axis =  7,
-            cex.main = 8)
+            cex.lab = 4.5,
+            cex.axis =  4.2,
+            cex.main = 4.8)
   symbols(species_subset$lon[predictions[[2]]],
           species_subset$lat[predictions[[2]]],
           circle = predictions[[3]][predictions[[2]]],
@@ -118,7 +120,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
           circle = (-1) * predictions[[3]][predictions[[1]]],
           inches = 0.12,
           add = T,
-          bg = alpha('deepskyblue4', 0.4),
+          bg = alpha('slateblue4', 0.4),
           fg = alpha('black', 0.08))
   maps::map("state",
             boundary = FALSE,
@@ -130,14 +132,14 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
        state_labels$name, 
        pos = 1,
        col = "black",
-       cex = 6,
+       cex = 4,
        family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
-             legend.cex = 4,
-             axis.args = list(cex.axis = 5,
+             legend.cex = 2.5,
+             axis.args = list(cex.axis = 3.5,
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
@@ -145,7 +147,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
                       max(my_gam$linear.predictors)),
              legend.args = list("log(cpue+1)",
                                 side = 2, 
-                                cex = 4,
+                                cex = 2.5,
                                 family = "serif",
                                 line = 1.5))
 }
@@ -384,7 +386,26 @@ RMSE_plot <- function(data, title){
                                     face = "bold",
                                     family = "serif"),
           axis.line = element_line(color = "black"))
-  }
+}
+
+plot_variable <- function(gam, covariate, bounds, variable, ylabel, yvalues){
+  plot(gam,
+       pages = 0,
+       select = covariate, 
+       shade = T,
+       shade.col = alpha('deepskyblue4', 0.4),
+       ylim = bounds,
+       xlab = variable,
+       ylab = ylabel,
+       yaxt = yvalues,
+       seWithMean = T,
+       scale = 0,
+       cex.axis = 6.5,
+       cex.lab = 6.5,
+       family = "serif",
+       lwd = 2.5)
+}
+
 
 # Load data ----
 # See function for modifications made
@@ -396,7 +417,7 @@ yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- read_data('yoy_dab.Rdata')
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
-                           lat = c(46.4, 44.0, 37.0),
+                           lat = c(47, 44.0, 37.0),
                            lon = c(-121.0, -121.0, -120.0))
 
 # Hake ----
@@ -584,7 +605,7 @@ windows(width = 10,
 RMSE_plot(hake_combined_df, 
           "Yearly Error for Pacific Hake")
 dev.copy(jpeg, 
-         here('results/RREAS_preliminary', 
+         here('results/hindcast_output/yoy_hake', 
               'hake_explicit_RMSE.jpg'), 
          height = 8, 
          width = 10, 
@@ -592,35 +613,153 @@ dev.copy(jpeg,
          res = 200)
 dev.off()
 
+# Partial dependence plots
+# Aggregate model
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence.jpg'),
+     units = "in",
+     width = 40,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 4),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(hake_total,
+              covariate = 2,
+              bounds = c(-3.5, 2.5),
+              "Depth",
+              "Species Abundance Anomalies",
+              "s")
+plot_variable(hake_total,
+              covariate = 4,
+              bounds = c(-3.5, 3.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(hake_total,
+              covariate = 5,
+              bounds = c(-3.5, 3.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(hake_total,
+              covariate = 3,
+              bounds = c(-3.5, 3.5),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+# Small model
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence_small.jpg'),
+     units = "in",
+     width = 40,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 4),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(hake_small,
+              covariate = 2,
+              bounds = c(-3.5, 2.5),
+              "Depth",
+              "Species Abundance Anomalies",
+              "s")
+plot_variable(hake_small,
+              covariate = 4,
+              bounds = c(-3.5, 3.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(hake_small,
+              covariate = 5,
+              bounds = c(-3.5, 3.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(hake_small,
+              covariate = 3,
+              bounds = c(-3.5, 3.5),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence_large.jpg'),
+     units = "in",
+     width = 40,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 4),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(hake_large,
+              covariate = 2,
+              bounds = c(-3.5, 2.5),
+              "Depth",
+              "Species Abundance Anomalies",
+              "s")
+plot_variable(hake_large,
+              covariate = 4,
+              bounds = c(-3.5, 3.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(hake_large,
+              covariate = 5,
+              bounds = c(-3.5, 3.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(hake_large,
+              covariate = 3,
+              bounds = c(-3.5, 3.5),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
 
 # Maps
 # General distributions
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-location_plot(hake_total, yoy_hake, "lat", "All Sizes", yoy_hake$catch)
-location_plot(hake_large, yoy_hake, " ", "Small Sizes", yoy_hake$large)
-location_plot(hake_small, yoy_hake, " ", "Large Sizes", yoy_hake$small)
-dev.copy(jpeg, here('results/RREAS_preliminary', 'hake_distributions.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+location_plot(hake_total, yoy_hake, "Latitude", "All Sizes", log(yoy_hake$catch1))
+location_plot(hake_large, yoy_hake, " ", "Small Sizes (7-35 mm)", log(yoy_hake$large_catch1))
+location_plot(hake_small, yoy_hake, " ", "Large Sizes (36-134 mm)", log(yoy_hake$small_catch1))
+dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
+                    'hake_distributions.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Variable coefficient plots
-pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$mean_ssh)
-pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$mean_ssh)
-pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$mean_ssh)
+pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$mean_ssh, 7)
+pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$mean_ssh, 7)
+pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$mean_ssh, 7)
 
 windows()
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef(hake_total, yoy_hake, pred_hake_all, "Latitude", "All Sizes")
-plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes (7-31 mm)")
-plot_var_coef(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (32-134 mm)")
-dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_hake_var_coef.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes (7-35 mm)")
+plot_var_coef(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (36-134 mm)")
+dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
+                    'yoy_hake_var_coef.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Anchovy ----
@@ -831,7 +970,7 @@ par(mfrow = c(1, 3),
 location_plot(anchovy_total, yoy_anchovy, "lat", "All Sizes", yoy_anchovy$catch)
 location_plot(anchovy_large, yoy_anchovy, " ", "Small Sizes", yoy_anchovy$large)
 location_plot(anchovy_small, yoy_anchovy, " ", "Large Sizes", yoy_anchovy$small)
-dev.copy(jpeg, here('results/RREAS_preliminary', 'anchovy_distributions.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'anchovy_distributions.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -848,7 +987,7 @@ par(mfrow = c(1, 3),
 plot_var_coef(anchovy_total, yoy_anchovy, pred_anchovy_all, "Latitude", "All Sizes")
 plot_var_coef(anchovy_small, yoy_anchovy, pred_anchovy_small, "", "Small Sizes (15-35 mm)")
 plot_var_coef(anchovy_large, yoy_anchovy, pred_anchovy_large, "", "Large Sizes (36-92 mm)")
-dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_anchovy_var_coef.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'yoy_anchovy_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -1062,7 +1201,7 @@ par(mfrow = c(1, 3),
 location_plot(widow_total, yoy_widow, "lat", "All Sizes", yoy_widow$catch)
 location_plot(widow_large, yoy_widow, " ", "Small Sizes", yoy_widow$large)
 location_plot(widow_small, yoy_widow, " ", "Large Sizes", yoy_widow$small)
-dev.copy(jpeg, here('results/RREAS_preliminary', 'widow_distributions.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'widow_distributions.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -1079,7 +1218,7 @@ par(mfrow = c(1, 3),
 plot_var_coef(widow_total, yoy_widow, pred_widow_all, "Latitude", "All Sizes")
 plot_var_coef(widow_small, yoy_widow, pred_widow_small, "", "Small Sizes (11-31 mm)")
 plot_var_coef(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes (32-73 mm)")
-dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_widow_var_coef.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'yoy_widow_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -1293,7 +1432,7 @@ par(mfrow = c(1, 3),
 location_plot(shortbelly_total, yoy_shortbelly, "lat", "All Sizes", yoy_shortbelly$catch)
 location_plot(shortbelly_large, yoy_shortbelly, " ", "Small Sizes", yoy_shortbelly$large)
 location_plot(shortbelly_small, yoy_shortbelly, " ", "Large Sizes", yoy_shortbelly$small)
-dev.copy(jpeg, here('results/RREAS_preliminary', 'shortbelly_distributions.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'shortbelly_distributions.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -1310,7 +1449,7 @@ par(mfrow = c(1, 3),
 plot_var_coef2(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
 plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes (8-25 mm)")
 plot_var_coef(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes (26-85 mm)")
-dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_shortbelly_var_coef.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'yoy_shortbelly_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -1533,7 +1672,7 @@ par(mfrow = c(1, 3),
 location_plot(sdab_total, yoy_sdab, "lat", "All Sizes", yoy_sdab$catch)
 location_plot(sdab_large, yoy_sdab, " ", "Small Sizes", yoy_sdab$large)
 location_plot(sdab_small, yoy_sdab, " ", "Large Sizes", yoy_sdab$small)
-dev.copy(jpeg, here('results/RREAS_preliminary', 'sdab_distributions.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'sdab_distributions.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
 
@@ -1550,6 +1689,6 @@ par(mfrow = c(1, 3),
 plot_var_coef2(sdab_total, yoy_sdab, pred_sdab_all, "Latitude", "All Sizes")
 plot_var_coef(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes (11-30 mm)")
 plot_var_coef(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (30-82 mm)")
-dev.copy(jpeg, here('results/RREAS_preliminary', 'yoy_sdab_var_coef.jpg'), 
+dev.copy(jpeg, here('results/hindcast_output', 'yoy_sdab_var_coef.jpg'), 
          height = 15, width = 20, units = 'in', res = 200)
 dev.off()
