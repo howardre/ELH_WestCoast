@@ -974,7 +974,7 @@ tiff(here('results/hindcast_output/yoy_anchovy',
      units = "in",
      width = 56,
      height = 12,
-     res = 200)
+     res = 150)
 par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
