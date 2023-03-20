@@ -20,11 +20,13 @@ source(here('code/functions', 'vis_gam_COLORS.R'))
 read_data <- function(file){
   yoy <- readRDS(here('data', file)) %>% 
     tidyr::drop_na(roms_temperature, roms_salinity, roms_ssh, bottom_depth) %>%
-    filter(catch < 2500)
-  yoy$catch1 <- yoy$catch + 1
-  yoy$small_catch1 <- yoy$small + 1
-  yoy$large_catch1 <- yoy$large + 1
-  yoy$year_f <- as.factor(yoy$year)
+    filter(catch < 2500 &
+             year != 2020 &
+             year > 2010) %>%
+    mutate(catch1 = catch + 1,
+           small_catch1 = small + 1,
+           large_catch1 = large + 1,
+           year_f = as.factor(year))
 #  yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
   return(yoy)
 }
@@ -362,19 +364,16 @@ LOYO_preds_large <- function(gam_list, data, results){
   return(results)
 }
 
+RMSE_plot <- function(data, title){}
+
 # Load data ----
-yoy_hake <- read_data('yoy_hake.Rdata') %>%
-  filter(year > 2010)
-yoy_anchovy <- read_data('yoy_anch.Rdata') %>%
-  filter(year > 2010)
-yoy_widow <- read_data('yoy_widw.Rdata') %>%
-  filter(year > 2010)
-yoy_widow <- filter(yoy_widow, catch < 2000) %>%
-  filter(year > 2010) # two large hauls in 2016 caused huge errors
-yoy_shortbelly <- read_data('yoy_sbly.Rdata') %>%
-  filter(year > 2010)
-yoy_sdab <- read_data('yoy_dab.Rdata') %>%
-  filter(year > 2010)
+# See function for modifications made
+yoy_hake <- read_data('yoy_hake.Rdata') 
+yoy_anchovy <- read_data('yoy_anch.Rdata')
+yoy_widow <- read_data('yoy_widw.Rdata')
+yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
+yoy_shortbelly <- read_data('yoy_sbly.Rdata') 
+yoy_sdab <- read_data('yoy_dab.Rdata')
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(46.4, 44.0, 37.0),
@@ -388,7 +387,7 @@ hake_total <- gam(catch1 ~ year_f +
                     s(bottom_depth, k = 4) +
                     s(jday) +
                     s(roms_temperature, k = 4) +
-                    s(roms_salinity, k = 4) +
+                    #s(roms_salinity, k = 4) + # not significant
                     s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -406,7 +405,7 @@ hake_formula <- formula(y_catch ~ s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
                           s(roms_temperature, k = 4) +
-                          s(roms_salinity, k = 4) +
+                          #s(roms_salinity, k = 4) +
                           s(roms_ssh, k = 4) +
                           s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
@@ -423,19 +422,19 @@ hake_results <- LOYO_preds(hake_gams, hake_data, hake_results)
 # Calculate RMSE
 # Get values for each year and overall value
 hake_error <- RMSE_calc(hake_results, yoy_hake)
-mean(hake_error[[2]]$RMSE) #259
+mean(hake_error[[2]]$RMSE) #246
 
 # Plot the RMSE for each year
 hake_error[[2]]$roms_temperature <- yoy_hake$roms_temperature[match(hake_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_error[[2]]) +
   geom_line(aes(year, RMSE),
-             size = 1,
+             linewidth = 1,
              group = 1) 
 
 ggplot(hake_error[[2]]) +
   geom_line(aes(year, roms_temperature),
-            size = 1,
+            linewidth = 1,
             group = 1) 
 
 
@@ -447,7 +446,7 @@ hake_small <- gam(small_catch1 ~ year_f +
                     s(bottom_depth, k = 4) +
                     s(jday) +
                     s(roms_temperature, k = 4) +
-                    s(roms_salinity, k = 4) +
+                    #s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -465,7 +464,7 @@ hake_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
                                 s(roms_temperature, k = 4) +
-                                s(roms_salinity, k = 4) +
+                                #s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
                                 s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
@@ -500,7 +499,7 @@ hake_large <- gam(large_catch1 ~ year_f +
                     s(bottom_depth, k = 4) +
                     s(jday) +
                     s(roms_temperature, k = 4) +
-                    s(roms_salinity, k = 4) +
+                    #s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -518,7 +517,7 @@ hake_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
                                 s(roms_temperature, k = 4) +
-                                s(roms_salinity, k = 4) +
+                                #s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
                                 s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
@@ -555,7 +554,7 @@ hake_added_results <- lapply(hake_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(hake_added_results)) # 233
+mean(unlist(hake_added_results)) # 257
 
 hake_combined_df <- data.frame(year = names(hake_added_results), 
                                RMSE = unlist(hake_added_results))
