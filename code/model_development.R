@@ -627,7 +627,7 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(hake_total,
               covariate = 2,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-3.5, 3.5),
               "Depth",
               "Species Abundance Anomalies",
               "s")
@@ -664,7 +664,7 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(hake_small,
               covariate = 2,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-3.5, 3.5),
               "Depth",
               "Species Abundance Anomalies",
               "s")
@@ -700,7 +700,7 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(hake_large,
               covariate = 2,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-3.5, 3.5),
               "Depth",
               "Species Abundance Anomalies",
               "s")
@@ -769,9 +769,9 @@ anchovy_total <- gam(catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
-                       s(roms_temperature, k = 4) +
-                       s(roms_salinity, k = 4) +
-                       s(roms_ssh, k = 4) +
+                       # s(roms_temperature, k = 4) +
+                       # s(roms_salinity, k = 4) +
+                       # s(roms_ssh, k = 4) +
                        s(lon, lat, by = mean_ssh),
                      family = tw(link = "log"),
                      method = "REML",
@@ -787,9 +787,9 @@ yoy_anchovy$y_catch <- yoy_anchovy$catch1 + anchovy_year_effect[, 1]
 anchovy_formula <- formula(y_catch ~ s(lon, lat) +
                              s(bottom_depth, k = 4) +
                              s(jday) +
-                             s(roms_temperature, k = 4) +
-                             s(roms_salinity, k = 4) +
-                             s(roms_ssh, k = 4) +
+                             # s(roms_temperature, k = 4) +
+                             # s(roms_salinity, k = 4) +
+                             # s(roms_ssh, k = 4) +
                              s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 anchovy_gams <- LOYO_validation(yoy_anchovy, anchovy_formula)
@@ -805,7 +805,7 @@ anchovy_results <- LOYO_preds(anchovy_gams, anchovy_data, anchovy_results)
 # Calculate RMSE
 # Get values for each year and overall value
 anchovy_error <- RMSE_calc(anchovy_results, yoy_anchovy)
-mean(anchovy_error[[2]]$RMSE) #212
+mean(anchovy_error[[2]]$RMSE) #124
 
 # Plot the RMSE for each year
 anchovy_error[[2]]$roms_temperature <- yoy_anchovy$roms_temperature[match(anchovy_error[[2]]$year, yoy_anchovy$year)]
@@ -882,7 +882,7 @@ anchovy_large <- gam(large_catch1 ~ year_f +
                        s(bottom_depth, k = 4) +
                        s(jday) +
                        s(roms_temperature, k = 4) +
-                       s(roms_salinity, k = 4) +
+                       # s(roms_salinity, k = 4) +
                        s(roms_ssh, k = 4) +
                        s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -900,7 +900,7 @@ anchovy_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                    s(bottom_depth, k = 4) +
                                    s(jday) +
                                    s(roms_temperature, k = 4) +
-                                   s(roms_salinity, k = 4) +
+                                   # s(roms_salinity, k = 4) +
                                    s(roms_ssh, k = 4) +
                                    s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
@@ -937,58 +937,152 @@ anchovy_added_results <- lapply(anchovy_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(anchovy_added_results)) # 211
+mean(unlist(anchovy_added_results)) # 130
 
 anchovy_combined_df <- data.frame(year = names(anchovy_added_results), 
                                   RMSE = unlist(anchovy_added_results))
 
-ggplot(anchovy_combined_df) +
-  geom_line(aes(year, RMSE),
-            size = 1.3,
-            group = 1,
-            color = "maroon4") +
-  labs(x = "Year",
-       y = "RMSE",
-       title = "Yearly RMSE for Northern Anchovy") +
-  theme_tufte() +
-  theme(axis.title = element_text(size = 26,
-                                  color = "maroon4",
-                                  family = "serif"),
-        axis.text = element_text(size = 22,
-                                 family = "serif"),
-        plot.title = element_text(size = 28, 
-                                  face = "bold",
-                                  family = "serif"),
-        axis.line = element_line(color = "black"))
+# Partial dependence plots
+# Aggregate model
+tiff(here('results/hindcast_output/yoy_anchovy',
+          'anchovy_partial_dependence.jpg'),
+     units = "in",
+     width = 48,
+     height = 24,
+     res = 200)
+par(mfrow = c(1, 2),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(anchovy_total,
+              covariate = 2,
+              bounds = c(-1, 4.4),
+              "Depth",
+              "Species Abundance Anomalies",
+              "s")
+plot_variable(anchovy_total,
+              covariate = 3,
+              bounds = c(-1, 4.4),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
 
+# Small model
+tiff(here('results/hindcast_output/yoy_anchovy',
+          'anchovy_partial_dependence_small.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 5),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(anchovy_small,
+              covariate = 2,
+              bounds = c(-4, 2.3),
+              "Depth",
+              "Species Abundance Anomalies",
+              "s")
+plot_variable(anchovy_small,
+              covariate = 4,
+              bounds = c(-4, 2.3),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(anchovy_small,
+              covariate = 5,
+              bounds = c(-4, 2.3),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(anchovy_small,
+              covariate = 6,
+              bounds = c(-4, 2.3),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(anchovy_small,
+              covariate = 3,
+              bounds = c(-4, 2.3),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+tiff(here('results/hindcast_output/yoy_anchovy',
+          'anchovy_partial_dependence_large.jpg'),
+     units = "in",
+     width = 40,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 4),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(anchovy_large,
+              covariate = 2,
+              bounds = c(-1.5, 1.5),
+              "Depth",
+              "Species Abundance Anomalies",
+              "s")
+plot_variable(anchovy_large,
+              covariate = 4,
+              bounds = c(-1.5, 1.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(anchovy_large,
+              covariate = 5,
+              bounds = c(-1.5, 1.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(anchovy_large,
+              covariate = 3,
+              bounds = c(-1.5, 1.5),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
 
 # Maps
+# General distributions
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-location_plot(anchovy_total, yoy_anchovy, "lat", "All Sizes", yoy_anchovy$catch)
-location_plot(anchovy_large, yoy_anchovy, " ", "Small Sizes", yoy_anchovy$large)
-location_plot(anchovy_small, yoy_anchovy, " ", "Large Sizes", yoy_anchovy$small)
-dev.copy(jpeg, here('results/hindcast_output', 'anchovy_distributions.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+location_plot(anchovy_total, yoy_anchovy, "Latitude", "All Sizes", log(yoy_anchovy$catch1))
+location_plot(anchovy_large, yoy_anchovy, " ", "Small Sizes (15-35 mm)", log(yoy_anchovy$large_catch1))
+location_plot(anchovy_small, yoy_anchovy, " ", "Large Sizes (36-92 mm)", log(yoy_anchovy$small_catch1))
+dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
+                    'anchovy_distributions.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Variable coefficient plots
-pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$mean_ssh)
-pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$mean_ssh)
-pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$mean_ssh)
+pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$mean_ssh, 5)
+pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$mean_ssh, 8)
+pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$mean_ssh, 7)
 
 windows()
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef(anchovy_total, yoy_anchovy, pred_anchovy_all, "Latitude", "All Sizes")
 plot_var_coef(anchovy_small, yoy_anchovy, pred_anchovy_small, "", "Small Sizes (15-35 mm)")
 plot_var_coef(anchovy_large, yoy_anchovy, pred_anchovy_large, "", "Large Sizes (36-92 mm)")
-dev.copy(jpeg, here('results/hindcast_output', 'yoy_anchovy_var_coef.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
+                    'yoy_anchovy_var_coef.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Widow Rockfish ----
