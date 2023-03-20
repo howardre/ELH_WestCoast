@@ -364,7 +364,27 @@ LOYO_preds_large <- function(gam_list, data, results){
   return(results)
 }
 
-RMSE_plot <- function(data, title){}
+RMSE_plot <- function(data, title){
+  ggplot(data) +
+    geom_line(aes(year, RMSE),
+              size = 1.3,
+              group = 1,
+              color = "maroon4") +
+    labs(x = "Year",
+         y = "RMSE",
+         title = title) +
+    # scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
+    theme_tufte() +
+    theme(axis.title = element_text(size = 26,
+                                    color = "maroon4",
+                                    family = "serif"),
+          axis.text = element_text(size = 22,
+                                   family = "serif"),
+          plot.title = element_text(size = 28, 
+                                    face = "bold",
+                                    family = "serif"),
+          axis.line = element_line(color = "black"))
+  }
 
 # Load data ----
 # See function for modifications made
@@ -559,26 +579,19 @@ mean(unlist(hake_added_results)) # 257
 hake_combined_df <- data.frame(year = names(hake_added_results), 
                                RMSE = unlist(hake_added_results))
 
+windows(width = 10,
+        height = 8)
+RMSE_plot(hake_combined_df, 
+          "Yearly Error for Pacific Hake")
+dev.copy(jpeg, 
+         here('results/RREAS_preliminary', 
+              'hake_explicit_RMSE.jpg'), 
+         height = 8, 
+         width = 10, 
+         units = 'in',
+         res = 200)
+dev.off()
 
-ggplot(hake_combined_df) +
-  geom_line(aes(year, RMSE),
-            size = 1.3,
-            group = 1,
-            color = "maroon4") +
-  labs(x = "Year",
-       y = "RMSE",
-       title = "Yearly Error for Pacific Hake") +
- # scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
-  theme_tufte() +
-  theme(axis.title = element_text(size = 26,
-                                  color = "maroon4",
-                                  family = "serif"),
-        axis.text = element_text(size = 22,
-                                 family = "serif"),
-        plot.title = element_text(size = 28, 
-                                  face = "bold",
-                                  family = "serif"),
-        axis.line = element_line(color = "black"))
 
 # Maps
 # General distributions
