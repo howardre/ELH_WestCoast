@@ -73,7 +73,7 @@ location_plot <- function(gam, species_subset, yaxis, title, value) {
              legend.mar = 6,
              zlim = c(min(gam$fitted.values),
                       max(gam$fitted.values)),
-             legend.args = list("log(cpue+1)",
+             legend.args = list("CPUE",
                                 side = 2, 
                                 cex = 2.5,
                                 family = "serif",
@@ -1146,10 +1146,10 @@ widow_results <- LOYO_preds(widow_gams, widow_data, widow_results)
 # Calculate RMSE
 # Get values for each year and overall value
 widow_error <- RMSE_calc(widow_results, yoy_widow)
-mean(widow_error[[2]]$RMSE) #
+mean(widow_error[[2]]$RMSE) # 25
 
 # Plot the RMSE for each year
-widow_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(widow_error[[2]]$year, ctd_means$year)]
+widow_error[[2]]$roms_temperature <- yoy_widow$roms_temperature[match(widow_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1204,7 +1204,7 @@ widow_small_results <- LOYO_preds_small(widow_small_gams, widow_data, widow_smal
 widow_small_error <- RMSE_calc_small(widow_small_results, yoy_widow)
 
 # Plot the RMSE for each year
-widow_small_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(widow_small_error[[2]]$year, ctd_means$year)]
+widow_small_error[[2]]$roms_salinity <- yoy_widow$roms_salinity[match(widow_small_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1212,7 +1212,7 @@ ggplot(widow_small_error[[2]]) +
             group = 1) 
 
 ggplot(widow_small_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -1257,7 +1257,7 @@ widow_large_results <- LOYO_preds_large(widow_large_gams, widow_data, widow_larg
 widow_large_error <- RMSE_calc_large(widow_large_results, yoy_widow)
 
 # Plot the RMSE for each year
-widow_large_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(widow_large_error[[2]]$year, ctd_means$year)]
+widow_large_error[[2]]$roms_ssh <- yoy_widow$roms_ssh[match(widow_large_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1265,7 +1265,7 @@ ggplot(widow_large_error[[2]]) +
             group = 1) 
 
 ggplot(widow_large_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -1278,62 +1278,174 @@ widow_added_results <- lapply(widow_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(widow_added_results)) # 29
+mean(unlist(widow_added_results)) # 26
 # When including the outliers, splitting up the data into size bins drastically improves the RMSE
 # When aggregated with the outliers, the RMSE is extremely high
 
 widow_combined_df <- data.frame(year = names(widow_added_results), 
                                RMSE = unlist(widow_added_results))
 
-ggplot(widow_combined_df) +
-  geom_line(aes(year, RMSE),
-            size = 1.3,
-            group = 1,
-            color = "maroon4") +
-  labs(x = "Year",
-       y = "RMSE",
-       title = "Yearly RMSE for Widow Rockfish") +
-#  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
-  theme_tufte() +
-  theme(axis.title = element_text(size = 26,
-                                  color = "maroon4",
-                                  family = "serif"),
-        axis.text = element_text(size = 22,
-                                 family = "serif"),
-        plot.title = element_text(size = 28, 
-                                  face = "bold",
-                                  family = "serif"),
-        axis.line = element_line(color = "black"))
+# Partial dependence plots
+# Aggregate model
+tiff(here('results/hindcast_output/yoy_widow',
+          'widow_partial_dependence.jpg'),
+     units = "in",
+     width = 40,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 4),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(widow_total,
+              covariate = 2,
+              bounds = c(-4, 2),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(widow_total,
+              covariate = 4,
+              bounds = c(-4, 2),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(widow_total,
+              covariate = 5,
+              bounds = c(-4, 2),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(widow_total,
+              covariate = 3,
+              bounds = c(-4, 2),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+# Small model
+tiff(here('results/hindcast_output/yoy_widow',
+          'widow_partial_dependence_small.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 150)
+par(mfrow = c(1, 5),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(widow_small,
+              covariate = 2,
+              bounds = c(-3.2, 2),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(widow_small,
+              covariate = 4,
+              bounds = c(-3.2, 2),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(widow_small,
+              covariate = 5,
+              bounds = c(-3.2, 2),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(widow_small,
+              covariate = 6,
+              bounds = c(-3.2, 2),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(widow_small,
+              covariate = 3,
+              bounds = c(-3.2, 2),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+# Large model
+tiff(here('results/hindcast_output/yoy_widow',
+          'widow_partial_dependence_large.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 5),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(widow_large,
+              covariate = 2,
+              bounds = c(-1.5, 1.5),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(widow_large,
+              covariate = 4,
+              bounds = c(-1.5, 1.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(widow_large,
+              covariate = 5,
+              bounds = c(-1.5, 1.5),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(widow_large,
+              covariate = 6,
+              bounds = c(-1.5, 1.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(widow_large,
+              covariate = 3,
+              bounds = c(-1.5, 1.5),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
 
 # Maps
+# General distributions
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-location_plot(widow_total, yoy_widow, "lat", "All Sizes", yoy_widow$catch)
-location_plot(widow_large, yoy_widow, " ", "Small Sizes", yoy_widow$large)
-location_plot(widow_small, yoy_widow, " ", "Large Sizes", yoy_widow$small)
-dev.copy(jpeg, here('results/hindcast_output', 'widow_distributions.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+location_plot(widow_total, yoy_widow, "Latitude", "All Sizes", log(yoy_widow$catch1))
+location_plot(widow_large, yoy_widow, " ", "Small Sizes (11-45 mm)", log(yoy_widow$large_catch1))
+location_plot(widow_small, yoy_widow, " ", "Large Sizes (46-73 mm)", log(yoy_widow$small_catch1))
+dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
+                    'widow_distributions.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Variable coefficient plots
-pred_widow_all <- variable_coefficient(widow_total, yoy_widow, yoy_widow$mean_ssh)
-pred_widow_small <- variable_coefficient(widow_small, yoy_widow, yoy_widow$mean_ssh)
-pred_widow_large <- variable_coefficient(widow_large, yoy_widow, yoy_widow$mean_ssh)
+pred_widow_all <- variable_coefficient(widow_total, yoy_widow, yoy_widow$mean_ssh, 7)
+pred_widow_small <- variable_coefficient(widow_small, yoy_widow, yoy_widow$mean_ssh, 8)
+pred_widow_large <- variable_coefficient(widow_large, yoy_widow, yoy_widow$mean_ssh, 8)
 
 windows()
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
 plot_var_coef(widow_total, yoy_widow, pred_widow_all, "Latitude", "All Sizes")
-plot_var_coef(widow_small, yoy_widow, pred_widow_small, "", "Small Sizes (11-31 mm)")
-plot_var_coef(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes (32-73 mm)")
-dev.copy(jpeg, here('results/hindcast_output', 'yoy_widow_var_coef.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+plot_var_coef(widow_small, yoy_widow, pred_widow_small, "", "Small Sizes (11-45 mm)")
+plot_var_coef(widow_large, yoy_widow, pred_widow_large, "", "Large Sizes (46-73 mm)")
+dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
+                    'yoy_widow_var_coef.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
-
 
 # Shortbelly Rockfish ----
 # Aggregate model
@@ -1344,7 +1456,7 @@ shortbelly_total <- gam(catch1 ~ year_f +
                           s(jday) +
                           s(roms_temperature, k = 4) +
                           s(roms_salinity, k = 4) +
-                          s(roms_ssh, k = 4) +
+                          # s(roms_ssh, k = 4) + # removal reduced AIC
                           s(lon, lat, by = mean_ssh),
                         family = tw(link = "log"),
                         method = "REML",
@@ -1362,7 +1474,7 @@ shortbelly_formula <- formula(y_catch ~ s(lon, lat) +
                                 s(jday) +
                                 s(roms_temperature, k = 4) +
                                 s(roms_salinity, k = 4) +
-                                s(roms_ssh, k = 4) +
+                                # s(roms_ssh, k = 4) +
                                 s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 shortbelly_gams <- LOYO_validation(yoy_shortbelly, shortbelly_formula)
@@ -1378,10 +1490,10 @@ shortbelly_results <- LOYO_preds(shortbelly_gams, shortbelly_data, shortbelly_re
 # Calculate RMSE
 # Get values for each year and overall value
 shortbelly_error <- RMSE_calc(shortbelly_results, yoy_shortbelly)
-mean(shortbelly_error[[2]]$RMSE) #111
+mean(shortbelly_error[[2]]$RMSE) # 157
 
 # Plot the RMSE for each year
-shortbelly_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(shortbelly_error[[2]]$year, ctd_means$year)]
+shortbelly_error[[2]]$roms_temperature <- yoy_shortbelly$roms_temperature[match(shortbelly_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1436,7 +1548,7 @@ shortbelly_small_results <- LOYO_preds_small(shortbelly_small_gams, shortbelly_d
 shortbelly_small_error <- RMSE_calc_small(shortbelly_small_results, yoy_shortbelly)
 
 # Plot the RMSE for each year
-shortbelly_small_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(shortbelly_small_error[[2]]$year, ctd_means$year)]
+shortbelly_small_error[[2]]$roms_salinity <- yoy_shortbelly$roms_salinity[match(shortbelly_small_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1444,7 +1556,7 @@ ggplot(shortbelly_small_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_small_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -1455,7 +1567,7 @@ shortbelly_large <- gam(large_catch1 ~ year_f +
                           s(bottom_depth, k = 4) +
                           s(jday) +
                           s(roms_temperature, k = 4) +
-                          s(roms_salinity, k = 4) +
+                          # s(roms_salinity, k = 4) +
                           s(roms_ssh, k = 4) +
                           s(lon, lat, by = mean_ssh),
                         family = tw(link = "log"),
@@ -1473,7 +1585,7 @@ shortbelly_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                       s(bottom_depth, k = 4) +
                                       s(jday) +
                                       s(roms_temperature, k = 4) +
-                                      s(roms_salinity, k = 4) +
+                                      # s(roms_salinity, k = 4) +
                                       s(roms_ssh, k = 4) +
                                       s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
@@ -1489,7 +1601,7 @@ shortbelly_large_results <- LOYO_preds_large(shortbelly_large_gams, shortbelly_d
 shortbelly_large_error <- RMSE_calc_large(shortbelly_large_results, yoy_shortbelly)
 
 # Plot the RMSE for each year
-shortbelly_large_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(shortbelly_large_error[[2]]$year, ctd_means$year)]
+shortbelly_large_error[[2]]$roms_ssh <- yoy_shortbelly$roms_ssh[match(shortbelly_large_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1497,7 +1609,7 @@ ggplot(shortbelly_large_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_large_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -1510,59 +1622,165 @@ shortbelly_added_results <- lapply(shortbelly_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(shortbelly_added_results)) # 110
+mean(unlist(shortbelly_added_results)) # 147
 
 shortbelly_combined_df <- data.frame(year = names(shortbelly_added_results), 
                                      RMSE = unlist(shortbelly_added_results))
 
+# Partial dependence plots
+# Aggregate model
+tiff(here('results/hindcast_output/yoy_shortbelly',
+          'shortbelly_partial_dependence.jpg'),
+     units = "in",
+     width = 40,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 4),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(shortbelly_total,
+              covariate = 2,
+              bounds = c(-4.2, 3),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(shortbelly_total,
+              covariate = 4,
+              bounds = c(-4.2, 3),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(shortbelly_total,
+              covariate = 5,
+              bounds = c(-4.2, 3),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(shortbelly_total,
+              covariate = 3,
+              bounds = c(-4.2, 3),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
 
-ggplot(shortbelly_combined_df) +
-  geom_line(aes(year, RMSE),
-            size = 1.3,
-            group = 1,
-            color = "maroon4") +
-  labs(x = "Year",
-       y = "RMSE",
-       title = "Yearly Error for Shortbelly Rockfish") +
-#  scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
-  theme_tufte() +
-  theme(axis.title = element_text(size = 26,
-                                  color = "maroon4",
-                                  family = "serif"),
-        axis.text = element_text(size = 22,
-                                 family = "serif"),
-        plot.title = element_text(size = 28, 
-                                  face = "bold",
-                                  family = "serif"),
-        axis.line = element_line(color = "black"))
+# Small model
+tiff(here('results/hindcast_output/yoy_shortbelly',
+          'shortbelly_partial_dependence_small.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 150)
+par(mfrow = c(1, 5),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(shortbelly_small,
+              covariate = 2,
+              bounds = c(-3, 3),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(shortbelly_small,
+              covariate = 4,
+              bounds = c(-3, 3),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(shortbelly_small,
+              covariate = 5,
+              bounds = c(-3, 3),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(shortbelly_small,
+              covariate = 6,
+              bounds = c(-3, 3),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(shortbelly_small,
+              covariate = 3,
+              bounds = c(-3, 3),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+# Large model
+tiff(here('results/hindcast_output/yoy_shortbelly',
+          'shortbelly_partial_dependence_large.jpg'),
+     units = "in",
+     width = 40,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 4),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(shortbelly_large,
+              covariate = 2,
+              bounds = c(-1.5, 1.5),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(shortbelly_large,
+              covariate = 4,
+              bounds = c(-1.5, 1.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(shortbelly_large,
+              covariate = 5,
+              bounds = c(-1.5, 1.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(shortbelly_large,
+              covariate = 3,
+              bounds = c(-1.5, 1.5),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
 
 # Maps
+# General distributions
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-location_plot(shortbelly_total, yoy_shortbelly, "lat", "All Sizes", yoy_shortbelly$catch)
-location_plot(shortbelly_large, yoy_shortbelly, " ", "Small Sizes", yoy_shortbelly$large)
-location_plot(shortbelly_small, yoy_shortbelly, " ", "Large Sizes", yoy_shortbelly$small)
-dev.copy(jpeg, here('results/hindcast_output', 'shortbelly_distributions.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+location_plot(shortbelly_total, yoy_shortbelly, "Latitude", "All Sizes", log(yoy_shortbelly$catch1))
+location_plot(shortbelly_large, yoy_shortbelly, " ", "Small Sizes (8-35 mm)", log(yoy_shortbelly$large_catch1))
+location_plot(shortbelly_small, yoy_shortbelly, " ", "Large Sizes (36-85 mm)", log(yoy_shortbelly$small_catch1))
+dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
+                    'shortbelly_distributions.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Variable coefficient plots
-pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$mean_ssh)
-pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$mean_ssh)
-pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$mean_ssh)
+pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$mean_ssh, 7)
+pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$mean_ssh, 8)
+pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$mean_ssh, 7)
 
 windows()
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-plot_var_coef2(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
-plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes (8-25 mm)")
-plot_var_coef(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes (26-85 mm)")
-dev.copy(jpeg, here('results/hindcast_output', 'yoy_shortbelly_var_coef.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+plot_var_coef(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
+plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes (8-35 mm)")
+plot_var_coef(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes (36-85 mm)")
+dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
+                    'yoy_shortbelly_var_coef.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Pacific Sanddab ----
@@ -1570,11 +1788,11 @@ dev.off()
 # Use models selected during model exploration
 sdab_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
-                    s(bottom_depth, k = 4) +
+                    # s(bottom_depth, k = 4) +
                     s(jday) + 
                     s(roms_temperature, k = 4) +
-                    s(roms_salinity, k = 4) +
-                    s(roms_ssh, k = 4) +
+                    # s(roms_salinity, k = 4) +
+                    # s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
                   method = "REML",
@@ -1588,11 +1806,11 @@ yoy_sdab$y_catch <- yoy_sdab$catch1 + sdab_year_effect[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 sdab_formula <- formula(y_catch ~ s(lon, lat) + 
-                          s(bottom_depth, k = 4) +
+                          # s(bottom_depth, k = 4) +
                           s(jday) + 
                           s(roms_temperature, k = 4) +
-                          s(roms_salinity, k = 4) +
-                          s(roms_ssh, k = 4) +
+                          # s(roms_salinity, k = 4) +
+                          # s(roms_ssh, k = 4) +
                           s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 sdab_gams <- LOYO_validation(yoy_sdab, sdab_formula)
@@ -1608,10 +1826,10 @@ sdab_results <- LOYO_preds(sdab_gams, sdab_data, sdab_results)
 # Calculate RMSE
 # Get values for each year and overall value
 sdab_error <- RMSE_calc(sdab_results, yoy_sdab)
-mean(sdab_error[[2]]$RMSE) #65
+mean(sdab_error[[2]]$RMSE) # 102
 
 # Plot the RMSE for each year
-sdab_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(sdab_error[[2]]$year, ctd_means$year)]
+sdab_error[[2]]$roms_temperature <- yoy_sdab$roms_temperature[match(sdab_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1677,7 +1895,7 @@ sdab_small_results <- LOYO_preds_small(sdab_small_gams, sdab_data, sdab_small_re
 sdab_small_error <- RMSE_calc_small(sdab_small_results, yoy_sdab)
 
 # Plot the RMSE for each year
-sdab_small_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(sdab_small_error[[2]]$year, ctd_means$year)]
+sdab_small_error[[2]]$roms_salinity <- yoy_sdab$roms_salinity[match(sdab_small_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1685,7 +1903,7 @@ ggplot(sdab_small_error[[2]]) +
             group = 1) 
 
 ggplot(sdab_small_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -1730,7 +1948,7 @@ sdab_large_results <- LOYO_preds_large(sdab_large_gams, sdab_data, sdab_large_re
 sdab_large_error <- RMSE_calc_large(sdab_large_results, yoy_sdab)
 
 # Plot the RMSE for each year
-sdab_large_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(sdab_large_error[[2]]$year, ctd_means$year)]
+sdab_large_error[[2]]$roms_ssh <- yoy_sdab$roms_ssh[match(sdab_large_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1738,7 +1956,7 @@ ggplot(sdab_large_error[[2]]) +
             group = 1) 
 
 ggplot(sdab_large_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -1751,56 +1969,200 @@ sdab_added_results <- lapply(sdab_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(sdab_added_results)) # 54
+mean(unlist(sdab_added_results)) # 92
 
 sdab_combined_df <- data.frame(year = names(sdab_added_results), 
                                RMSE = unlist(sdab_added_results))
 
-ggplot(sdab_combined_df) +
-  geom_line(aes(year, RMSE),
-            size = 1.3,
-            group = 1,
-            color = "maroon4") +
-  labs(x = "Year",
-       y = "RMSE",
-       title = "Yearly RMSE for Pacific Sanddab") +
-# scale_x_discrete(breaks = c(1987, 1997, 2007, 2017)) +
-  theme_tufte() +
-  theme(axis.title = element_text(size = 26,
-                                  color = "maroon4",
-                                  family = "serif"),
-        axis.text = element_text(size = 22,
-                                 family = "serif"),
-        plot.title = element_text(size = 28, 
-                                  face = "bold",
-                                  family = "serif"),
-        axis.line = element_line(color = "black"))
+# Partial dependence plots
+# Aggregate model
+tiff(here('results/hindcast_output/yoy_sanddab',
+          'sanddab_partial_dependence.jpg'),
+     units = "in",
+     width = 48,
+     height = 24,
+     res = 150)
+par(mfrow = c(1, 2),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(sdab_total,
+              covariate = 3,
+              bounds = c(-4, 2),
+              "Temperature",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(sdab_total,
+              covariate = 2,
+              bounds = c(-4, 2),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+# Small model
+tiff(here('results/hindcast_output/yoy_sanddab',
+          'sanddab_partial_dependence_small.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 150)
+par(mfrow = c(1, 5),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(sdab_small,
+              covariate = 2,
+              bounds = c(-4, 3),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(sdab_small,
+              covariate = 4,
+              bounds = c(-4, 3),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(sdab_small,
+              covariate = 5,
+              bounds = c(-4, 3),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(sdab_small,
+              covariate = 6,
+              bounds = c(-4, 3),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(sdab_small,
+              covariate = 3,
+              bounds = c(-4, 3),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
+
+# Large model
+tiff(here('results/hindcast_output/yoy_sanddab',
+          'sanddab_partial_dependence_large.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 5),
+    mar = c(11, 15, .5, 0.6) + 0.1,
+    oma = c(3, 1, 1, 1),
+    mgp = c(9, 4, 0))
+plot_variable(sdab_large,
+              covariate = 2,
+              bounds = c(-2.2, 1.5),
+              "Depth",
+              "Effect on Species Abundance",
+              "s")
+plot_variable(sdab_large,
+              covariate = 4,
+              bounds = c(-2.2, 1.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(sdab_large,
+              covariate = 5,
+              bounds = c(-2.2, 1.5),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(sdab_large,
+              covariate = 6,
+              bounds = c(-2.2, 1.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(sdab_large,
+              covariate = 3,
+              bounds = c(-2.2, 1.5),
+              "Day of Year",
+              " ",
+              "n")
+dev.off()
 
 # Maps
+# General distributions
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-location_plot(sdab_total, yoy_sdab, "lat", "All Sizes", yoy_sdab$catch)
-location_plot(sdab_large, yoy_sdab, " ", "Small Sizes", yoy_sdab$large)
-location_plot(sdab_small, yoy_sdab, " ", "Large Sizes", yoy_sdab$small)
-dev.copy(jpeg, here('results/hindcast_output', 'sdab_distributions.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+location_plot(sdab_total, yoy_sdab, "Latitude", "All Sizes", log(yoy_sdab$catch1))
+location_plot(sdab_large, yoy_sdab, " ", "Small Sizes (11-30 mm)", log(yoy_sdab$large_catch1))
+location_plot(sdab_small, yoy_sdab, " ", "Large Sizes (31-82 mm)", log(yoy_sdab$small_catch1))
+dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
+                    'sanddab_distributions.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 # Variable coefficient plots
-pred_sdab_all <- variable_coefficient(sdab_total, yoy_sdab, yoy_sdab$mean_ssh)
-pred_sdab_small <- variable_coefficient(sdab_small, yoy_sdab, yoy_sdab$mean_ssh)
-pred_sdab_large <- variable_coefficient(sdab_large, yoy_sdab, yoy_sdab$mean_ssh)
+pred_sdab_all <- variable_coefficient(sdab_total, yoy_sdab, yoy_sdab$mean_ssh, 5) # none significant
+pred_sdab_small <- variable_coefficient(sdab_small, yoy_sdab, yoy_sdab$mean_ssh, 8)
+pred_sdab_large <- variable_coefficient(sdab_large, yoy_sdab, yoy_sdab$mean_ssh, 8)
 
 windows()
 par(mfrow = c(1, 3),
-    mar = c(6.4, 7.2, 2.5, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-plot_var_coef2(sdab_total, yoy_sdab, pred_sdab_all, "Latitude", "All Sizes")
-plot_var_coef(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes (11-30 mm)")
-plot_var_coef(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (30-82 mm)")
-dev.copy(jpeg, here('results/hindcast_output', 'yoy_sdab_var_coef.jpg'), 
-         height = 15, width = 20, units = 'in', res = 200)
+myvis_gam(sdab_total,
+          view = c('lon', 'lat'),
+          too.far = 0.07,
+          plot.type = 'contour',
+          contour.col = contour_col,
+          color = "jet" ,
+          type = 'response',
+          xlim = c(-125.7, -116.5),
+          ylim = range(yoy_sdab$lat, na.rm = TRUE) + c(-.4, .5),
+          family = "serif",
+          xlab = "Longitude",
+          ylab = "Latitude",
+          main = "All Sizes",
+          cex.lab = 4.5,
+          cex.axis =  4.2,
+          cex.main = 4.8)
+maps::map("state",
+          boundary = FALSE,
+          fill = TRUE,
+          col = "wheat4",
+          add = TRUE)
+text(x = state_labels$lon, 
+     y = state_labels$lat,
+     state_labels$name, 
+     pos = 1,
+     col = "black",
+     cex = 4,
+     family = "serif")
+image.plot(legend.only = T,
+           col = jet.colors(100),
+           legend.shrink = 0.2,
+           smallplot = c(.24, .29, .08, .21),
+           legend.cex = 2.5,
+           axis.args = list(cex.axis = 3.5,
+                            family = "serif"),
+           legend.width = 0.8,
+           legend.mar = 6,
+           zlim = c(min(sdab_total$fitted.values),
+                    max(sdab_total$fitted.values)),
+           legend.args = list("CPUE",
+                              side = 2, 
+                              cex = 2.5,
+                              family = "serif",
+                              line = 1.5))
+plot_var_coef2(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes (11-30 mm)")
+plot_var_coef2(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (31-82 mm)")
+dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
+                    'yoy_sanddab_var_coef.jpg'), 
+         height = 15, 
+         width = 20, 
+         units = 'in', 
+         res = 200)
 dev.off()
