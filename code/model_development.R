@@ -27,7 +27,7 @@ read_data <- function(file){
            small_catch1 = small + 1,
            large_catch1 = large + 1,
            year_f = as.factor(year))
-#  yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
+  yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
   return(yoy)
 }
 
@@ -41,7 +41,7 @@ location_plot <- function(gam, species_subset, yaxis, title, value) {
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
-            type = 'link',
+            type = 'response',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
@@ -71,8 +71,8 @@ location_plot <- function(gam, species_subset, yaxis, title, value) {
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
-             zlim = c(min(gam$linear.predictors),
-                      max(gam$linear.predictors)),
+             zlim = c(min(gam$fitted.values),
+                      max(gam$fitted.values)),
              legend.args = list("log(cpue+1)",
                                 side = 2, 
                                 cex = 2.5,
@@ -98,7 +98,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
-            type = 'link',
+            type = 'response',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
@@ -120,7 +120,7 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
           circle = (-1) * predictions[[3]][predictions[[1]]],
           inches = 0.12,
           add = T,
-          bg = alpha('slateblue4', 0.4),
+          bg = alpha('goldenrod', 0.4),
           fg = alpha('black', 0.08))
   maps::map("state",
             boundary = FALSE,
@@ -143,9 +143,9 @@ plot_var_coef <- function(my_gam, species_subset, predictions, yaxis, size){
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
-             zlim = c(min(my_gam$linear.predictors),
-                      max(my_gam$linear.predictors)),
-             legend.args = list("log(cpue+1)",
+             zlim = c(min(my_gam$fitted.values),
+                      max(my_gam$fitted.values)),
+             legend.args = list("CPUE",
                                 side = 2, 
                                 cex = 2.5,
                                 family = "serif",
@@ -159,16 +159,16 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
-            type = 'link',
+            type = 'response',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
-            cex.lab = 7.5,
-            cex.axis =  7,
-            cex.main = 8)
+            cex.lab = 4.5,
+            cex.axis =  4.2,
+            cex.main = 4.8)
   # symbols(species_subset$lon[predictions[[2]]],
   #         species_subset$lat[predictions[[2]]],
   #         circle = predictions[[3]][predictions[[2]]],
@@ -181,7 +181,7 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
           circle = (-1) * predictions[[3]][predictions[[1]]],
           inches = 0.12,
           add = T,
-          bg = alpha('deepskyblue4', 0.4),
+          bg = alpha('goldenrod', 0.4),
           fg = alpha('black', 0.08))
   maps::map("state",
             boundary = FALSE,
@@ -193,22 +193,22 @@ plot_var_coef2 <- function(my_gam, species_subset, predictions, yaxis, size){
        state_labels$name, 
        pos = 1,
        col = "black",
-       cex = 6,
+       cex = 4,
        family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
-             legend.cex = 4,
-             axis.args = list(cex.axis = 5,
+             legend.cex = 2.5,
+             axis.args = list(cex.axis = 3.5,
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
-             zlim = c(min(my_gam$linear.predictors),
-                      max(my_gam$linear.predictors)),
-             legend.args = list("log(cpue+1)",
+             zlim = c(min(my_gam$fitted.values),
+                      max(my_gam$fitted.values)),
+             legend.args = list("CPUE",
                                 side = 2, 
-                                cex = 4,
+                                cex = 2.5,
                                 family = "serif",
                                 line = 1.5))
 }
@@ -220,16 +220,16 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
             plot.type = 'contour',
             contour.col = contour_col,
             color = "jet" ,
-            type = 'link',
+            type = 'response',
             xlim = c(-125.7, -116.5),
             ylim = range(species_subset$lat, na.rm = TRUE) + c(-.4, .5),
             family = "serif",
             xlab = "Longitude",
             ylab = yaxis,
             main = size,
-            cex.lab = 7.5,
-            cex.axis =  7,
-            cex.main = 8)
+            cex.lab = 4.5,
+            cex.axis =  4.2,
+            cex.main = 4.8)
   symbols(species_subset$lon[predictions[[2]]],
           species_subset$lat[predictions[[2]]],
           circle = predictions[[3]][predictions[[2]]],
@@ -254,22 +254,22 @@ plot_var_coef3 <- function(my_gam, species_subset, predictions, yaxis, size){
        state_labels$name, 
        pos = 1,
        col = "black",
-       cex = 6,
+       cex = 4,
        family = "serif")
   image.plot(legend.only = T,
              col = jet.colors(100),
              legend.shrink = 0.2,
              smallplot = c(.24, .29, .08, .21),
-             legend.cex = 4,
-             axis.args = list(cex.axis = 5,
+             legend.cex = 2.5,
+             axis.args = list(cex.axis = 3.5,
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
-             zlim = c(min(my_gam$linear.predictors),
-                      max(my_gam$linear.predictors)),
-             legend.args = list("log(cpue+1)",
+             zlim = c(min(my_gam$fitted.values),
+                      max(my_gam$fitted.values)),
+             legend.args = list("CPUE",
                                 side = 2, 
-                                cex = 4,
+                                cex = 2.5,
                                 family = "serif",
                                 line = 1.5))
 }
@@ -428,7 +428,7 @@ hake_total <- gam(catch1 ~ year_f +
                     s(bottom_depth, k = 4) +
                     s(jday) +
                     s(roms_temperature, k = 4) +
-                    #s(roms_salinity, k = 4) + # not significant
+                    # s(roms_salinity, k = 4) + # not significant
                     s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -463,7 +463,7 @@ hake_results <- LOYO_preds(hake_gams, hake_data, hake_results)
 # Calculate RMSE
 # Get values for each year and overall value
 hake_error <- RMSE_calc(hake_results, yoy_hake)
-mean(hake_error[[2]]$RMSE) #246
+mean(hake_error[[2]]$RMSE) # 126
 
 # Plot the RMSE for each year
 hake_error[[2]]$roms_temperature <- yoy_hake$roms_temperature[match(hake_error[[2]]$year, yoy_hake$year)]
@@ -487,7 +487,7 @@ hake_small <- gam(small_catch1 ~ year_f +
                     s(bottom_depth, k = 4) +
                     s(jday) +
                     s(roms_temperature, k = 4) +
-                    #s(roms_salinity, k = 4) +
+                    s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -505,7 +505,7 @@ hake_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
                                 s(roms_temperature, k = 4) +
-                                #s(roms_salinity, k = 4) +
+                                s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
                                 s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
@@ -540,7 +540,7 @@ hake_large <- gam(large_catch1 ~ year_f +
                     s(bottom_depth, k = 4) +
                     s(jday) +
                     s(roms_temperature, k = 4) +
-                    #s(roms_salinity, k = 4) +
+                    # s(roms_salinity, k = 4) +
                     s(roms_ssh, k = 4) +
                     s(lon, lat, by = mean_ssh),
                   family = tw(link = "log"),
@@ -558,7 +558,7 @@ hake_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
                                 s(roms_temperature, k = 4) +
-                                #s(roms_salinity, k = 4) +
+                                # s(roms_salinity, k = 4) +
                                 s(roms_ssh, k = 4) +
                                 s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
 
@@ -595,7 +595,7 @@ hake_added_results <- lapply(hake_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(hake_added_results)) # 257
+mean(unlist(hake_added_results)) # 119
 
 hake_combined_df <- data.frame(year = names(hake_added_results), 
                                RMSE = unlist(hake_added_results))
@@ -627,25 +627,25 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(hake_total,
               covariate = 2,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.6, 3),
               "Depth",
-              "Species Abundance Anomalies",
+              "Effect on Species Abundance",
               "s")
 plot_variable(hake_total,
               covariate = 4,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.6, 3),
               "Temperature",
               " ",
               "n")
 plot_variable(hake_total,
               covariate = 5,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.6, 3),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(hake_total,
               covariate = 3,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.6, 3),
               "Day of Year",
               " ",
               "n")
@@ -655,34 +655,40 @@ dev.off()
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_small.jpg'),
      units = "in",
-     width = 40,
+     width = 55,
      height = 12,
-     res = 200)
-par(mfrow = c(1, 4),
+     res = 150)
+par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(hake_small,
               covariate = 2,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.5, 2.5),
               "Depth",
-              "Species Abundance Anomalies",
+              "Effect on Species Abundance",
               "s")
 plot_variable(hake_small,
               covariate = 4,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.5, 2.5),
               "Temperature",
               " ",
               "n")
 plot_variable(hake_small,
               covariate = 5,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.5, 2.5),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(hake_small,
+              covariate = 6,
+              bounds = c(-3.5, 2.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(hake_small,
               covariate = 3,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-3.5, 2.5),
               "Day of Year",
               " ",
               "n")
@@ -700,25 +706,25 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(hake_large,
               covariate = 2,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-2, 1.5),
               "Depth",
-              "Species Abundance Anomalies",
+              "Effect on Species Abundance",
               "s")
 plot_variable(hake_large,
               covariate = 4,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-2, 1.5),
               "Temperature",
               " ",
               "n")
 plot_variable(hake_large,
               covariate = 5,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-2, 1.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(hake_large,
               covariate = 3,
-              bounds = c(-3.5, 3.5),
+              bounds = c(-2, 1.5),
               "Day of Year",
               " ",
               "n")
@@ -743,7 +749,7 @@ dev.off()
 
 # Variable coefficient plots
 pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$mean_ssh, 7)
-pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$mean_ssh, 7)
+pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$mean_ssh, 8)
 pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$mean_ssh, 7)
 
 windows()
@@ -753,7 +759,7 @@ par(mfrow = c(1, 3),
     mgp = c(5, 2, 0))
 plot_var_coef(hake_total, yoy_hake, pred_hake_all, "Latitude", "All Sizes")
 plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes (7-35 mm)")
-plot_var_coef(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (36-134 mm)")
+plot_var_coef2(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (36-134 mm)")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'yoy_hake_var_coef.jpg'), 
          height = 15, 
@@ -769,9 +775,9 @@ anchovy_total <- gam(catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
-                       # s(roms_temperature, k = 4) +
-                       # s(roms_salinity, k = 4) +
-                       # s(roms_ssh, k = 4) +
+                       # s(roms_temperature, k = 4) + #left out due to AIC
+                       s(roms_salinity, k = 4) +
+                       s(roms_ssh, k = 4) +
                        s(lon, lat, by = mean_ssh),
                      family = tw(link = "log"),
                      method = "REML",
@@ -787,9 +793,9 @@ yoy_anchovy$y_catch <- yoy_anchovy$catch1 + anchovy_year_effect[, 1]
 anchovy_formula <- formula(y_catch ~ s(lon, lat) +
                              s(bottom_depth, k = 4) +
                              s(jday) +
-                             # s(roms_temperature, k = 4) +
-                             # s(roms_salinity, k = 4) +
-                             # s(roms_ssh, k = 4) +
+                             # s(roms_temperature, k = 4) + 
+                             s(roms_salinity, k = 4) +
+                             s(roms_ssh, k = 4) +
                              s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
 
 anchovy_gams <- LOYO_validation(yoy_anchovy, anchovy_formula)
@@ -805,7 +811,7 @@ anchovy_results <- LOYO_preds(anchovy_gams, anchovy_data, anchovy_results)
 # Calculate RMSE
 # Get values for each year and overall value
 anchovy_error <- RMSE_calc(anchovy_results, yoy_anchovy)
-mean(anchovy_error[[2]]$RMSE) #124
+mean(anchovy_error[[2]]$RMSE) # 19
 
 # Plot the RMSE for each year
 anchovy_error[[2]]$roms_temperature <- yoy_anchovy$roms_temperature[match(anchovy_error[[2]]$year, yoy_anchovy$year)]
@@ -937,7 +943,7 @@ anchovy_added_results <- lapply(anchovy_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(anchovy_added_results)) # 130
+mean(unlist(anchovy_added_results)) # 27
 
 anchovy_combined_df <- data.frame(year = names(anchovy_added_results), 
                                   RMSE = unlist(anchovy_added_results))
@@ -947,22 +953,34 @@ anchovy_combined_df <- data.frame(year = names(anchovy_added_results),
 tiff(here('results/hindcast_output/yoy_anchovy',
           'anchovy_partial_dependence.jpg'),
      units = "in",
-     width = 48,
-     height = 24,
+     width = 40,
+     height = 12,
      res = 200)
-par(mfrow = c(1, 2),
+par(mfrow = c(1, 4),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(anchovy_total,
               covariate = 2,
-              bounds = c(-1, 4.4),
+              bounds = c(-1, 1.5),
               "Depth",
-              "Species Abundance Anomalies",
+              "Effect on Species Abundance",
               "s")
 plot_variable(anchovy_total,
+              covariate = 4,
+              bounds = c(-1, 1.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(anchovy_total,
+              covariate = 5,
+              bounds = c(-1, 1.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(anchovy_total,
               covariate = 3,
-              bounds = c(-1, 4.4),
+              bounds = c(-1, 1.5),
               "Day of Year",
               " ",
               "n")
@@ -983,11 +1001,11 @@ plot_variable(anchovy_small,
               covariate = 2,
               bounds = c(-4, 2.3),
               "Depth",
-              "Species Abundance Anomalies",
+              "Effect on Species Abundance",
               "s")
 plot_variable(anchovy_small,
               covariate = 4,
-              bounds = c(-4, 2.3),
+              bounds = c(-4., 2.3),
               "Temperature",
               " ",
               "n")
@@ -1023,25 +1041,25 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(anchovy_large,
               covariate = 2,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-3.5, 1.7),
               "Depth",
-              "Species Abundance Anomalies",
+              "Effect on Species Abundance",
               "s")
 plot_variable(anchovy_large,
               covariate = 4,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-3.5, 1.7),
               "Temperature",
               " ",
               "n")
 plot_variable(anchovy_large,
               covariate = 5,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-3.5, 1.7),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(anchovy_large,
               covariate = 3,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-3.5, 1.7),
               "Day of Year",
               " ",
               "n")
@@ -1065,7 +1083,7 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy',
 dev.off()
 
 # Variable coefficient plots
-pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$mean_ssh, 5)
+pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$mean_ssh, 7)
 pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$mean_ssh, 8)
 pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$mean_ssh, 7)
 
@@ -1092,7 +1110,7 @@ widow_total <- gam(catch1 ~ year_f +
                      s(lon, lat) +
                      s(bottom_depth, k = 4) +
                      s(jday) +
-                     s(roms_temperature, k = 4) +
+                     # s(roms_temperature, k = 4) + # reduced AIC
                      s(roms_salinity, k = 4) +
                      s(roms_ssh, k = 4) +
                      s(lon, lat, by = mean_ssh),
@@ -1110,7 +1128,7 @@ yoy_widow$y_catch <- yoy_widow$catch1 + widow_year_effect[, 1]
 widow_formula <- formula(y_catch ~ s(lon, lat) +
                            s(bottom_depth, k = 4) +
                            s(jday) +
-                           s(roms_temperature, k = 4) +
+                           # s(roms_temperature, k = 4) +
                            s(roms_salinity, k = 4) +
                            s(roms_ssh, k = 4) +
                            s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
@@ -1128,7 +1146,7 @@ widow_results <- LOYO_preds(widow_gams, widow_data, widow_results)
 # Calculate RMSE
 # Get values for each year and overall value
 widow_error <- RMSE_calc(widow_results, yoy_widow)
-mean(widow_error[[2]]$RMSE) #29
+mean(widow_error[[2]]$RMSE) #
 
 # Plot the RMSE for each year
 widow_error[[2]]$roms_temperature <- ctd_means$roms_temperature[match(widow_error[[2]]$year, ctd_means$year)]
