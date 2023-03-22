@@ -402,10 +402,68 @@ hindcast_trim <- nep_hindcast %>%
                                           "%m%d%Y")),
          lon = case_when(lon >= 180 ~ lon - 360,
                          lon < 180 ~ lon)) %>%
-  filter(between(month, 4, 7) & # must use between, no %in% for numeric
+  filter(between(month, 4, 8) & # must use between, no %in% for numeric
            between(lat, 32.7, 47.6) &
            between(lon, -125.4, -117.3))
 ```
+
+```{r}
+# Calculate anomalies
+library(marmap)
+ccs_depth <- getNOAA.bathy(-125.4, -117.3, 32.7, 47.6) # get depths
+depth_df <- fortify.bathy(ccs_depth)
+
+# Match to the hindcast
+hindcast_trim[, c(15, 16)] <- as.data.frame(RANN::nn2(depth_df[, c('y', 'x')],
+                                                      hindcast_trim[, c('lat', 'lon')],
+                                                      k = 1))
+hindcast_trim$depth <- as.data.frame(depth_df)[c(hindcast_trim$nn.idx), 3] 
+hindcast_trim <- hindcast_trim[-c(15, 16)]
+
+# Remove the values not on the shelf
+hindcast_depths <- filter(hindcast_trim,
+                          between(depth, -200, 0)) 
+
+# Calculate average monthly values per year
+hindcast_month <- aggregate(list(month_zeta = hindcast_depths$zeta, 
+                                 month_temp = hindcast_depths$temp, 
+                                 month_salt = hindcast_depths$salt), 
+                            by = list(month = hindcast_depths$month, 
+                                      year = hindcast_depths$year), 
+                            mean)
+
+# Calculate average values for each year between June and August
+hindcast_year <- hindcast_month %>%
+  filter(between(month, 6, 8)) %>%
+  group_by(year) %>%
+  mutate(mean_ssh = mean(month_zeta, na.rm = TRUE),
+         mean_temp = mean(month_temp, na.rm = TRUE),
+         mean_salt = mean(month_salt, na.rm = TRUE))
+
+# Match back to the main data frame
+hindcast_trim$mean_ssh <- hindcast_year$mean_ssh[match(hindcast_trim$year, 
+                                                       hindcast_year$year)]
+hindcast_trim$mean_temp <- hindcast_year$mean_temp[match(hindcast_trim$year, 
+                                                       hindcast_year$year)]
+hindcast_trim$mean_salt <- hindcast_year$mean_salt[match(hindcast_trim$year, 
+                                                       hindcast_year$year)]
+
+hindcast_means <- merge(hindcast_trim,
+                        hindcast_month,
+                        by = c('month',
+                               'year'),
+                        all.x = T)
+
+# Likely going to remove the 
+hindcast_anom <- hindcast_means %>%
+  mutate(ssh_anom_m = zeta - month_zeta,
+         ssh_anom_y = zeta - mean_ssh,
+         sst_anom_m = temp - month_temp,
+         sst_anom_y = temp - mean_temp,
+         sss_anom_m = salt - month_salt,
+         sss_anom_y = salt - mean_salt)
+```
+
 
 ```{r}
 hindcast_means <- hindcast_trim %>%
