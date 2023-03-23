@@ -425,53 +425,54 @@ hindcast_depths <- filter(hindcast_trim,
                           between(depth, -200, 0)) 
 
 # Calculate average monthly values per year
-hindcast_month <- aggregate(list(month_zeta = hindcast_depths$zeta, 
-                                 month_temp = hindcast_depths$temp, 
-                                 month_salt = hindcast_depths$salt), 
-                            by = list(month = hindcast_depths$month, 
-                                      year = hindcast_depths$year), 
-                            mean)
+hindcast_month <- hindcast_depths %>%
+  group_by(month) %>%
+  mutate(month_ssh = mean(zeta, na.rm = TRUE),
+         month_temp = mean(temp, na.rm = TRUE),
+         month_salt = mean(salt, na.rm = TRUE))
 
 # Calculate average values for each year between June and August
+ssh_avg <- hindcast_month %>%
+  filter(between(month, 6, 8)) %>%
+  summarise(mean_ssh = mean(zeta, na.rm = TRUE),
+            mean_temp = mean(temp, na.rm = TRUE),
+            mean_salt = mean(salt, na.rm = TRUE)) %>%
+  summarise(mean_ssh = mean(mean_ssh, na.rm = TRUE),
+            mean_temp = mean(mean_temp, na.rm = TRUE),
+            mean_salt = mean(mean_salt, na.rm = TRUE))
+
 hindcast_year <- hindcast_month %>%
   filter(between(month, 6, 8)) %>%
   group_by(year) %>%
-  mutate(mean_ssh = mean(month_zeta, na.rm = TRUE),
-         mean_temp = mean(month_temp, na.rm = TRUE),
-         mean_salt = mean(month_salt, na.rm = TRUE))
+  summarise(year_ssh = mean(zeta, na.rm = TRUE),
+            year_temp = mean(temp, na.rm = TRUE),
+            year_salt = mean(salt, na.rm = TRUE)) %>%
+  mutate(ssh_anom = year_ssh - ssh_avg$mean_ssh,
+         sst_anom = year_temp - ssh_avg$mean_temp,
+         sss_anom = year_salt - ssh_avg$mean_salt)
+
 
 # Match back to the main data frame
-hindcast_trim$mean_ssh <- hindcast_year$mean_ssh[match(hindcast_trim$year, 
-                                                       hindcast_year$year)]
-hindcast_trim$mean_temp <- hindcast_year$mean_temp[match(hindcast_trim$year, 
-                                                       hindcast_year$year)]
-hindcast_trim$mean_salt <- hindcast_year$mean_salt[match(hindcast_trim$year, 
-                                                       hindcast_year$year)]
-
-hindcast_means <- merge(hindcast_trim,
-                        hindcast_month,
-                        by = c('month',
-                               'year'),
-                        all.x = T)
+hindcast_trim$month_ssh <- hindcast_month$month_ssh[match(hindcast_trim$month, 
+                                                         hindcast_month$month)]
+hindcast_trim$month_temp <- hindcast_month$month_temp[match(hindcast_trim$month, 
+                                                           hindcast_month$month)]
+hindcast_trim$month_salt <- hindcast_month$month_salt[match(hindcast_trim$month, 
+                                                           hindcast_month$month)]
+hindcast_trim$ssh_anom <- hindcast_year$ssh_anom[match(hindcast_trim$year, 
+                                                         hindcast_year$year)]
+hindcast_trim$sst_anom <- hindcast_year$sst_anom[match(hindcast_trim$year, 
+                                                           hindcast_year$year)]
+hindcast_trim$sss_anom <- hindcast_year$sss_anom[match(hindcast_trim$year, 
+                                                           hindcast_year$year)]
 
 # Likely going to remove the 
-hindcast_anom <- hindcast_means %>%
-  mutate(ssh_anom_m = zeta - month_zeta,
-         ssh_anom_y = zeta - mean_ssh,
+hindcast_anom <- hindcast_trim %>%
+  mutate(ssh_anom_m = zeta - month_ssh,
          sst_anom_m = temp - month_temp,
-         sst_anom_y = temp - mean_temp,
-         sss_anom_m = salt - month_salt,
-         sss_anom_y = salt - mean_salt)
-```
+         sss_anom_m = salt - month_salt)
 
-
-```{r}
-hindcast_means <- hindcast_trim %>%
-  group_by(year) %>%
-  mutate(mean_ssh = mean(zeta, na.rm = TRUE),
-         mean_temp = mean(temp, na.rm = TRUE))
-
-saveRDS(hindcast_means, file = "../data/hindcast_means.Rdata")
+saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 ```
 
 ```{r}
