@@ -167,14 +167,16 @@ species_filter <- function(data, species){
 
 # Match ROMS hindcast to the fish data
 hindcast_match <- function(data, roms, a, b){
-  data[, c(a, b)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'numeric_date')],
-                                                   data[, c('lat', 'lon', 'numeric_date')],
+  data[, c(a, b)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'month', 'year')],
+                                                   data[, c('lat', 'lon', 'month', 'year')],
                                                    k = 1))
   data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 5] # Match nearest temp
-  data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 4] # Match nearest temp
+  data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 4]
   data$roms_ssh <- as.data.frame(roms)[c(data$nn.idx), 6]
-  data$mean_temp <- as.data.frame(roms)[c(data$nn.idx), 16]
-  data$mean_ssh <- as.data.frame(roms)[c(data$nn.idx), 15]
+  data$ssh_anom <- as.data.frame(roms)[c(data$nn.idx), 21] # Match nearest temp
+  data$sss_anom <- as.data.frame(roms)[c(data$nn.idx), 23]
+  data$sst_anom <- as.data.frame(roms)[c(data$nn.idx), 22]
+  data$year_ssh <- as.data.frame(roms)[c(data$nn.idx), 25]
   data <- data[-c(a, b)] # remove extra columns before predicting
 }
 ```
@@ -364,78 +366,6 @@ merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means,
 ```
 
 ```{r}
-# Calculate anomalies
-nc <- nc_open(here('data','nep_srf_1995-2020.nc'))
-lats <- ncvar_get(nc,"lat_rho")
-nlat <- dim(lats)
-lons <- ncvar_get(nc,"lon_rho")
-nlon <- dim(lons)
-time <- ncvar_get(nc, 'ocean_time')
-time1 <- as.Date(time / (60 * 60 * 24), origin = "1900-01-01 00:00:00")
-ntime <- dim(time1)
-nm <- 12
-ny <- ntime/nm
-fillvalue_t <- ncatt_get(nc, 'temp', "_FillValue")
-fillvalue_s <- ncatt_get(nc, 'salt', "_FillValue")
-fillvalue_h <- ncatt_get(nc, 'zeta', "_FillValue")
-temp <- ncvar_get(nc, varid = 'temp')
-temp[temp == fillvalue_t$value] <- NA
-salt <- ncvar_get(nc, varid = 'salt')
-salt[salt == fillvalue_s$value] <- NA
-zeta <- ncvar_get(nc, varid = 'zeta')
-zeta[zeta == fillvalue_h$value] <- NA
-
-nc_close(nc)
-```
-
-```{r}
-temp_avg <- apply(temp[, 1, 1:13], c(1, 2), mean, na.rm = TRUE)
-temp_sd <- apply(temp[, 1, 1:13], c(1, 2), sd, na.rm = TRUE)
-```
-
-
-```{r}
-library(raster)
-nc_salt <- brick(here('data','nep_srf_1995-2020.nc'),
-                 varname = "salt")
-nc_temp <- brick(here('data','nep_srf_1995-2020.nc'),
-                 varname = "temp")
-nc_zeta <- brick(here('data','nep_srf_1995-2020.nc'),
-                 varname = "zeta")
-
-months <- as.integer(format(time1, "%m"))
-
-# Calculate monthly mean for each variable at each location
-salt_means <- stackApply(nc_salt, months, fun = mean) # removing NA's changes size of layers
-temp_means <- stackApply(nc_temp, months, fun = mean)
-zeta_means <- stackApply(nc_zeta, months, fun = mean)
-
-# Calculate monthly standard deviation for each variable at each location
-salt_sd <- stackApply(nc_salt, months, fun = sd)
-temp_sd <- stackApply(nc_temp, months, fun = sd)
-zeta_sd <- stackApply(nc_zeta, months, fun = sd)
-
-# Calculate anomalies
-salt_brick <- (nc_salt - salt_means) / salt_sd
-temp_brick <- (nc_temp - temp_means) / temp_sd
-zeta_brick <- (nc_zeta - zeta_means) / zeta_sd
-```
-
-```{r}
-hindcast_sp <- nep_hindcast
-coordinates(hindcast_sp) <- ~ lon + lat
-gridded(hindcast_sp) <- TRUE
-
-extent <- terra::ext(apply(hindcast_trim[, 7:8], 2, range))
-raster <- terra::rast(extent, ncol = 10, nrow = 2)
-test <- terra::rasterize(hindcast_trim[, 7:8],
-                         raster,
-                         hindcast_trim[, 4],
-                         fun = mean)
-```
-
-
-```{r}
 # Add ROMS hindcast
 nc <- nc_open(here('data','nep_srf_1995-2020.nc'))
 lats <- ncvar_get(nc,"lat_rho")
@@ -479,22 +409,20 @@ hindcast_trim <- nep_hindcast %>%
            between(lon, -125.4, -117.3))
 ```
 
-
-
 ```{r}
-hindcast_rast <- rasterFromXYZ(hindcast_trim)
-
-# Calculate monthly mean for each variable at each location
-salt_means <- stackApply(nc_salt, months, fun = mean, na.rm = TRUE)
-temp_means <- stackApply(nc_temp, months, fun = mean, na.rm = TRUE)
-zeta_means <- stackApply(nc_zeta, months, fun = mean, na.rm = TRUE)
-
-# Calculate monthly standard deviation for each variable at each location
-salt_sd <- stackApply(nc_salt, months, fun = sd, na.rm = TRUE)
-temp_sd <- stackApply(nc_temp, months, fun = sd, na.rm = TRUE)
-zeta_sd <- stackApply(nc_zeta, months, fun = sd, na.rm = TRUE)
+# Get means by month for each unique lat/lon combo
+hindcast_anom <- hindcast_trim %>%
+  group_by(month, lat, lon) %>%
+  mutate(ssh_month = mean(zeta),
+         sst_month = mean(temp),
+         sss_month = mean(salt),
+         ssh_sd = sd(zeta),
+         sst_sd = sd(temp),
+         sss_sd = sd(salt)) %>%
+  mutate(ssh_anom = (zeta - ssh_month)/ssh_sd,
+         sst_anom = (temp - sst_month)/sst_sd,
+         sss_anom = (salt - sss_month)/sss_sd,)
 ```
-
 
 ```{r}
 # Calculate anomalies
@@ -503,74 +431,38 @@ ccs_depth <- getNOAA.bathy(-125.4, -117.3, 32.7, 47.6) # get depths
 depth_df <- fortify.bathy(ccs_depth)
 
 # Match to the hindcast
-hindcast_trim[, c(15, 16)] <- as.data.frame(RANN::nn2(depth_df[, c('y', 'x')],
-                                                      hindcast_trim[, c('lat', 'lon')],
+hindcast_anom[, c(24, 25)] <- as.data.frame(RANN::nn2(depth_df[, c('y', 'x')],
+                                                      hindcast_anom[, c('lat', 'lon')],
                                                       k = 1))
-hindcast_trim$depth <- as.data.frame(depth_df)[c(hindcast_trim$nn.idx), 3] 
-hindcast_trim <- hindcast_trim[-c(15, 16)]
+hindcast_anom$depth <- as.data.frame(depth_df)[c(hindcast_anom$nn.idx), 3] 
+hindcast_anom <- hindcast_anom[-c(24, 25)]
 
 # Remove the values not on the shelf
-hindcast_depths <- filter(hindcast_trim,
+hindcast_depths <- filter(hindcast_anom,
                           between(depth, -100, 0)) 
 
 # Calculate average monthly values per year
-hindcast_month <- hindcast_depths %>%
-  group_by(month) %>%
-  mutate(month_ssh = mean(zeta, na.rm = TRUE),
-         month_temp = mean(temp, na.rm = TRUE),
-         month_salt = mean(salt, na.rm = TRUE))
-
-# Calculate average values for each year between June and August
-ssh_avg <- hindcast_month %>%
-  filter(between(month, 6, 8)) %>%
-  summarise(mean_ssh = mean(zeta, na.rm = TRUE),
-            mean_temp = mean(temp, na.rm = TRUE),
-            mean_salt = mean(salt, na.rm = TRUE)) %>%
-  summarise(mean_ssh = mean(mean_ssh, na.rm = TRUE),
-            mean_temp = mean(mean_temp, na.rm = TRUE),
-            mean_salt = mean(mean_salt, na.rm = TRUE))
-
-hindcast_year <- hindcast_month %>%
-  filter(between(month, 6, 8)) %>%
+hindcast_year <- hindcast_depths %>%
   group_by(year) %>%
-  summarise(year_ssh = mean(zeta, na.rm = TRUE),
-            year_temp = mean(temp, na.rm = TRUE),
-            year_salt = mean(salt, na.rm = TRUE)) %>%
-  mutate(ssh_anom = year_ssh - ssh_avg$mean_ssh,
-         sst_anom = year_temp - ssh_avg$mean_temp,
-         sss_anom = year_salt - ssh_avg$mean_salt)
+  summarise(year_ssh = mean(ssh_anom, na.rm = TRUE),
+            year_temp = mean(sst_anom, na.rm = TRUE),
+            year_salt = mean(sss_anom, na.rm = TRUE))
 
 
 # Match back to the main data frame
-hindcast_trim$month_ssh <- hindcast_month$month_ssh[match(hindcast_trim$month, 
-                                                         hindcast_month$month)]
-hindcast_trim$month_temp <- hindcast_month$month_temp[match(hindcast_trim$month, 
-                                                           hindcast_month$month)]
-hindcast_trim$month_salt <- hindcast_month$month_salt[match(hindcast_trim$month, 
-                                                           hindcast_month$month)]
-hindcast_trim$ssh_anom <- hindcast_year$ssh_anom[match(hindcast_trim$year, 
-                                                         hindcast_year$year)]
-hindcast_trim$sst_anom <- hindcast_year$sst_anom[match(hindcast_trim$year, 
-                                                           hindcast_year$year)]
-hindcast_trim$sss_anom <- hindcast_year$sss_anom[match(hindcast_trim$year, 
-                                                           hindcast_year$year)]
-
-# Likely going to remove the 
-hindcast_anom <- hindcast_trim %>%
-  mutate(ssh_anom_m = zeta - month_ssh,
-         sst_anom_m = temp - month_temp,
-         sss_anom_m = salt - month_salt)
+hindcast_anom$year_ssh <- hindcast_year$year_ssh[match(hindcast_anom$year,
+                                                       hindcast_year$year)]
 
 saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 ```
 
 ```{r}
 # Match to the fish data
-yoy_anch <- hindcast_match(merge_anch, hindcast_means, 36, 37)
-yoy_dab <- hindcast_match(merge_dab, hindcast_means, 37, 38)
-yoy_hake <- hindcast_match(merge_hake, hindcast_means, 37, 38)
-yoy_sbly <- hindcast_match(merge_sbly, hindcast_means, 37, 38)
-yoy_widw <- hindcast_match(merge_widw, hindcast_means, 37, 38)
+yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 36, 37)
+yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 37, 38)
+yoy_hake <- hindcast_match(merge_hake, hindcast_anom, 37, 38)
+yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, 37, 38)
+yoy_widw <- hindcast_match(merge_widw, hindcast_anom, 37, 38)
 ```
 
 ```{r, warning = FALSE}
