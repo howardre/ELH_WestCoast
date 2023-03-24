@@ -364,6 +364,78 @@ merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means,
 ```
 
 ```{r}
+# Calculate anomalies
+nc <- nc_open(here('data','nep_srf_1995-2020.nc'))
+lats <- ncvar_get(nc,"lat_rho")
+nlat <- dim(lats)
+lons <- ncvar_get(nc,"lon_rho")
+nlon <- dim(lons)
+time <- ncvar_get(nc, 'ocean_time')
+time1 <- as.Date(time / (60 * 60 * 24), origin = "1900-01-01 00:00:00")
+ntime <- dim(time1)
+nm <- 12
+ny <- ntime/nm
+fillvalue_t <- ncatt_get(nc, 'temp', "_FillValue")
+fillvalue_s <- ncatt_get(nc, 'salt', "_FillValue")
+fillvalue_h <- ncatt_get(nc, 'zeta', "_FillValue")
+temp <- ncvar_get(nc, varid = 'temp')
+temp[temp == fillvalue_t$value] <- NA
+salt <- ncvar_get(nc, varid = 'salt')
+salt[salt == fillvalue_s$value] <- NA
+zeta <- ncvar_get(nc, varid = 'zeta')
+zeta[zeta == fillvalue_h$value] <- NA
+
+nc_close(nc)
+```
+
+```{r}
+temp_avg <- apply(temp[, 1, 1:13], c(1, 2), mean, na.rm = TRUE)
+temp_sd <- apply(temp[, 1, 1:13], c(1, 2), sd, na.rm = TRUE)
+```
+
+
+```{r}
+library(raster)
+nc_salt <- brick(here('data','nep_srf_1995-2020.nc'),
+                 varname = "salt")
+nc_temp <- brick(here('data','nep_srf_1995-2020.nc'),
+                 varname = "temp")
+nc_zeta <- brick(here('data','nep_srf_1995-2020.nc'),
+                 varname = "zeta")
+
+months <- as.integer(format(time1, "%m"))
+
+# Calculate monthly mean for each variable at each location
+salt_means <- stackApply(nc_salt, months, fun = mean) # removing NA's changes size of layers
+temp_means <- stackApply(nc_temp, months, fun = mean)
+zeta_means <- stackApply(nc_zeta, months, fun = mean)
+
+# Calculate monthly standard deviation for each variable at each location
+salt_sd <- stackApply(nc_salt, months, fun = sd)
+temp_sd <- stackApply(nc_temp, months, fun = sd)
+zeta_sd <- stackApply(nc_zeta, months, fun = sd)
+
+# Calculate anomalies
+salt_brick <- (nc_salt - salt_means) / salt_sd
+temp_brick <- (nc_temp - temp_means) / temp_sd
+zeta_brick <- (nc_zeta - zeta_means) / zeta_sd
+```
+
+```{r}
+hindcast_sp <- nep_hindcast
+coordinates(hindcast_sp) <- ~ lon + lat
+gridded(hindcast_sp) <- TRUE
+
+extent <- terra::ext(apply(hindcast_trim[, 7:8], 2, range))
+raster <- terra::rast(extent, ncol = 10, nrow = 2)
+test <- terra::rasterize(hindcast_trim[, 7:8],
+                         raster,
+                         hindcast_trim[, 4],
+                         fun = mean)
+```
+
+
+```{r}
 # Add ROMS hindcast
 nc <- nc_open(here('data','nep_srf_1995-2020.nc'))
 lats <- ncvar_get(nc,"lat_rho")
@@ -407,6 +479,23 @@ hindcast_trim <- nep_hindcast %>%
            between(lon, -125.4, -117.3))
 ```
 
+
+
+```{r}
+hindcast_rast <- rasterFromXYZ(hindcast_trim)
+
+# Calculate monthly mean for each variable at each location
+salt_means <- stackApply(nc_salt, months, fun = mean, na.rm = TRUE)
+temp_means <- stackApply(nc_temp, months, fun = mean, na.rm = TRUE)
+zeta_means <- stackApply(nc_zeta, months, fun = mean, na.rm = TRUE)
+
+# Calculate monthly standard deviation for each variable at each location
+salt_sd <- stackApply(nc_salt, months, fun = sd, na.rm = TRUE)
+temp_sd <- stackApply(nc_temp, months, fun = sd, na.rm = TRUE)
+zeta_sd <- stackApply(nc_zeta, months, fun = sd, na.rm = TRUE)
+```
+
+
 ```{r}
 # Calculate anomalies
 library(marmap)
@@ -422,7 +511,7 @@ hindcast_trim <- hindcast_trim[-c(15, 16)]
 
 # Remove the values not on the shelf
 hindcast_depths <- filter(hindcast_trim,
-                          between(depth, -200, 0)) 
+                          between(depth, -100, 0)) 
 
 # Calculate average monthly values per year
 hindcast_month <- hindcast_depths %>%
