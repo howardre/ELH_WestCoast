@@ -19,14 +19,16 @@ library(ggthemes)
 source(here('code/functions', 'vis_gam_COLORS.R'))
 read_data <- function(file){
   yoy <- readRDS(here('data', file)) %>% 
-    tidyr::drop_na(roms_temperature, roms_salinity, roms_ssh, bottom_depth) %>%
+    tidyr::drop_na(sst_anom, sss_anom, ssh_anom, bottom_depth, year, jday, lat, lon) %>%
     filter(catch < 2500 &
              year != 2020 &
-             year > 2010) %>%
+             year > 2010 &
+             year < 2019) %>%
     mutate(catch1 = catch + 1,
            small_catch1 = small + 1,
            large_catch1 = large + 1,
-           year_f = as.factor(year))
+           year_f = as.factor(year),
+           ssh_pos = year_ssh + abs(min(year_ssh)) + 10)
   yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
   return(yoy)
 }
@@ -409,8 +411,10 @@ plot_variable <- function(gam, covariate, bounds, variable, ylabel, yvalues){
 
 # Load data ----
 # See function for modifications made
+# Currently only have hindcast up to 2018, so data is filtered to this
 yoy_hake <- read_data('yoy_hake.Rdata') 
 yoy_anchovy <- read_data('yoy_anch.Rdata')
+yoy_anchovy <- filter(yoy_anchovy, year > 2013, jday < 164)
 yoy_widow <- read_data('yoy_widw.Rdata')
 yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata') 
@@ -427,10 +431,10 @@ hake_total <- gam(catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
-                    s(roms_temperature, k = 4) +
-                    # s(roms_salinity, k = 4) + # not significant
-                    s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_ssh),
+                    s(sst_anom, k = 4) +
+                    s(sss_anom, k = 4) + 
+                    s(ssh_anom, k = 4) +
+                    s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_hake)
@@ -445,10 +449,10 @@ yoy_hake$y_catch <- yoy_hake$catch1 + hake_year_effect[, 1]
 hake_formula <- formula(y_catch ~ s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
-                          s(roms_temperature, k = 4) +
-                          #s(roms_salinity, k = 4) +
-                          s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
+                          s(sst_anom, k = 4) +
+                          s(sss_anom, k = 4) +
+                          s(ssh_anom, k = 4) +
+                          s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 hake_gams <- LOYO_validation(yoy_hake, hake_formula)
 
@@ -463,10 +467,10 @@ hake_results <- LOYO_preds(hake_gams, hake_data, hake_results)
 # Calculate RMSE
 # Get values for each year and overall value
 hake_error <- RMSE_calc(hake_results, yoy_hake)
-mean(hake_error[[2]]$RMSE) # 126
+mean(hake_error[[2]]$RMSE) # 231
 
 # Plot the RMSE for each year
-hake_error[[2]]$roms_temperature <- yoy_hake$roms_temperature[match(hake_error[[2]]$year, yoy_hake$year)]
+hake_error[[2]]$sst_anom <- yoy_hake$sst_anom[match(hake_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -474,7 +478,7 @@ ggplot(hake_error[[2]]) +
              group = 1) 
 
 ggplot(hake_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, sst_anom),
             linewidth = 1,
             group = 1) 
 
@@ -486,10 +490,10 @@ hake_small <- gam(small_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
-                    s(roms_temperature, k = 4) +
-                    s(roms_salinity, k = 4) +
-                    s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_ssh),
+                    s(sst_anom, k = 4) +
+                    s(sss_anom, k = 4) +
+                    s(ssh_anom, k = 4) +
+                    s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_hake)
@@ -504,10 +508,10 @@ yoy_hake$y_small_catch <- yoy_hake$small_catch1 + hake_year_small[, 1]
 hake_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
-                                s(roms_temperature, k = 4) +
-                                s(roms_salinity, k = 4) +
-                                s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                s(sst_anom, k = 4) +
+                                s(sss_anom, k = 4) +
+                                s(ssh_anom, k = 4) +
+                                s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 hake_small_gams <- LOYO_validation(yoy_hake, hake_small_formula)
 
@@ -521,7 +525,7 @@ hake_small_results <- LOYO_preds_small(hake_small_gams, hake_data, hake_small_re
 hake_small_error <- RMSE_calc_small(hake_small_results, yoy_hake)
 
 # Plot the RMSE for each year
-hake_small_error[[2]]$roms_salinity <- yoy_hake$roms_salinity[match(hake_small_error[[2]]$year, yoy_hake$year)]
+hake_small_error[[2]]$sss_anom <- yoy_hake$sss_anom[match(hake_small_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -529,7 +533,7 @@ ggplot(hake_small_error[[2]]) +
             group = 1) 
 
 ggplot(hake_small_error[[2]]) +
-  geom_line(aes(year, roms_salinity),
+  geom_line(aes(year, sss_anom),
             size = 1,
             group = 1)
 
@@ -539,10 +543,10 @@ hake_large <- gam(large_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
-                    s(roms_temperature, k = 4) +
-                    # s(roms_salinity, k = 4) +
-                    s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_ssh),
+                    s(sst_anom, k = 4) +
+                    s(sss_anom, k = 4) +
+                    s(ssh_anom, k = 4) +
+                    s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_hake)
@@ -557,10 +561,10 @@ yoy_hake$y_large_catch <- yoy_hake$large_catch1 + hake_year_large[, 1]
 hake_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
-                                s(roms_temperature, k = 4) +
-                                # s(roms_salinity, k = 4) +
-                                s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                s(sst_anom, k = 4) +
+                                s(sss_anom, k = 4) +
+                                s(ssh_anom, k = 4) +
+                                s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 hake_large_gams <- LOYO_validation(yoy_hake, hake_large_formula)
 
@@ -574,7 +578,7 @@ hake_large_results <- LOYO_preds_large(hake_large_gams, hake_data, hake_large_re
 hake_large_error <- RMSE_calc_large(hake_large_results, yoy_hake)
 
 # Plot the RMSE for each year
-hake_large_error[[2]]$roms_ssh <- yoy_hake$roms_ssh[match(hake_large_error[[2]]$year, yoy_hake$year)]
+hake_large_error[[2]]$ssh_anom <- yoy_hake$ssh_anom[match(hake_large_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -582,7 +586,7 @@ ggplot(hake_large_error[[2]]) +
             group = 1) 
 
 ggplot(hake_large_error[[2]]) +
-  geom_line(aes(year, roms_ssh),
+  geom_line(aes(year, ssh_anom),
             size = 1,
             group = 1)
 
@@ -595,7 +599,7 @@ hake_added_results <- lapply(hake_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(hake_added_results)) # 119
+mean(unlist(hake_added_results)) # 227
 
 hake_combined_df <- data.frame(year = names(hake_added_results), 
                                RMSE = unlist(hake_added_results))
@@ -618,34 +622,40 @@ dev.off()
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence.jpg'),
      units = "in",
-     width = 40,
+     width = 56,
      height = 12,
      res = 200)
-par(mfrow = c(1, 4),
+par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(hake_total,
               covariate = 2,
-              bounds = c(-3.6, 3),
+              bounds = c(-4.5, 2.5),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(hake_total,
               covariate = 4,
-              bounds = c(-3.6, 3),
+              bounds = c(-4.5, 2.5),
               "Temperature",
               " ",
               "n")
 plot_variable(hake_total,
               covariate = 5,
-              bounds = c(-3.6, 3),
+              bounds = c(-4.5, 2.5),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(hake_total,
+              covariate = 6,
+              bounds = c(-4.5, 2.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(hake_total,
               covariate = 3,
-              bounds = c(-3.6, 3),
+              bounds = c(-4.5, 2.5),
               "Day of Year",
               " ",
               "n")
@@ -655,76 +665,83 @@ dev.off()
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_small.jpg'),
      units = "in",
-     width = 55,
+     width = 56,
      height = 12,
-     res = 150)
+     res = 200)
 par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(hake_small,
               covariate = 2,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-4, 2),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(hake_small,
               covariate = 4,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-4, 2),
               "Temperature",
               " ",
               "n")
 plot_variable(hake_small,
               covariate = 5,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-4, 2),
               "Salinity",
               " ",
               "n")
 plot_variable(hake_small,
               covariate = 6,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-4, 2),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(hake_small,
               covariate = 3,
-              bounds = c(-3.5, 2.5),
+              bounds = c(-4, 2),
               "Day of Year",
               " ",
               "n")
 dev.off()
 
+# Large model
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_large.jpg'),
      units = "in",
-     width = 40,
+     width = 56,
      height = 12,
      res = 200)
-par(mfrow = c(1, 4),
+par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(hake_large,
               covariate = 2,
-              bounds = c(-2, 1.5),
+              bounds = c(-5.5, 4),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(hake_large,
               covariate = 4,
-              bounds = c(-2, 1.5),
+              bounds = c(-5.5, 4),
               "Temperature",
               " ",
               "n")
 plot_variable(hake_large,
               covariate = 5,
-              bounds = c(-2, 1.5),
+              bounds = c(-5.5, 4),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(hake_large,
+              covariate = 6,
+              bounds = c(-5.5, 4),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(hake_large,
               covariate = 3,
-              bounds = c(-2, 1.5),
+              bounds = c(-5.5, 4),
               "Day of Year",
               " ",
               "n")
@@ -748,9 +765,9 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_hake',
 dev.off()
 
 # Variable coefficient plots
-pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$mean_ssh, 7)
-pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$mean_ssh, 8)
-pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$mean_ssh, 7)
+pred_hake_all <- variable_coefficient(hake_total, yoy_hake, yoy_hake$ssh_pos, 8)
+pred_hake_small <- variable_coefficient(hake_small, yoy_hake, yoy_hake$ssh_pos, 8)
+pred_hake_large <- variable_coefficient(hake_large, yoy_hake, yoy_hake$ssh_pos, 8)
 
 windows()
 par(mfrow = c(1, 3),
@@ -759,7 +776,7 @@ par(mfrow = c(1, 3),
     mgp = c(5, 2, 0))
 plot_var_coef(hake_total, yoy_hake, pred_hake_all, "Latitude", "All Sizes")
 plot_var_coef(hake_small, yoy_hake, pred_hake_small, "", "Small Sizes (7-35 mm)")
-plot_var_coef2(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (36-134 mm)")
+plot_var_coef(hake_large, yoy_hake, pred_hake_large, "", "Large Sizes (36-134 mm)")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'yoy_hake_var_coef.jpg'), 
          height = 15, 
@@ -775,10 +792,10 @@ anchovy_total <- gam(catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
-                       # s(roms_temperature, k = 4) + #left out due to AIC
-                       s(roms_salinity, k = 4) +
-                       s(roms_ssh, k = 4) +
-                       s(lon, lat, by = mean_ssh),
+                       s(sst_anom, k = 4) + 
+                       s(sss_anom, k = 4) +
+                       s(ssh_anom, k = 4) +
+                       s(lon, lat, by = ssh_pos),
                      family = tw(link = "log"),
                      method = "REML",
                      data =  yoy_anchovy)
@@ -793,10 +810,10 @@ yoy_anchovy$y_catch <- yoy_anchovy$catch1 + anchovy_year_effect[, 1]
 anchovy_formula <- formula(y_catch ~ s(lon, lat) +
                              s(bottom_depth, k = 4) +
                              s(jday) +
-                             # s(roms_temperature, k = 4) + 
-                             s(roms_salinity, k = 4) +
-                             s(roms_ssh, k = 4) +
-                             s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
+                             s(sst_anom, k = 4) + 
+                             s(sss_anom, k = 4) +
+                             s(ssh_anom, k = 4) +
+                             s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 anchovy_gams <- LOYO_validation(yoy_anchovy, anchovy_formula)
 
@@ -811,10 +828,10 @@ anchovy_results <- LOYO_preds(anchovy_gams, anchovy_data, anchovy_results)
 # Calculate RMSE
 # Get values for each year and overall value
 anchovy_error <- RMSE_calc(anchovy_results, yoy_anchovy)
-mean(anchovy_error[[2]]$RMSE) # 19
+mean(anchovy_error[[2]]$RMSE) # 369
 
 # Plot the RMSE for each year
-anchovy_error[[2]]$roms_temperature <- yoy_anchovy$roms_temperature[match(anchovy_error[[2]]$year, yoy_anchovy$year)]
+anchovy_error[[2]]$sst_anom <- yoy_anchovy$sst_anom[match(anchovy_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -822,7 +839,7 @@ ggplot(anchovy_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, sst_anom),
             size = 1,
             group = 1) 
 
@@ -834,10 +851,10 @@ anchovy_small <- gam(small_catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
-                       s(roms_temperature, k = 4) +
-                       s(roms_salinity, k = 4) +
-                       s(roms_ssh, k = 4) +
-                       s(lon, lat, by = mean_ssh),
+                       s(sst_anom, k = 4) +
+                       s(sss_anom, k = 4) +
+                       s(ssh_anom, k = 4) +
+                       s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_anchovy)
@@ -852,10 +869,10 @@ yoy_anchovy$y_small_catch <- yoy_anchovy$small_catch1 + anchovy_year_small[, 1]
 anchovy_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                    s(bottom_depth, k = 4) +
                                    s(jday) +
-                                   s(roms_temperature, k = 4) +
-                                   s(roms_salinity, k = 4) +
-                                   s(roms_ssh, k = 4) +
-                                   s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                   s(sst_anom, k = 4) +
+                                   s(sss_anom, k = 4) +
+                                   s(ssh_anom, k = 4) +
+                                   s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 anchovy_small_gams <- LOYO_validation(yoy_anchovy, anchovy_small_formula)
 
@@ -869,7 +886,7 @@ anchovy_small_results <- LOYO_preds_small(anchovy_small_gams, anchovy_data, anch
 anchovy_small_error <- RMSE_calc_small(anchovy_small_results, yoy_anchovy)
 
 # Plot the RMSE for each year
-anchovy_small_error[[2]]$roms_salinity <- yoy_anchovy$roms_salinity[match(anchovy_small_error[[2]]$year, yoy_anchovy$year)]
+anchovy_small_error[[2]]$sss_anom <- yoy_anchovy$sss_anom[match(anchovy_small_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -877,7 +894,7 @@ ggplot(anchovy_small_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_small_error[[2]]) +
-  geom_line(aes(year, roms_salinity),
+  geom_line(aes(year, sss_anom),
             size = 1,
             group = 1)
 
@@ -887,10 +904,10 @@ anchovy_large <- gam(large_catch1 ~ year_f +
                        s(lon, lat) +
                        s(bottom_depth, k = 4) +
                        s(jday) +
-                       s(roms_temperature, k = 4) +
-                       # s(roms_salinity, k = 4) +
-                       s(roms_ssh, k = 4) +
-                       s(lon, lat, by = mean_ssh),
+                       s(sst_anom, k = 4) +
+                       s(sss_anom, k = 4) +
+                       s(ssh_anom, k = 4) +
+                       s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_anchovy)
@@ -905,10 +922,10 @@ yoy_anchovy$y_large_catch <- yoy_anchovy$large_catch1 + anchovy_year_large[, 1]
 anchovy_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                    s(bottom_depth, k = 4) +
                                    s(jday) +
-                                   s(roms_temperature, k = 4) +
-                                   # s(roms_salinity, k = 4) +
-                                   s(roms_ssh, k = 4) +
-                                   s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                   s(sst_anom, k = 4) +
+                                   s(sss_anom, k = 4) +
+                                   s(ssh_anom, k = 4) +
+                                   s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 anchovy_large_gams <- LOYO_validation(yoy_anchovy, anchovy_large_formula)
 
@@ -922,7 +939,7 @@ anchovy_large_results <- LOYO_preds_large(anchovy_large_gams, anchovy_data, anch
 anchovy_large_error <- RMSE_calc_large(anchovy_large_results, yoy_anchovy)
 
 # Plot the RMSE for each year
-anchovy_large_error[[2]]$roms_ssh <- yoy_anchovy$roms_ssh[match(anchovy_large_error[[2]]$year, yoy_anchovy$year)]
+anchovy_large_error[[2]]$ssh_anom <- yoy_anchovy$ssh_anom[match(anchovy_large_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -930,7 +947,7 @@ ggplot(anchovy_large_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_large_error[[2]]) +
-  geom_line(aes(year, roms_ssh),
+  geom_line(aes(year, ssh_anom),
             size = 1,
             group = 1)
 
@@ -943,44 +960,63 @@ anchovy_added_results <- lapply(anchovy_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(anchovy_added_results)) # 27
+mean(unlist(anchovy_added_results)) # 316
 
 anchovy_combined_df <- data.frame(year = names(anchovy_added_results), 
                                   RMSE = unlist(anchovy_added_results))
+
+windows(width = 10,
+        height = 8)
+RMSE_plot(anchovy_combined_df, 
+          "Yearly Error for Northern Anchovy")
+dev.copy(jpeg, 
+         here('results/hindcast_output/yoy_anchovy', 
+              'anchovy_explicit_RMSE.jpg'), 
+         height = 8, 
+         width = 10, 
+         units = 'in',
+         res = 200)
+dev.off()
 
 # Partial dependence plots
 # Aggregate model
 tiff(here('results/hindcast_output/yoy_anchovy',
           'anchovy_partial_dependence.jpg'),
      units = "in",
-     width = 40,
+     width = 56,
      height = 12,
      res = 200)
-par(mfrow = c(1, 4),
+par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(anchovy_total,
               covariate = 2,
-              bounds = c(-1, 1.5),
+              bounds = c(-3.5, 7.5),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(anchovy_total,
               covariate = 4,
-              bounds = c(-1, 1.5),
+              bounds = c(-3.5, 7.5),
               "Temperature",
               " ",
               "n")
 plot_variable(anchovy_total,
               covariate = 5,
-              bounds = c(-1, 1.5),
+              bounds = c(-3.5, 7.5),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(anchovy_total,
+              covariate = 6,
+              bounds = c(-3.5, 7.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(anchovy_total,
               covariate = 3,
-              bounds = c(-1, 1.5),
+              bounds = c(-3.5, 7.5),
               "Day of Year",
               " ",
               "n")
@@ -992,74 +1028,81 @@ tiff(here('results/hindcast_output/yoy_anchovy',
      units = "in",
      width = 56,
      height = 12,
-     res = 150)
+     res = 200)
 par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(anchovy_small,
               covariate = 2,
-              bounds = c(-4, 2.3),
+              bounds = c(-3, 8),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(anchovy_small,
               covariate = 4,
-              bounds = c(-4., 2.3),
+              bounds = c(-3, 8),
               "Temperature",
               " ",
               "n")
 plot_variable(anchovy_small,
               covariate = 5,
-              bounds = c(-4, 2.3),
+              bounds = c(-3, 8),
               "Salinity",
               " ",
               "n")
 plot_variable(anchovy_small,
               covariate = 6,
-              bounds = c(-4, 2.3),
+              bounds = c(-3, 8),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(anchovy_small,
               covariate = 3,
-              bounds = c(-4, 2.3),
+              bounds = c(-3, 8),
               "Day of Year",
               " ",
               "n")
 dev.off()
 
+# Large model
 tiff(here('results/hindcast_output/yoy_anchovy',
           'anchovy_partial_dependence_large.jpg'),
      units = "in",
-     width = 40,
+     width = 56,
      height = 12,
      res = 200)
-par(mfrow = c(1, 4),
+par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(anchovy_large,
               covariate = 2,
-              bounds = c(-3.5, 1.7),
+              bounds = c(-4.5, 5.5),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(anchovy_large,
               covariate = 4,
-              bounds = c(-3.5, 1.7),
+              bounds = c(-4.5, 5.5),
               "Temperature",
               " ",
               "n")
 plot_variable(anchovy_large,
               covariate = 5,
-              bounds = c(-3.5, 1.7),
+              bounds = c(-4.5, 5.5),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(anchovy_large,
+              covariate = 6,
+              bounds = c(-4.5, 5.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(anchovy_large,
               covariate = 3,
-              bounds = c(-3.5, 1.7),
+              bounds = c(-4.5, 5.5),
               "Day of Year",
               " ",
               "n")
@@ -1083,9 +1126,9 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy',
 dev.off()
 
 # Variable coefficient plots
-pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$mean_ssh, 7)
-pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$mean_ssh, 8)
-pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$mean_ssh, 7)
+pred_anchovy_all <- variable_coefficient(anchovy_total, yoy_anchovy, yoy_anchovy$ssh_pos, 8)
+pred_anchovy_small <- variable_coefficient(anchovy_small, yoy_anchovy, yoy_anchovy$ssh_pos, 8)
+pred_anchovy_large <- variable_coefficient(anchovy_large, yoy_anchovy, yoy_anchovy$ssh_pos, 8)
 
 windows()
 par(mfrow = c(1, 3),
@@ -1110,10 +1153,10 @@ widow_total <- gam(catch1 ~ year_f +
                      s(lon, lat) +
                      s(bottom_depth, k = 4) +
                      s(jday) +
-                     # s(roms_temperature, k = 4) + # reduced AIC
-                     s(roms_salinity, k = 4) +
-                     s(roms_ssh, k = 4) +
-                     s(lon, lat, by = mean_ssh),
+                     s(sst_anom, k = 4) + 
+                     # s(sss_anom, k = 4) + # reduced AIC
+                     s(ssh_anom, k = 4) +
+                     s(lon, lat, by = ssh_pos),
                    family = tw(link = "log"),
                    method = "REML",
                    data = yoy_widow)
@@ -1128,10 +1171,10 @@ yoy_widow$y_catch <- yoy_widow$catch1 + widow_year_effect[, 1]
 widow_formula <- formula(y_catch ~ s(lon, lat) +
                            s(bottom_depth, k = 4) +
                            s(jday) +
-                           # s(roms_temperature, k = 4) +
-                           s(roms_salinity, k = 4) +
-                           s(roms_ssh, k = 4) +
-                           s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
+                           s(sst_anom, k = 4) +
+                           # s(sss_anom, k = 4) +
+                           s(ssh_anom, k = 4) +
+                           s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 widow_gams <- LOYO_validation(yoy_widow, widow_formula)
 
@@ -1146,10 +1189,10 @@ widow_results <- LOYO_preds(widow_gams, widow_data, widow_results)
 # Calculate RMSE
 # Get values for each year and overall value
 widow_error <- RMSE_calc(widow_results, yoy_widow)
-mean(widow_error[[2]]$RMSE) # 25
+mean(widow_error[[2]]$RMSE) # 29
 
 # Plot the RMSE for each year
-widow_error[[2]]$roms_temperature <- yoy_widow$roms_temperature[match(widow_error[[2]]$year, yoy_widow$year)]
+widow_error[[2]]$sst_anom <- yoy_widow$sst_anom[match(widow_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1157,7 +1200,7 @@ ggplot(widow_error[[2]]) +
             group = 1) 
 
 ggplot(widow_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, sst_anom),
             size = 1,
             group = 1) 
 
@@ -1169,10 +1212,10 @@ widow_small <- gam(small_catch1 ~ year_f +
                      s(lon, lat) +
                      s(bottom_depth, k = 4) +
                      s(jday) +
-                     s(roms_temperature, k = 4) +
-                     s(roms_salinity, k = 4) +
-                     s(roms_ssh, k = 4) +
-                     s(lon, lat, by = mean_ssh),
+                     s(sst_anom, k = 4) +
+                     # s(sss_anom, k = 4) + # reduced AIC
+                     s(ssh_anom, k = 4) +
+                     s(lon, lat, by = ssh_pos),
                    family = tw(link = "log"),
                    method = "REML",
                    data = yoy_widow)
@@ -1187,10 +1230,10 @@ yoy_widow$y_small_catch <- yoy_widow$small_catch1 + widow_year_small[, 1]
 widow_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                  s(bottom_depth, k = 4) +
                                  s(jday) +
-                                 s(roms_temperature, k = 4) +
-                                 s(roms_salinity, k = 4) +
-                                 s(roms_ssh, k = 4) +
-                                 s(lon, lat,  by = mean_ssh)) # Note no year factor, added into response
+                                 s(sst_anom, k = 4) +
+                                 # s(sss_anom, k = 4) +
+                                 s(ssh_anom, k = 4) +
+                                 s(lon, lat,  by = ssh_pos)) # Note no year factor, added into response
 
 widow_small_gams <- LOYO_validation(yoy_widow, widow_small_formula)
 
@@ -1204,7 +1247,7 @@ widow_small_results <- LOYO_preds_small(widow_small_gams, widow_data, widow_smal
 widow_small_error <- RMSE_calc_small(widow_small_results, yoy_widow)
 
 # Plot the RMSE for each year
-widow_small_error[[2]]$roms_salinity <- yoy_widow$roms_salinity[match(widow_small_error[[2]]$year, yoy_widow$year)]
+widow_small_error[[2]]$sss_anom <- yoy_widow$sss_anom[match(widow_small_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1212,7 +1255,7 @@ ggplot(widow_small_error[[2]]) +
             group = 1) 
 
 ggplot(widow_small_error[[2]]) +
-  geom_line(aes(year, roms_salinity),
+  geom_line(aes(year, sss_anom),
             size = 1,
             group = 1)
 
@@ -1222,10 +1265,10 @@ widow_large <- gam(large_catch1 ~ year_f +
                      s(lon, lat) +
                      s(bottom_depth, k = 4) +
                      s(jday) +
-                     s(roms_temperature, k = 4) +
-                     s(roms_salinity, k = 4) +
-                     s(roms_ssh, k = 4) +
-                     s(lon, lat, by = mean_ssh),
+                     s(sst_anom, k = 4) +
+                     s(sss_anom, k = 4) +
+                     s(ssh_anom, k = 4) +
+                     s(lon, lat, by = ssh_pos),
                    family = tw(link = "log"),
                    method = "REML",
                    data = yoy_widow)
@@ -1240,10 +1283,10 @@ yoy_widow$y_large_catch <- yoy_widow$large_catch1 + widow_year_large[, 1]
 widow_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                  s(bottom_depth, k = 4) +
                                  s(jday) +
-                                 s(roms_temperature, k = 4) +
-                                 s(roms_salinity, k = 4) +
-                                 s(roms_ssh, k = 4) +
-                                 s(lon, lat,  by = mean_ssh)) # Note no year factor, added into response
+                                 s(sst_anom, k = 4) +
+                                 s(sss_anom, k = 4) +
+                                 s(ssh_anom, k = 4) +
+                                 s(lon, lat,  by = ssh_pos)) # Note no year factor, added into response
 
 widow_large_gams <- LOYO_validation(yoy_widow, widow_large_formula)
 
@@ -1257,7 +1300,7 @@ widow_large_results <- LOYO_preds_large(widow_large_gams, widow_data, widow_larg
 widow_large_error <- RMSE_calc_large(widow_large_results, yoy_widow)
 
 # Plot the RMSE for each year
-widow_large_error[[2]]$roms_ssh <- yoy_widow$roms_ssh[match(widow_large_error[[2]]$year, yoy_widow$year)]
+widow_large_error[[2]]$ssh_anom <- yoy_widow$ssh_anom[match(widow_large_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1265,7 +1308,7 @@ ggplot(widow_large_error[[2]]) +
             group = 1) 
 
 ggplot(widow_large_error[[2]]) +
-  geom_line(aes(year, roms_ssh),
+  geom_line(aes(year, ssh_anom),
             size = 1,
             group = 1)
 
@@ -1278,19 +1321,32 @@ widow_added_results <- lapply(widow_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(widow_added_results)) # 26
+mean(unlist(widow_added_results)) # 29
 # When including the outliers, splitting up the data into size bins drastically improves the RMSE
 # When aggregated with the outliers, the RMSE is extremely high
 
 widow_combined_df <- data.frame(year = names(widow_added_results), 
                                RMSE = unlist(widow_added_results))
 
+windows(width = 10,
+        height = 8)
+RMSE_plot(widow_combined_df, 
+          "Yearly Error for Widow Rockfish")
+dev.copy(jpeg, 
+         here('results/hindcast_output/yoy_widow', 
+              'widow_explicit_RMSE.jpg'), 
+         height = 8, 
+         width = 10, 
+         units = 'in',
+         res = 200)
+dev.off()
+
 # Partial dependence plots
 # Aggregate model
 tiff(here('results/hindcast_output/yoy_widow',
           'widow_partial_dependence.jpg'),
      units = "in",
-     width = 40,
+     width = 42,
      height = 12,
      res = 200)
 par(mfrow = c(1, 4),
@@ -1299,25 +1355,25 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(widow_total,
               covariate = 2,
-              bounds = c(-4, 2),
+              bounds = c(-1.5, 1.2),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(widow_total,
               covariate = 4,
-              bounds = c(-4, 2),
-              "Salinity",
+              bounds = c(-1.5, 1.2),
+              "Temperature",
               " ",
               "n")
 plot_variable(widow_total,
               covariate = 5,
-              bounds = c(-4, 2),
+              bounds = c(-1.5, 1.2),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(widow_total,
               covariate = 3,
-              bounds = c(-4, 2),
+              bounds = c(-1.5, 1.2),
               "Day of Year",
               " ",
               "n")
@@ -1327,40 +1383,34 @@ dev.off()
 tiff(here('results/hindcast_output/yoy_widow',
           'widow_partial_dependence_small.jpg'),
      units = "in",
-     width = 56,
+     width = 42,
      height = 12,
-     res = 150)
-par(mfrow = c(1, 5),
+     res = 200)
+par(mfrow = c(1, 4),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(widow_small,
               covariate = 2,
-              bounds = c(-3.2, 2),
+              bounds = c(-2.5, 1),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(widow_small,
               covariate = 4,
-              bounds = c(-3.2, 2),
+              bounds = c(-2.5, 1),
               "Temperature",
               " ",
               "n")
 plot_variable(widow_small,
               covariate = 5,
-              bounds = c(-3.2, 2),
-              "Salinity",
-              " ",
-              "n")
-plot_variable(widow_small,
-              covariate = 6,
-              bounds = c(-3.2, 2),
+              bounds = c(-2.5, 1),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(widow_small,
               covariate = 3,
-              bounds = c(-3.2, 2),
+              bounds = c(-2.5, 1),
               "Day of Year",
               " ",
               "n")
@@ -1379,31 +1429,31 @@ par(mfrow = c(1, 5),
     mgp = c(9, 4, 0))
 plot_variable(widow_large,
               covariate = 2,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-1, 1.5),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(widow_large,
               covariate = 4,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-1, 1.5),
               "Temperature",
               " ",
               "n")
 plot_variable(widow_large,
               covariate = 5,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-1, 1.5),
               "Salinity",
               " ",
               "n")
 plot_variable(widow_large,
               covariate = 6,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-1, 1.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(widow_large,
               covariate = 3,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-1, 1.5),
               "Day of Year",
               " ",
               "n")
@@ -1427,9 +1477,9 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_widow',
 dev.off()
 
 # Variable coefficient plots
-pred_widow_all <- variable_coefficient(widow_total, yoy_widow, yoy_widow$mean_ssh, 7)
-pred_widow_small <- variable_coefficient(widow_small, yoy_widow, yoy_widow$mean_ssh, 8)
-pred_widow_large <- variable_coefficient(widow_large, yoy_widow, yoy_widow$mean_ssh, 8)
+pred_widow_all <- variable_coefficient(widow_total, yoy_widow, yoy_widow$ssh_pos, 7)
+pred_widow_small <- variable_coefficient(widow_small, yoy_widow, yoy_widow$ssh_pos, 7)
+pred_widow_large <- variable_coefficient(widow_large, yoy_widow, yoy_widow$ssh_pos, 8)
 
 windows()
 par(mfrow = c(1, 3),
@@ -1454,10 +1504,10 @@ shortbelly_total <- gam(catch1 ~ year_f +
                           s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
-                          s(roms_temperature, k = 4) +
-                          s(roms_salinity, k = 4) +
-                          # s(roms_ssh, k = 4) + # removal reduced AIC
-                          s(lon, lat, by = mean_ssh),
+                          s(sst_anom, k = 4) +
+                          s(sss_anom, k = 4) +
+                          s(ssh_anom, k = 4) + # removal reduced AIC
+                          s(lon, lat, by = ssh_pos),
                         family = tw(link = "log"),
                         method = "REML",
                         data = yoy_shortbelly)
@@ -1472,10 +1522,10 @@ yoy_shortbelly$y_catch <- yoy_shortbelly$catch1 + shortbelly_year_effect[, 1]
 shortbelly_formula <- formula(y_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
-                                s(roms_temperature, k = 4) +
-                                s(roms_salinity, k = 4) +
-                                # s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
+                                s(sst_anom, k = 4) +
+                                s(sss_anom, k = 4) +
+                                s(ssh_anom, k = 4) +
+                                s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 shortbelly_gams <- LOYO_validation(yoy_shortbelly, shortbelly_formula)
 
@@ -1490,10 +1540,10 @@ shortbelly_results <- LOYO_preds(shortbelly_gams, shortbelly_data, shortbelly_re
 # Calculate RMSE
 # Get values for each year and overall value
 shortbelly_error <- RMSE_calc(shortbelly_results, yoy_shortbelly)
-mean(shortbelly_error[[2]]$RMSE) # 157
+mean(shortbelly_error[[2]]$RMSE) # 156
 
 # Plot the RMSE for each year
-shortbelly_error[[2]]$roms_temperature <- yoy_shortbelly$roms_temperature[match(shortbelly_error[[2]]$year, yoy_shortbelly$year)]
+shortbelly_error[[2]]$sst_anom <- yoy_shortbelly$sst_anom[match(shortbelly_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1501,7 +1551,7 @@ ggplot(shortbelly_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, sst_anom),
             size = 1,
             group = 1) 
 
@@ -1513,10 +1563,10 @@ shortbelly_small <- gam(small_catch1 ~ year_f +
                           s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
-                          s(roms_temperature, k = 4) +
-                          s(roms_salinity, k = 4) +
-                          s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_ssh),
+                          s(sst_anom, k = 4) +
+                          s(sss_anom, k = 4) +
+                          s(ssh_anom, k = 4) +
+                          s(lon, lat, by = ssh_pos),
                         family = tw(link = "log"),
                         method = "REML",
                         data = yoy_shortbelly)
@@ -1531,10 +1581,10 @@ yoy_shortbelly$y_small_catch <- yoy_shortbelly$small_catch1 + shortbelly_year_sm
 shortbelly_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                       s(bottom_depth, k = 4) +
                                       s(jday) +
-                                      s(roms_temperature, k = 4) +
-                                      s(roms_salinity, k = 4) +
-                                      s(roms_ssh, k = 4) +
-                                      s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                      s(sst_anom, k = 4) +
+                                      s(sss_anom, k = 4) +
+                                      s(ssh_anom, k = 4) +
+                                      s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 shortbelly_small_gams <- LOYO_validation(yoy_shortbelly, shortbelly_small_formula)
 
@@ -1548,7 +1598,7 @@ shortbelly_small_results <- LOYO_preds_small(shortbelly_small_gams, shortbelly_d
 shortbelly_small_error <- RMSE_calc_small(shortbelly_small_results, yoy_shortbelly)
 
 # Plot the RMSE for each year
-shortbelly_small_error[[2]]$roms_salinity <- yoy_shortbelly$roms_salinity[match(shortbelly_small_error[[2]]$year, yoy_shortbelly$year)]
+shortbelly_small_error[[2]]$sss_anom <- yoy_shortbelly$sss_anom[match(shortbelly_small_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1556,7 +1606,7 @@ ggplot(shortbelly_small_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_small_error[[2]]) +
-  geom_line(aes(year, roms_salinity),
+  geom_line(aes(year, sss_anom),
             size = 1,
             group = 1)
 
@@ -1566,10 +1616,10 @@ shortbelly_large <- gam(large_catch1 ~ year_f +
                           s(lon, lat) +
                           s(bottom_depth, k = 4) +
                           s(jday) +
-                          s(roms_temperature, k = 4) +
-                          # s(roms_salinity, k = 4) +
-                          s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_ssh),
+                          # s(sst_anom, k = 4) +
+                          s(sss_anom, k = 4) +
+                          s(ssh_anom, k = 4) +
+                          s(lon, lat, by = ssh_pos),
                         family = tw(link = "log"),
                         method = "REML",
                         data = yoy_shortbelly)
@@ -1584,10 +1634,10 @@ yoy_shortbelly$y_large_catch <- yoy_shortbelly$large_catch1 + shortbelly_year_la
 shortbelly_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                       s(bottom_depth, k = 4) +
                                       s(jday) +
-                                      s(roms_temperature, k = 4) +
-                                      # s(roms_salinity, k = 4) +
-                                      s(roms_ssh, k = 4) +
-                                      s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                      # s(sst_anom, k = 4) +
+                                      s(sss_anom, k = 4) +
+                                      s(ssh_anom, k = 4) +
+                                      s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 shortbelly_large_gams <- LOYO_validation(yoy_shortbelly, shortbelly_large_formula)
 
@@ -1601,7 +1651,7 @@ shortbelly_large_results <- LOYO_preds_large(shortbelly_large_gams, shortbelly_d
 shortbelly_large_error <- RMSE_calc_large(shortbelly_large_results, yoy_shortbelly)
 
 # Plot the RMSE for each year
-shortbelly_large_error[[2]]$roms_ssh <- yoy_shortbelly$roms_ssh[match(shortbelly_large_error[[2]]$year, yoy_shortbelly$year)]
+shortbelly_large_error[[2]]$ssh_anom <- yoy_shortbelly$ssh_anom[match(shortbelly_large_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1609,7 +1659,7 @@ ggplot(shortbelly_large_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_large_error[[2]]) +
-  geom_line(aes(year, roms_ssh),
+  geom_line(aes(year, ssh_anom),
             size = 1,
             group = 1)
 
@@ -1622,44 +1672,63 @@ shortbelly_added_results <- lapply(shortbelly_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(shortbelly_added_results)) # 147
+mean(unlist(shortbelly_added_results)) # 154
 
 shortbelly_combined_df <- data.frame(year = names(shortbelly_added_results), 
                                      RMSE = unlist(shortbelly_added_results))
+
+windows(width = 10,
+        height = 8)
+RMSE_plot(shortbelly_combined_df, 
+          "Yearly Error for Shortbelly Rockfish")
+dev.copy(jpeg, 
+         here('results/hindcast_output/yoy_shortbelly', 
+              'shortbelly_explicit_RMSE.jpg'), 
+         height = 8, 
+         width = 10, 
+         units = 'in',
+         res = 200)
+dev.off()
 
 # Partial dependence plots
 # Aggregate model
 tiff(here('results/hindcast_output/yoy_shortbelly',
           'shortbelly_partial_dependence.jpg'),
      units = "in",
-     width = 40,
+     width = 56,
      height = 12,
      res = 200)
-par(mfrow = c(1, 4),
+par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(shortbelly_total,
               covariate = 2,
-              bounds = c(-4.2, 3),
+              bounds = c(-3.5, 2.5),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(shortbelly_total,
               covariate = 4,
-              bounds = c(-4.2, 3),
+              bounds = c(-3.5, 2.5),
               "Temperature",
               " ",
               "n")
 plot_variable(shortbelly_total,
               covariate = 5,
-              bounds = c(-4.2, 3),
+              bounds = c(-3.5, 2.5),
               "Salinity",
               " ",
               "n")
 plot_variable(shortbelly_total,
+              covariate = 6,
+              bounds = c(-3.5, 2.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(shortbelly_total,
               covariate = 3,
-              bounds = c(-4.2, 3),
+              bounds = c(-3.5, 2.5),
               "Day of Year",
               " ",
               "n")
@@ -1678,31 +1747,31 @@ par(mfrow = c(1, 5),
     mgp = c(9, 4, 0))
 plot_variable(shortbelly_small,
               covariate = 2,
-              bounds = c(-3, 3),
+              bounds = c(-4.5, 2.5),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(shortbelly_small,
               covariate = 4,
-              bounds = c(-3, 3),
+              bounds = c(-4.5, 2.5),
               "Temperature",
               " ",
               "n")
 plot_variable(shortbelly_small,
               covariate = 5,
-              bounds = c(-3, 3),
+              bounds = c(-4.5, 2.5),
               "Salinity",
               " ",
               "n")
 plot_variable(shortbelly_small,
               covariate = 6,
-              bounds = c(-3, 3),
+              bounds = c(-4.5, 2.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(shortbelly_small,
               covariate = 3,
-              bounds = c(-3, 3),
+              bounds = c(-4.5, 2.5),
               "Day of Year",
               " ",
               "n")
@@ -1712,7 +1781,7 @@ dev.off()
 tiff(here('results/hindcast_output/yoy_shortbelly',
           'shortbelly_partial_dependence_large.jpg'),
      units = "in",
-     width = 40,
+     width = 42,
      height = 12,
      res = 200)
 par(mfrow = c(1, 4),
@@ -1721,25 +1790,25 @@ par(mfrow = c(1, 4),
     mgp = c(9, 4, 0))
 plot_variable(shortbelly_large,
               covariate = 2,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-4.5, 1),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(shortbelly_large,
               covariate = 4,
-              bounds = c(-1.5, 1.5),
-              "Temperature",
+              bounds = c(-4.5, 1),
+              "Salinity",
               " ",
               "n")
 plot_variable(shortbelly_large,
               covariate = 5,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-4.5, 1),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(shortbelly_large,
               covariate = 3,
-              bounds = c(-1.5, 1.5),
+              bounds = c(-4.5, 1),
               "Day of Year",
               " ",
               "n")
@@ -1763,17 +1832,17 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly',
 dev.off()
 
 # Variable coefficient plots
-pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$mean_ssh, 7)
-pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$mean_ssh, 8)
-pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$mean_ssh, 7)
+pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$ssh_pos, 8)
+pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$ssh_pos, 8)
+pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$ssh_pos, 7)
 
 windows()
 par(mfrow = c(1, 3),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-plot_var_coef(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
-plot_var_coef2(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes (8-35 mm)")
+plot_var_coef3(shortbelly_total, yoy_shortbelly, pred_shortbelly_all, "Latitude", "All Sizes")
+plot_var_coef(shortbelly_small, yoy_shortbelly, pred_shortbelly_small, "", "Small Sizes (8-35 mm)")
 plot_var_coef(shortbelly_large, yoy_shortbelly, pred_shortbelly_large, "", "Large Sizes (36-85 mm)")
 dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
                     'yoy_shortbelly_var_coef.jpg'), 
@@ -1788,12 +1857,12 @@ dev.off()
 # Use models selected during model exploration
 sdab_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
-                    # s(bottom_depth, k = 4) +
+                    s(bottom_depth, k = 4) +
                     s(jday) + 
-                    s(roms_temperature, k = 4) +
-                    # s(roms_salinity, k = 4) +
-                    # s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_ssh),
+                    s(sst_anom, k = 4) +
+                    s(sss_anom, k = 4) +
+                    s(ssh_anom, k = 4) +
+                    s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_sdab)
@@ -1806,12 +1875,12 @@ yoy_sdab$y_catch <- yoy_sdab$catch1 + sdab_year_effect[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 sdab_formula <- formula(y_catch ~ s(lon, lat) + 
-                          # s(bottom_depth, k = 4) +
+                          s(bottom_depth, k = 4) +
                           s(jday) + 
-                          s(roms_temperature, k = 4) +
-                          # s(roms_salinity, k = 4) +
-                          # s(roms_ssh, k = 4) +
-                          s(lon, lat, by = mean_ssh)) # Note no factor(year), added into response
+                          s(sst_anom, k = 4) +
+                          s(sss_anom, k = 4) +
+                          s(ssh_anom, k = 4) +
+                          s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 sdab_gams <- LOYO_validation(yoy_sdab, sdab_formula)
 
@@ -1826,10 +1895,10 @@ sdab_results <- LOYO_preds(sdab_gams, sdab_data, sdab_results)
 # Calculate RMSE
 # Get values for each year and overall value
 sdab_error <- RMSE_calc(sdab_results, yoy_sdab)
-mean(sdab_error[[2]]$RMSE) # 102
+mean(sdab_error[[2]]$RMSE) # 134
 
 # Plot the RMSE for each year
-sdab_error[[2]]$roms_temperature <- yoy_sdab$roms_temperature[match(sdab_error[[2]]$year, yoy_sdab$year)]
+sdab_error[[2]]$sst_anom <- yoy_sdab$sst_anom[match(sdab_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1848,7 +1917,7 @@ ggplot(sdab_error[[2]]) +
         axis.line = element_line(color = "black"))
 
 ggplot(sdab_error[[2]]) +
-  geom_line(aes(year, roms_temperature),
+  geom_line(aes(year, sst_anom),
             size = 1,
             group = 1) 
 
@@ -1860,10 +1929,10 @@ sdab_small <- gam(small_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
-                    s(roms_temperature, k = 4) +
-                    s(roms_salinity, k = 4) +
-                    s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_ssh),
+                    s(sst_anom, k = 4) +
+                    s(sss_anom, k = 4) +
+                    s(ssh_anom, k = 4) +
+                    s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_sdab)
@@ -1878,10 +1947,10 @@ yoy_sdab$y_small_catch <- yoy_sdab$small_catch1 + sdab_year_small[, 1]
 sdab_small_formula <- formula(y_small_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
-                                s(roms_temperature, k = 4) +
-                                s(roms_salinity, k = 4) +
-                                s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                s(sst_anom, k = 4) +
+                                s(sss_anom, k = 4) +
+                                s(ssh_anom, k = 4) +
+                                s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 sdab_small_gams <- LOYO_validation(yoy_sdab, sdab_small_formula)
 
@@ -1895,7 +1964,7 @@ sdab_small_results <- LOYO_preds_small(sdab_small_gams, sdab_data, sdab_small_re
 sdab_small_error <- RMSE_calc_small(sdab_small_results, yoy_sdab)
 
 # Plot the RMSE for each year
-sdab_small_error[[2]]$roms_salinity <- yoy_sdab$roms_salinity[match(sdab_small_error[[2]]$year, yoy_sdab$year)]
+sdab_small_error[[2]]$sss_anom <- yoy_sdab$sss_anom[match(sdab_small_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1903,7 +1972,7 @@ ggplot(sdab_small_error[[2]]) +
             group = 1) 
 
 ggplot(sdab_small_error[[2]]) +
-  geom_line(aes(year, roms_salinity),
+  geom_line(aes(year, sss_anom),
             size = 1,
             group = 1)
 
@@ -1913,10 +1982,10 @@ sdab_large <- gam(large_catch1 ~ year_f +
                     s(lon, lat) +
                     s(bottom_depth, k = 4) +
                     s(jday) +
-                    s(roms_temperature, k = 4) +
-                    s(roms_salinity, k = 4) +
-                    s(roms_ssh, k = 4) +
-                    s(lon, lat, by = mean_ssh),
+                    s(sst_anom, k = 4) +
+                    s(sss_anom, k = 4) +
+                    # s(ssh_anom, k = 4) +
+                    s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
                   data = yoy_sdab)
@@ -1931,10 +2000,10 @@ yoy_sdab$y_large_catch <- yoy_sdab$large_catch1 + sdab_year_large[, 1]
 sdab_large_formula <- formula(y_large_catch ~ s(lon, lat) +
                                 s(bottom_depth, k = 4) +
                                 s(jday) +
-                                s(roms_temperature, k = 4) +
-                                s(roms_salinity, k = 4) +
-                                s(roms_ssh, k = 4) +
-                                s(lon, lat, by = mean_ssh)) # Note no year factor, added into response
+                                s(sst_anom, k = 4) +
+                                s(sss_anom, k = 4) +
+                                # s(ssh_anom, k = 4) +
+                                s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 sdab_large_gams <- LOYO_validation(yoy_sdab, sdab_large_formula)
 
@@ -1948,7 +2017,7 @@ sdab_large_results <- LOYO_preds_large(sdab_large_gams, sdab_data, sdab_large_re
 sdab_large_error <- RMSE_calc_large(sdab_large_results, yoy_sdab)
 
 # Plot the RMSE for each year
-sdab_large_error[[2]]$roms_ssh <- yoy_sdab$roms_ssh[match(sdab_large_error[[2]]$year, yoy_sdab$year)]
+sdab_large_error[[2]]$ssh_anom <- yoy_sdab$ssh_anom[match(sdab_large_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1956,7 +2025,7 @@ ggplot(sdab_large_error[[2]]) +
             group = 1) 
 
 ggplot(sdab_large_error[[2]]) +
-  geom_line(aes(year, roms_ssh),
+  geom_line(aes(year, ssh_anom),
             size = 1,
             group = 1)
 
@@ -1969,32 +2038,63 @@ sdab_added_results <- lapply(sdab_combined_results, function(x){
   rmse(x$catch1, x$pred_small + x$pred_large)
 })
 
-mean(unlist(sdab_added_results)) # 92
+mean(unlist(sdab_added_results)) # 123
 
 sdab_combined_df <- data.frame(year = names(sdab_added_results), 
                                RMSE = unlist(sdab_added_results))
+
+windows(width = 10,
+        height = 8)
+RMSE_plot(sdab_combined_df, 
+          "Yearly Error for Pacific Sanddab")
+dev.copy(jpeg, 
+         here('results/hindcast_output/yoy_sanddab', 
+              'sanddab_explicit_RMSE.jpg'), 
+         height = 8, 
+         width = 10, 
+         units = 'in',
+         res = 200)
+dev.off()
 
 # Partial dependence plots
 # Aggregate model
 tiff(here('results/hindcast_output/yoy_sanddab',
           'sanddab_partial_dependence.jpg'),
      units = "in",
-     width = 48,
-     height = 24,
-     res = 150)
-par(mfrow = c(1, 2),
+     width = 56,
+     height = 12,
+     res = 200)
+par(mfrow = c(1, 5),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(sdab_total,
-              covariate = 3,
-              bounds = c(-4, 2),
-              "Temperature",
+              covariate = 2,
+              bounds = c(-2, 1.5),
+              "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(sdab_total,
-              covariate = 2,
-              bounds = c(-4, 2),
+              covariate = 4,
+              bounds = c(-2, 1.5),
+              "Temperature",
+              " ",
+              "n")
+plot_variable(sdab_total,
+              covariate = 5,
+              bounds = c(-2, 1.5),
+              "Salinity",
+              " ",
+              "n")
+plot_variable(sdab_total,
+              covariate = 6,
+              bounds = c(-2, 1.5),
+              "Sea Surface Height",
+              " ",
+              "n")
+plot_variable(sdab_total,
+              covariate = 3,
+              bounds = c(-2, 1.5),
               "Day of Year",
               " ",
               "n")
@@ -2013,31 +2113,31 @@ par(mfrow = c(1, 5),
     mgp = c(9, 4, 0))
 plot_variable(sdab_small,
               covariate = 2,
-              bounds = c(-4, 3),
+              bounds = c(-3, 1.5),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(sdab_small,
               covariate = 4,
-              bounds = c(-4, 3),
+              bounds = c(-3, 1.5),
               "Temperature",
               " ",
               "n")
 plot_variable(sdab_small,
               covariate = 5,
-              bounds = c(-4, 3),
+              bounds = c(-3, 1.5),
               "Salinity",
               " ",
               "n")
 plot_variable(sdab_small,
               covariate = 6,
-              bounds = c(-4, 3),
+              bounds = c(-3, 1.5),
               "Sea Surface Height",
               " ",
               "n")
 plot_variable(sdab_small,
               covariate = 3,
-              bounds = c(-4, 3),
+              bounds = c(-3, 1.5),
               "Day of Year",
               " ",
               "n")
@@ -2047,40 +2147,34 @@ dev.off()
 tiff(here('results/hindcast_output/yoy_sanddab',
           'sanddab_partial_dependence_large.jpg'),
      units = "in",
-     width = 56,
+     width = 42,
      height = 12,
      res = 200)
-par(mfrow = c(1, 5),
+par(mfrow = c(1, 4),
     mar = c(11, 15, .5, 0.6) + 0.1,
     oma = c(3, 1, 1, 1),
     mgp = c(9, 4, 0))
 plot_variable(sdab_large,
               covariate = 2,
-              bounds = c(-2.2, 1.5),
+              bounds = c(-2.2, 2.7),
               "Depth",
               "Effect on Species Abundance",
               "s")
 plot_variable(sdab_large,
               covariate = 4,
-              bounds = c(-2.2, 1.5),
+              bounds = c(-2.2, 2.7),
               "Temperature",
               " ",
               "n")
 plot_variable(sdab_large,
               covariate = 5,
-              bounds = c(-2.2, 1.5),
+              bounds = c(-2.2, 2.7),
               "Salinity",
               " ",
               "n")
 plot_variable(sdab_large,
-              covariate = 6,
-              bounds = c(-2.2, 1.5),
-              "Sea Surface Height",
-              " ",
-              "n")
-plot_variable(sdab_large,
               covariate = 3,
-              bounds = c(-2.2, 1.5),
+              bounds = c(-2.2, 2.7),
               "Day of Year",
               " ",
               "n")
@@ -2104,61 +2198,18 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab',
 dev.off()
 
 # Variable coefficient plots
-pred_sdab_all <- variable_coefficient(sdab_total, yoy_sdab, yoy_sdab$mean_ssh, 5) # none significant
-pred_sdab_small <- variable_coefficient(sdab_small, yoy_sdab, yoy_sdab$mean_ssh, 8)
-pred_sdab_large <- variable_coefficient(sdab_large, yoy_sdab, yoy_sdab$mean_ssh, 8)
+pred_sdab_all <- variable_coefficient(sdab_total, yoy_sdab, yoy_sdab$ssh_pos, 8) 
+pred_sdab_small <- variable_coefficient(sdab_small, yoy_sdab, yoy_sdab$ssh_pos, 8)
+pred_sdab_large <- variable_coefficient(sdab_large, yoy_sdab, yoy_sdab$ssh_pos, 7)
 
 windows()
 par(mfrow = c(1, 3),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0))
-myvis_gam(sdab_total,
-          view = c('lon', 'lat'),
-          too.far = 0.07,
-          plot.type = 'contour',
-          contour.col = contour_col,
-          color = "jet" ,
-          type = 'response',
-          xlim = c(-125.7, -116.5),
-          ylim = range(yoy_sdab$lat, na.rm = TRUE) + c(-.4, .5),
-          family = "serif",
-          xlab = "Longitude",
-          ylab = "Latitude",
-          main = "All Sizes",
-          cex.lab = 4.5,
-          cex.axis =  4.2,
-          cex.main = 4.8)
-maps::map("state",
-          boundary = FALSE,
-          fill = TRUE,
-          col = "wheat4",
-          add = TRUE)
-text(x = state_labels$lon, 
-     y = state_labels$lat,
-     state_labels$name, 
-     pos = 1,
-     col = "black",
-     cex = 4,
-     family = "serif")
-image.plot(legend.only = T,
-           col = jet.colors(100),
-           legend.shrink = 0.2,
-           smallplot = c(.24, .29, .08, .21),
-           legend.cex = 2.5,
-           axis.args = list(cex.axis = 3.5,
-                            family = "serif"),
-           legend.width = 0.8,
-           legend.mar = 6,
-           zlim = c(min(sdab_total$fitted.values),
-                    max(sdab_total$fitted.values)),
-           legend.args = list("CPUE",
-                              side = 2, 
-                              cex = 2.5,
-                              family = "serif",
-                              line = 1.5))
-plot_var_coef2(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes (11-30 mm)")
-plot_var_coef2(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (31-82 mm)")
+plot_var_coef3(sdab_total, yoy_sdab, pred_sdab_all, "", "All Sizes")
+plot_var_coef(sdab_small, yoy_sdab, pred_sdab_small, "", "Small Sizes (11-30 mm)")
+plot_var_coef(sdab_large, yoy_sdab, pred_sdab_large, "", "Large Sizes (31-82 mm)")
 dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
                     'yoy_sanddab_var_coef.jpg'), 
          height = 15, 
