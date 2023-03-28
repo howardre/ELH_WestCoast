@@ -439,7 +439,8 @@ hindcast_anom <- hindcast_anom[-c(24, 25)]
 
 # Remove the values not on the shelf
 hindcast_depths <- filter(hindcast_anom,
-                          between(depth, -100, 0)) 
+                          between(depth, -100, 0),
+                          between(month, 5, 7)) 
 
 # Calculate average monthly values per year
 hindcast_year <- hindcast_depths %>%
