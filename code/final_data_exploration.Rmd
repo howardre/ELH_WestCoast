@@ -168,12 +168,12 @@ species_filter <- function(data, species){
 # Match ROMS hindcast to the fish data
 hindcast_match <- function(data, roms, a, b){
   data[, c(a, b)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'month', 'year')],
-                                                   data[, c('lat', 'lon', 'month', 'year')],
-                                                   k = 1))
+                                             data[, c('lat', 'lon', 'month', 'year')],
+                                             k = 1))
   data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 5] # Match nearest temp
   data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 4]
   data$roms_ssh <- as.data.frame(roms)[c(data$nn.idx), 6]
-  data$ssh_anom <- as.data.frame(roms)[c(data$nn.idx), 21] # Match nearest temp
+  data$ssh_anom <- as.data.frame(roms)[c(data$nn.idx), 21]
   data$sss_anom <- as.data.frame(roms)[c(data$nn.idx), 23]
   data$sst_anom <- as.data.frame(roms)[c(data$nn.idx), 22]
   data$year_ssh <- as.data.frame(roms)[c(data$nn.idx), 25]
@@ -411,6 +411,7 @@ hindcast_trim <- nep_hindcast %>%
 
 ```{r}
 # Get means by month for each unique lat/lon combo
+# Subtract value at each location/time by monthly value then divide by SD
 hindcast_anom <- hindcast_trim %>%
   group_by(month, lat, lon) %>%
   mutate(ssh_month = mean(zeta),
@@ -437,12 +438,12 @@ hindcast_anom[, c(24, 25)] <- as.data.frame(RANN::nn2(depth_df[, c('y', 'x')],
 hindcast_anom$depth <- as.data.frame(depth_df)[c(hindcast_anom$nn.idx), 3] 
 hindcast_anom <- hindcast_anom[-c(24, 25)]
 
-# Remove the values not on the shelf
+# Remove the values not on the shelf, between May and July
 hindcast_depths <- filter(hindcast_anom,
                           between(depth, -100, 0),
                           between(month, 5, 7)) 
 
-# Calculate average monthly values per year
+# Calculate average yearly values per year
 hindcast_year <- hindcast_depths %>%
   group_by(year) %>%
   summarise(year_ssh = mean(ssh_anom, na.rm = TRUE),
@@ -459,6 +460,7 @@ saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 
 ```{r}
 # Match to the fish data
+# No ROMS past 2018 right now
 yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 36, 37)
 yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 37, 38)
 yoy_hake <- hindcast_match(merge_hake, hindcast_anom, 37, 38)
