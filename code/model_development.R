@@ -19,7 +19,7 @@ library(ggthemes)
 source(here('code/functions', 'vis_gam_COLORS.R'))
 read_data <- function(file){
   yoy <- readRDS(here('data', file)) %>% 
-    tidyr::drop_na(sst_anom, sss_anom, ssh_anom, bottom_depth, year, jday, lat, lon) %>%
+    tidyr::drop_na(roms_temperature, roms_salinity, roms_ssh, bottom_depth, year, jday, lat, lon) %>%
     filter(catch < 2500 &
              year != 2020 &
              year > 2010 &
@@ -333,7 +333,8 @@ LOYO_validation <- function(data, formula){
     output <- gam(formula,
                   family = tw(link = "log"),
                   method = 'REML',
-                  data = data[data$year_f != x,])
+                  data = data[data$year_f != x,],
+                  select = TRUE)
   }) # Gives the list of GAMs with each year left out
   return(gams)
 }
@@ -429,15 +430,16 @@ state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
 # Use models selected during model exploration
 hake_total <- gam(catch1 ~ year_f +
                     s(lon, lat) +
-                    s(bottom_depth, k = 4) +
+                    s(bottom_depth, k = 5) +
                     s(jday) +
-                    s(sst_anom, k = 4) +
-                    s(sss_anom, k = 4) + 
-                    s(ssh_anom, k = 4) +
+                    s(roms_temperature, k = 5) +
+                    s(roms_salinity, k = 5) + 
+                    s(roms_ssh, k = 5) +
                     s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_hake)
+                  data = yoy_hake,
+                  select = TRUE)
 summary(hake_total)
 
 hake_year_effect <- year_adjust(hake_total, yoy_hake)
@@ -447,11 +449,11 @@ yoy_hake$y_catch <- yoy_hake$catch1 + hake_year_effect[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 hake_formula <- formula(y_catch ~ s(lon, lat) +
-                          s(bottom_depth, k = 4) +
+                          s(bottom_depth, k = 5) +
                           s(jday) +
-                          s(sst_anom, k = 4) +
-                          s(sss_anom, k = 4) +
-                          s(ssh_anom, k = 4) +
+                          s(roms_temperature, k = 5) +
+                          s(roms_salinity, k = 5) +
+                          s(roms_ssh, k = 5) +
                           s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 hake_gams <- LOYO_validation(yoy_hake, hake_formula)
@@ -470,7 +472,7 @@ hake_error <- RMSE_calc(hake_results, yoy_hake)
 mean(hake_error[[2]]$RMSE) # 231
 
 # Plot the RMSE for each year
-hake_error[[2]]$sst_anom <- yoy_hake$sst_anom[match(hake_error[[2]]$year, yoy_hake$year)]
+hake_error[[2]]$roms_temperature <- yoy_hake$roms_temperature[match(hake_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -478,7 +480,7 @@ ggplot(hake_error[[2]]) +
              group = 1) 
 
 ggplot(hake_error[[2]]) +
-  geom_line(aes(year, sst_anom),
+  geom_line(aes(year, roms_temperature),
             linewidth = 1,
             group = 1) 
 
@@ -488,15 +490,16 @@ ggplot(hake_error[[2]]) +
 # Use models selected during model exploration
 hake_small <- gam(small_catch1 ~ year_f +
                     s(lon, lat) +
-                    s(bottom_depth, k = 4) +
+                    s(bottom_depth, k = 5) +
                     s(jday) +
-                    s(sst_anom, k = 4) +
-                    s(sss_anom, k = 4) +
-                    s(ssh_anom, k = 4) +
+                    s(roms_temperature, k = 5) +
+                    s(roms_salinity, k = 5) +
+                    s(roms_ssh, k = 5) +
                     s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_hake)
+                  data = yoy_hake,
+                  select = TRUE)
 summary(hake_small)
 
 hake_year_small <- year_adjust(hake_small, yoy_hake)
@@ -506,11 +509,11 @@ yoy_hake$y_small_catch <- yoy_hake$small_catch1 + hake_year_small[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 hake_small_formula <- formula(y_small_catch ~ s(lon, lat) +
-                                s(bottom_depth, k = 4) +
+                                s(bottom_depth, k = 5) +
                                 s(jday) +
-                                s(sst_anom, k = 4) +
-                                s(sss_anom, k = 4) +
-                                s(ssh_anom, k = 4) +
+                                s(roms_temperature, k = 5) +
+                                s(roms_salinity, k = 5) +
+                                s(roms_ssh, k = 5) +
                                 s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 hake_small_gams <- LOYO_validation(yoy_hake, hake_small_formula)
@@ -525,7 +528,7 @@ hake_small_results <- LOYO_preds_small(hake_small_gams, hake_data, hake_small_re
 hake_small_error <- RMSE_calc_small(hake_small_results, yoy_hake)
 
 # Plot the RMSE for each year
-hake_small_error[[2]]$sss_anom <- yoy_hake$sss_anom[match(hake_small_error[[2]]$year, yoy_hake$year)]
+hake_small_error[[2]]$roms_salinity <- yoy_hake$roms_salinity[match(hake_small_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -533,7 +536,7 @@ ggplot(hake_small_error[[2]]) +
             group = 1) 
 
 ggplot(hake_small_error[[2]]) +
-  geom_line(aes(year, sss_anom),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -541,15 +544,16 @@ ggplot(hake_small_error[[2]]) +
 # Use models selected during model exploration
 hake_large <- gam(large_catch1 ~ year_f +
                     s(lon, lat) +
-                    s(bottom_depth, k = 4) +
+                    s(bottom_depth, k = 5) +
                     s(jday) +
-                    s(sst_anom, k = 4) +
-                    s(sss_anom, k = 4) +
-                    s(ssh_anom, k = 4) +
+                    s(roms_temperature, k = 5) +
+                    s(roms_salinity, k = 5) +
+                    s(roms_ssh, k = 5) +
                     s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_hake)
+                  data = yoy_hake,
+                  select = TRUE)
 summary(hake_large)
 
 hake_year_large <- year_adjust(hake_large, yoy_hake)
@@ -559,11 +563,11 @@ yoy_hake$y_large_catch <- yoy_hake$large_catch1 + hake_year_large[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 hake_large_formula <- formula(y_large_catch ~ s(lon, lat) +
-                                s(bottom_depth, k = 4) +
+                                s(bottom_depth, k = 5) +
                                 s(jday) +
-                                s(sst_anom, k = 4) +
-                                s(sss_anom, k = 4) +
-                                s(ssh_anom, k = 4) +
+                                s(roms_temperature, k = 5) +
+                                s(roms_salinity, k = 5) +
+                                s(roms_ssh, k = 5) +
                                 s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 hake_large_gams <- LOYO_validation(yoy_hake, hake_large_formula)
@@ -578,7 +582,7 @@ hake_large_results <- LOYO_preds_large(hake_large_gams, hake_data, hake_large_re
 hake_large_error <- RMSE_calc_large(hake_large_results, yoy_hake)
 
 # Plot the RMSE for each year
-hake_large_error[[2]]$ssh_anom <- yoy_hake$ssh_anom[match(hake_large_error[[2]]$year, yoy_hake$year)]
+hake_large_error[[2]]$roms_ssh <- yoy_hake$roms_ssh[match(hake_large_error[[2]]$year, yoy_hake$year)]
 
 ggplot(hake_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -586,7 +590,7 @@ ggplot(hake_large_error[[2]]) +
             group = 1) 
 
 ggplot(hake_large_error[[2]]) +
-  geom_line(aes(year, ssh_anom),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -790,15 +794,16 @@ dev.off()
 # Use models selected during model exploration
 anchovy_total <- gam(catch1 ~ year_f +
                        s(lon, lat) +
-                       s(bottom_depth, k = 4) +
+                       s(bottom_depth, k = 5) +
                        s(jday) +
-                       s(sst_anom, k = 4) + 
-                       s(sss_anom, k = 4) +
-                       s(ssh_anom, k = 4) +
+                       s(roms_temperature, k = 5) + 
+                       s(roms_salinity, k = 5) +
+                       s(roms_ssh, k = 5) +
                        s(lon, lat, by = ssh_pos),
                      family = tw(link = "log"),
                      method = "REML",
-                     data =  yoy_anchovy)
+                     data =  yoy_anchovy,
+                     select = TRUE)
 summary(anchovy_total)
 
 anchovy_year_effect <- year_adjust(anchovy_total, yoy_anchovy)
@@ -808,11 +813,11 @@ yoy_anchovy$y_catch <- yoy_anchovy$catch1 + anchovy_year_effect[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 anchovy_formula <- formula(y_catch ~ s(lon, lat) +
-                             s(bottom_depth, k = 4) +
+                             s(bottom_depth, k = 5) +
                              s(jday) +
-                             s(sst_anom, k = 4) + 
-                             s(sss_anom, k = 4) +
-                             s(ssh_anom, k = 4) +
+                             s(roms_temperature, k = 5) + 
+                             s(roms_salinity, k = 5) +
+                             s(roms_ssh, k = 5) +
                              s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 anchovy_gams <- LOYO_validation(yoy_anchovy, anchovy_formula)
@@ -831,7 +836,7 @@ anchovy_error <- RMSE_calc(anchovy_results, yoy_anchovy)
 mean(anchovy_error[[2]]$RMSE) # 369
 
 # Plot the RMSE for each year
-anchovy_error[[2]]$sst_anom <- yoy_anchovy$sst_anom[match(anchovy_error[[2]]$year, yoy_anchovy$year)]
+anchovy_error[[2]]$roms_temperature <- yoy_anchovy$roms_temperature[match(anchovy_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -839,7 +844,7 @@ ggplot(anchovy_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_error[[2]]) +
-  geom_line(aes(year, sst_anom),
+  geom_line(aes(year, roms_temperature),
             size = 1,
             group = 1) 
 
@@ -849,15 +854,16 @@ ggplot(anchovy_error[[2]]) +
 # Use models selected during model exploration
 anchovy_small <- gam(small_catch1 ~ year_f +
                        s(lon, lat) +
-                       s(bottom_depth, k = 4) +
+                       s(bottom_depth, k = 5) +
                        s(jday) +
-                       s(sst_anom, k = 4) +
-                       s(sss_anom, k = 4) +
-                       s(ssh_anom, k = 4) +
+                       s(roms_temperature, k = 5) +
+                       s(roms_salinity, k = 5) +
+                       s(roms_ssh, k = 5) +
                        s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_anchovy)
+                  data = yoy_anchovy,
+                  select = TRUE)
 summary(anchovy_small)
 
 anchovy_year_small <- year_adjust(anchovy_small, yoy_anchovy)
@@ -867,11 +873,11 @@ yoy_anchovy$y_small_catch <- yoy_anchovy$small_catch1 + anchovy_year_small[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 anchovy_small_formula <- formula(y_small_catch ~ s(lon, lat) +
-                                   s(bottom_depth, k = 4) +
+                                   s(bottom_depth, k = 5) +
                                    s(jday) +
-                                   s(sst_anom, k = 4) +
-                                   s(sss_anom, k = 4) +
-                                   s(ssh_anom, k = 4) +
+                                   s(roms_temperature, k = 5) +
+                                   s(roms_salinity, k = 5) +
+                                   s(roms_ssh, k = 5) +
                                    s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 anchovy_small_gams <- LOYO_validation(yoy_anchovy, anchovy_small_formula)
@@ -886,7 +892,7 @@ anchovy_small_results <- LOYO_preds_small(anchovy_small_gams, anchovy_data, anch
 anchovy_small_error <- RMSE_calc_small(anchovy_small_results, yoy_anchovy)
 
 # Plot the RMSE for each year
-anchovy_small_error[[2]]$sss_anom <- yoy_anchovy$sss_anom[match(anchovy_small_error[[2]]$year, yoy_anchovy$year)]
+anchovy_small_error[[2]]$roms_salinity <- yoy_anchovy$roms_salinity[match(anchovy_small_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -894,7 +900,7 @@ ggplot(anchovy_small_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_small_error[[2]]) +
-  geom_line(aes(year, sss_anom),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -902,15 +908,16 @@ ggplot(anchovy_small_error[[2]]) +
 # Use models selected during model exploration
 anchovy_large <- gam(large_catch1 ~ year_f +
                        s(lon, lat) +
-                       s(bottom_depth, k = 4) +
+                       s(bottom_depth, k = 5) +
                        s(jday) +
-                       s(sst_anom, k = 4) +
-                       s(sss_anom, k = 4) +
-                       s(ssh_anom, k = 4) +
+                       s(roms_temperature, k = 5) +
+                       s(roms_salinity, k = 5) +
+                       s(roms_ssh, k = 5) +
                        s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_anchovy)
+                  data = yoy_anchovy,
+                  select = TRUE)
 summary(anchovy_large)
 
 anchovy_year_large <- year_adjust(anchovy_large, yoy_anchovy)
@@ -920,11 +927,11 @@ yoy_anchovy$y_large_catch <- yoy_anchovy$large_catch1 + anchovy_year_large[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 anchovy_large_formula <- formula(y_large_catch ~ s(lon, lat) +
-                                   s(bottom_depth, k = 4) +
+                                   s(bottom_depth, k = 5) +
                                    s(jday) +
-                                   s(sst_anom, k = 4) +
-                                   s(sss_anom, k = 4) +
-                                   s(ssh_anom, k = 4) +
+                                   s(roms_temperature, k = 5) +
+                                   s(roms_salinity, k = 5) +
+                                   s(roms_ssh, k = 5) +
                                    s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 anchovy_large_gams <- LOYO_validation(yoy_anchovy, anchovy_large_formula)
@@ -939,7 +946,7 @@ anchovy_large_results <- LOYO_preds_large(anchovy_large_gams, anchovy_data, anch
 anchovy_large_error <- RMSE_calc_large(anchovy_large_results, yoy_anchovy)
 
 # Plot the RMSE for each year
-anchovy_large_error[[2]]$ssh_anom <- yoy_anchovy$ssh_anom[match(anchovy_large_error[[2]]$year, yoy_anchovy$year)]
+anchovy_large_error[[2]]$roms_ssh <- yoy_anchovy$roms_ssh[match(anchovy_large_error[[2]]$year, yoy_anchovy$year)]
 
 ggplot(anchovy_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -947,7 +954,7 @@ ggplot(anchovy_large_error[[2]]) +
             group = 1) 
 
 ggplot(anchovy_large_error[[2]]) +
-  geom_line(aes(year, ssh_anom),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -1151,15 +1158,16 @@ dev.off()
 # Use models selected during model exploration
 widow_total <- gam(catch1 ~ year_f +
                      s(lon, lat) +
-                     s(bottom_depth, k = 4) +
+                     s(bottom_depth, k = 5) +
                      s(jday) +
-                     s(sst_anom, k = 4) + 
-                     # s(sss_anom, k = 4) + # reduced AIC
-                     s(ssh_anom, k = 4) +
+                     s(roms_temperature, k = 5) + 
+                     # s(roms_salinity, k = 5) + # reduced AIC
+                     s(roms_ssh, k = 5) +
                      s(lon, lat, by = ssh_pos),
                    family = tw(link = "log"),
                    method = "REML",
-                   data = yoy_widow)
+                   data = yoy_widow,
+                   select = TRUE)
 summary(widow_total)
 
 widow_year_effect <- year_adjust(widow_total, yoy_widow)
@@ -1169,11 +1177,11 @@ yoy_widow$y_catch <- yoy_widow$catch1 + widow_year_effect[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 widow_formula <- formula(y_catch ~ s(lon, lat) +
-                           s(bottom_depth, k = 4) +
+                           s(bottom_depth, k = 5) +
                            s(jday) +
-                           s(sst_anom, k = 4) +
-                           # s(sss_anom, k = 4) +
-                           s(ssh_anom, k = 4) +
+                           s(roms_temperature, k = 5) +
+                           # s(roms_salinity, k = 5) +
+                           s(roms_ssh, k = 5) +
                            s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 widow_gams <- LOYO_validation(yoy_widow, widow_formula)
@@ -1192,7 +1200,7 @@ widow_error <- RMSE_calc(widow_results, yoy_widow)
 mean(widow_error[[2]]$RMSE) # 29
 
 # Plot the RMSE for each year
-widow_error[[2]]$sst_anom <- yoy_widow$sst_anom[match(widow_error[[2]]$year, yoy_widow$year)]
+widow_error[[2]]$roms_temperature <- yoy_widow$roms_temperature[match(widow_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1200,7 +1208,7 @@ ggplot(widow_error[[2]]) +
             group = 1) 
 
 ggplot(widow_error[[2]]) +
-  geom_line(aes(year, sst_anom),
+  geom_line(aes(year, roms_temperature),
             size = 1,
             group = 1) 
 
@@ -1210,15 +1218,16 @@ ggplot(widow_error[[2]]) +
 # Use models selected during model exploration
 widow_small <- gam(small_catch1 ~ year_f +
                      s(lon, lat) +
-                     s(bottom_depth, k = 4) +
+                     s(bottom_depth, k = 5) +
                      s(jday) +
-                     s(sst_anom, k = 4) +
-                     # s(sss_anom, k = 4) + # reduced AIC
-                     s(ssh_anom, k = 4) +
+                     s(roms_temperature, k = 5) +
+                     # s(roms_salinity, k = 5) + # reduced AIC
+                     s(roms_ssh, k = 5) +
                      s(lon, lat, by = ssh_pos),
                    family = tw(link = "log"),
                    method = "REML",
-                   data = yoy_widow)
+                   data = yoy_widow,
+                   select = TRUE)
 summary(widow_small)
 
 widow_year_small <- year_adjust(widow_small, yoy_widow)
@@ -1228,11 +1237,11 @@ yoy_widow$y_small_catch <- yoy_widow$small_catch1 + widow_year_small[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 widow_small_formula <- formula(y_small_catch ~ s(lon, lat) +
-                                 s(bottom_depth, k = 4) +
+                                 s(bottom_depth, k = 5) +
                                  s(jday) +
-                                 s(sst_anom, k = 4) +
-                                 # s(sss_anom, k = 4) +
-                                 s(ssh_anom, k = 4) +
+                                 s(roms_temperature, k = 5) +
+                                 # s(roms_salinity, k = 5) +
+                                 s(roms_ssh, k = 5) +
                                  s(lon, lat,  by = ssh_pos)) # Note no year factor, added into response
 
 widow_small_gams <- LOYO_validation(yoy_widow, widow_small_formula)
@@ -1247,7 +1256,7 @@ widow_small_results <- LOYO_preds_small(widow_small_gams, widow_data, widow_smal
 widow_small_error <- RMSE_calc_small(widow_small_results, yoy_widow)
 
 # Plot the RMSE for each year
-widow_small_error[[2]]$sss_anom <- yoy_widow$sss_anom[match(widow_small_error[[2]]$year, yoy_widow$year)]
+widow_small_error[[2]]$roms_salinity <- yoy_widow$roms_salinity[match(widow_small_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1255,7 +1264,7 @@ ggplot(widow_small_error[[2]]) +
             group = 1) 
 
 ggplot(widow_small_error[[2]]) +
-  geom_line(aes(year, sss_anom),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -1263,15 +1272,16 @@ ggplot(widow_small_error[[2]]) +
 # Use models selected during model exploration
 widow_large <- gam(large_catch1 ~ year_f +
                      s(lon, lat) +
-                     s(bottom_depth, k = 4) +
+                     s(bottom_depth, k = 5) +
                      s(jday) +
-                     s(sst_anom, k = 4) +
-                     s(sss_anom, k = 4) +
-                     s(ssh_anom, k = 4) +
+                     s(roms_temperature, k = 5) +
+                     s(roms_salinity, k = 5) +
+                     s(roms_ssh, k = 5) +
                      s(lon, lat, by = ssh_pos),
                    family = tw(link = "log"),
                    method = "REML",
-                   data = yoy_widow)
+                   data = yoy_widow,
+                   select = TRUE)
 summary(widow_large)
 
 widow_year_large <- year_adjust(widow_large, yoy_widow)
@@ -1281,11 +1291,11 @@ yoy_widow$y_large_catch <- yoy_widow$large_catch1 + widow_year_large[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 widow_large_formula <- formula(y_large_catch ~ s(lon, lat) +
-                                 s(bottom_depth, k = 4) +
+                                 s(bottom_depth, k = 5) +
                                  s(jday) +
-                                 s(sst_anom, k = 4) +
-                                 s(sss_anom, k = 4) +
-                                 s(ssh_anom, k = 4) +
+                                 s(roms_temperature, k = 5) +
+                                 s(roms_salinity, k = 5) +
+                                 s(roms_ssh, k = 5) +
                                  s(lon, lat,  by = ssh_pos)) # Note no year factor, added into response
 
 widow_large_gams <- LOYO_validation(yoy_widow, widow_large_formula)
@@ -1300,7 +1310,7 @@ widow_large_results <- LOYO_preds_large(widow_large_gams, widow_data, widow_larg
 widow_large_error <- RMSE_calc_large(widow_large_results, yoy_widow)
 
 # Plot the RMSE for each year
-widow_large_error[[2]]$ssh_anom <- yoy_widow$ssh_anom[match(widow_large_error[[2]]$year, yoy_widow$year)]
+widow_large_error[[2]]$roms_ssh <- yoy_widow$roms_ssh[match(widow_large_error[[2]]$year, yoy_widow$year)]
 
 ggplot(widow_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1308,7 +1318,7 @@ ggplot(widow_large_error[[2]]) +
             group = 1) 
 
 ggplot(widow_large_error[[2]]) +
-  geom_line(aes(year, ssh_anom),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -1502,15 +1512,16 @@ dev.off()
 # Use models selected during model exploration
 shortbelly_total <- gam(catch1 ~ year_f +
                           s(lon, lat) +
-                          s(bottom_depth, k = 4) +
+                          s(bottom_depth, k = 5) +
                           s(jday) +
-                          s(sst_anom, k = 4) +
-                          s(sss_anom, k = 4) +
-                          s(ssh_anom, k = 4) + # removal reduced AIC
+                          s(roms_temperature, k = 5) +
+                          s(roms_salinity, k = 5) +
+                          s(roms_ssh, k = 5) + # removal reduced AIC
                           s(lon, lat, by = ssh_pos),
                         family = tw(link = "log"),
                         method = "REML",
-                        data = yoy_shortbelly)
+                        data = yoy_shortbelly,
+                        select = TRUE)
 summary(shortbelly_total)
 
 shortbelly_year_effect <- year_adjust(shortbelly_total, yoy_shortbelly)
@@ -1520,11 +1531,11 @@ yoy_shortbelly$y_catch <- yoy_shortbelly$catch1 + shortbelly_year_effect[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 shortbelly_formula <- formula(y_catch ~ s(lon, lat) +
-                                s(bottom_depth, k = 4) +
+                                s(bottom_depth, k = 5) +
                                 s(jday) +
-                                s(sst_anom, k = 4) +
-                                s(sss_anom, k = 4) +
-                                s(ssh_anom, k = 4) +
+                                s(roms_temperature, k = 5) +
+                                s(roms_salinity, k = 5) +
+                                s(roms_ssh, k = 5) +
                                 s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 shortbelly_gams <- LOYO_validation(yoy_shortbelly, shortbelly_formula)
@@ -1543,7 +1554,7 @@ shortbelly_error <- RMSE_calc(shortbelly_results, yoy_shortbelly)
 mean(shortbelly_error[[2]]$RMSE) # 156
 
 # Plot the RMSE for each year
-shortbelly_error[[2]]$sst_anom <- yoy_shortbelly$sst_anom[match(shortbelly_error[[2]]$year, yoy_shortbelly$year)]
+shortbelly_error[[2]]$roms_temperature <- yoy_shortbelly$roms_temperature[match(shortbelly_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1551,7 +1562,7 @@ ggplot(shortbelly_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_error[[2]]) +
-  geom_line(aes(year, sst_anom),
+  geom_line(aes(year, roms_temperature),
             size = 1,
             group = 1) 
 
@@ -1561,15 +1572,16 @@ ggplot(shortbelly_error[[2]]) +
 # Use models selected during model exploration
 shortbelly_small <- gam(small_catch1 ~ year_f +
                           s(lon, lat) +
-                          s(bottom_depth, k = 4) +
+                          s(bottom_depth, k = 5) +
                           s(jday) +
-                          s(sst_anom, k = 4) +
-                          s(sss_anom, k = 4) +
-                          s(ssh_anom, k = 4) +
+                          s(roms_temperature, k = 5) +
+                          s(roms_salinity, k = 5) +
+                          s(roms_ssh, k = 5) +
                           s(lon, lat, by = ssh_pos),
                         family = tw(link = "log"),
                         method = "REML",
-                        data = yoy_shortbelly)
+                        data = yoy_shortbelly,
+                        select = TRUE)
 summary(shortbelly_small)
 
 shortbelly_year_small <- year_adjust(shortbelly_small, yoy_shortbelly)
@@ -1579,11 +1591,11 @@ yoy_shortbelly$y_small_catch <- yoy_shortbelly$small_catch1 + shortbelly_year_sm
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 shortbelly_small_formula <- formula(y_small_catch ~ s(lon, lat) +
-                                      s(bottom_depth, k = 4) +
+                                      s(bottom_depth, k = 5) +
                                       s(jday) +
-                                      s(sst_anom, k = 4) +
-                                      s(sss_anom, k = 4) +
-                                      s(ssh_anom, k = 4) +
+                                      s(roms_temperature, k = 5) +
+                                      s(roms_salinity, k = 5) +
+                                      s(roms_ssh, k = 5) +
                                       s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 shortbelly_small_gams <- LOYO_validation(yoy_shortbelly, shortbelly_small_formula)
@@ -1598,7 +1610,7 @@ shortbelly_small_results <- LOYO_preds_small(shortbelly_small_gams, shortbelly_d
 shortbelly_small_error <- RMSE_calc_small(shortbelly_small_results, yoy_shortbelly)
 
 # Plot the RMSE for each year
-shortbelly_small_error[[2]]$sss_anom <- yoy_shortbelly$sss_anom[match(shortbelly_small_error[[2]]$year, yoy_shortbelly$year)]
+shortbelly_small_error[[2]]$roms_salinity <- yoy_shortbelly$roms_salinity[match(shortbelly_small_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1606,7 +1618,7 @@ ggplot(shortbelly_small_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_small_error[[2]]) +
-  geom_line(aes(year, sss_anom),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -1614,15 +1626,16 @@ ggplot(shortbelly_small_error[[2]]) +
 # Use models selected during model exploration
 shortbelly_large <- gam(large_catch1 ~ year_f +
                           s(lon, lat) +
-                          s(bottom_depth, k = 4) +
+                          s(bottom_depth, k = 5) +
                           s(jday) +
-                          # s(sst_anom, k = 4) +
-                          s(sss_anom, k = 4) +
-                          s(ssh_anom, k = 4) +
+                          s(roms_temperature, k = 5) +
+                          s(roms_salinity, k = 5) +
+                          s(roms_ssh, k = 5) +
                           s(lon, lat, by = ssh_pos),
                         family = tw(link = "log"),
                         method = "REML",
-                        data = yoy_shortbelly)
+                        data = yoy_shortbelly,
+                        select = TRUE)
 summary(shortbelly_large)
 
 shortbelly_year_large <- year_adjust(shortbelly_large, yoy_shortbelly)
@@ -1632,11 +1645,11 @@ yoy_shortbelly$y_large_catch <- yoy_shortbelly$large_catch1 + shortbelly_year_la
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 shortbelly_large_formula <- formula(y_large_catch ~ s(lon, lat) +
-                                      s(bottom_depth, k = 4) +
+                                      s(bottom_depth, k = 5) +
                                       s(jday) +
-                                      # s(sst_anom, k = 4) +
-                                      s(sss_anom, k = 4) +
-                                      s(ssh_anom, k = 4) +
+                                      s(roms_temperature, k = 5) +
+                                      s(roms_salinity, k = 5) +
+                                      s(roms_ssh, k = 5) +
                                       s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 shortbelly_large_gams <- LOYO_validation(yoy_shortbelly, shortbelly_large_formula)
@@ -1651,7 +1664,7 @@ shortbelly_large_results <- LOYO_preds_large(shortbelly_large_gams, shortbelly_d
 shortbelly_large_error <- RMSE_calc_large(shortbelly_large_results, yoy_shortbelly)
 
 # Plot the RMSE for each year
-shortbelly_large_error[[2]]$ssh_anom <- yoy_shortbelly$ssh_anom[match(shortbelly_large_error[[2]]$year, yoy_shortbelly$year)]
+shortbelly_large_error[[2]]$roms_ssh <- yoy_shortbelly$roms_ssh[match(shortbelly_large_error[[2]]$year, yoy_shortbelly$year)]
 
 ggplot(shortbelly_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1659,7 +1672,7 @@ ggplot(shortbelly_large_error[[2]]) +
             group = 1) 
 
 ggplot(shortbelly_large_error[[2]]) +
-  geom_line(aes(year, ssh_anom),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
@@ -1857,15 +1870,16 @@ dev.off()
 # Use models selected during model exploration
 sdab_total <- gam(catch1 ~ year_f + 
                     s(lon, lat) + 
-                    s(bottom_depth, k = 4) +
+                    s(bottom_depth, k = 5) +
                     s(jday) + 
-                    s(sst_anom, k = 4) +
-                    s(sss_anom, k = 4) +
-                    s(ssh_anom, k = 4) +
+                    s(roms_temperature, k = 5) +
+                    s(roms_salinity, k = 5) +
+                    s(roms_ssh, k = 5) +
                     s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_sdab)
+                  data = yoy_sdab,
+                  select = TRUE)
 summary(sdab_total)
 
 sdab_year_effect <- year_adjust(sdab_total, yoy_sdab)
@@ -1875,11 +1889,11 @@ yoy_sdab$y_catch <- yoy_sdab$catch1 + sdab_year_effect[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 sdab_formula <- formula(y_catch ~ s(lon, lat) + 
-                          s(bottom_depth, k = 4) +
+                          s(bottom_depth, k = 5) +
                           s(jday) + 
-                          s(sst_anom, k = 4) +
-                          s(sss_anom, k = 4) +
-                          s(ssh_anom, k = 4) +
+                          s(roms_temperature, k = 5) +
+                          s(roms_salinity, k = 5) +
+                          s(roms_ssh, k = 5) +
                           s(lon, lat, by = ssh_pos)) # Note no factor(year), added into response
 
 sdab_gams <- LOYO_validation(yoy_sdab, sdab_formula)
@@ -1898,7 +1912,7 @@ sdab_error <- RMSE_calc(sdab_results, yoy_sdab)
 mean(sdab_error[[2]]$RMSE) # 134
 
 # Plot the RMSE for each year
-sdab_error[[2]]$sst_anom <- yoy_sdab$sst_anom[match(sdab_error[[2]]$year, yoy_sdab$year)]
+sdab_error[[2]]$roms_temperature <- yoy_sdab$roms_temperature[match(sdab_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1917,7 +1931,7 @@ ggplot(sdab_error[[2]]) +
         axis.line = element_line(color = "black"))
 
 ggplot(sdab_error[[2]]) +
-  geom_line(aes(year, sst_anom),
+  geom_line(aes(year, roms_temperature),
             size = 1,
             group = 1) 
 
@@ -1927,15 +1941,16 @@ ggplot(sdab_error[[2]]) +
 # Use models selected during model exploration
 sdab_small <- gam(small_catch1 ~ year_f +
                     s(lon, lat) +
-                    s(bottom_depth, k = 4) +
+                    s(bottom_depth, k = 5) +
                     s(jday) +
-                    s(sst_anom, k = 4) +
-                    s(sss_anom, k = 4) +
-                    s(ssh_anom, k = 4) +
+                    s(roms_temperature, k = 5) +
+                    s(roms_salinity, k = 5) +
+                    s(roms_ssh, k = 5) +
                     s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_sdab)
+                  data = yoy_sdab,
+                  select = TRUE)
 summary(sdab_small)
 
 sdab_year_small <- year_adjust(sdab_small, yoy_sdab)
@@ -1945,11 +1960,11 @@ yoy_sdab$y_small_catch <- yoy_sdab$small_catch1 + sdab_year_small[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 sdab_small_formula <- formula(y_small_catch ~ s(lon, lat) +
-                                s(bottom_depth, k = 4) +
+                                s(bottom_depth, k = 5) +
                                 s(jday) +
-                                s(sst_anom, k = 4) +
-                                s(sss_anom, k = 4) +
-                                s(ssh_anom, k = 4) +
+                                s(roms_temperature, k = 5) +
+                                s(roms_salinity, k = 5) +
+                                s(roms_ssh, k = 5) +
                                 s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 sdab_small_gams <- LOYO_validation(yoy_sdab, sdab_small_formula)
@@ -1964,7 +1979,7 @@ sdab_small_results <- LOYO_preds_small(sdab_small_gams, sdab_data, sdab_small_re
 sdab_small_error <- RMSE_calc_small(sdab_small_results, yoy_sdab)
 
 # Plot the RMSE for each year
-sdab_small_error[[2]]$sss_anom <- yoy_sdab$sss_anom[match(sdab_small_error[[2]]$year, yoy_sdab$year)]
+sdab_small_error[[2]]$roms_salinity <- yoy_sdab$roms_salinity[match(sdab_small_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_small_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -1972,7 +1987,7 @@ ggplot(sdab_small_error[[2]]) +
             group = 1) 
 
 ggplot(sdab_small_error[[2]]) +
-  geom_line(aes(year, sss_anom),
+  geom_line(aes(year, roms_salinity),
             size = 1,
             group = 1)
 
@@ -1980,15 +1995,16 @@ ggplot(sdab_small_error[[2]]) +
 # Use models selected during model exploration
 sdab_large <- gam(large_catch1 ~ year_f +
                     s(lon, lat) +
-                    s(bottom_depth, k = 4) +
+                    s(bottom_depth, k = 5) +
                     s(jday) +
-                    s(sst_anom, k = 4) +
-                    s(sss_anom, k = 4) +
-                    # s(ssh_anom, k = 4) +
+                    s(roms_temperature, k = 5) +
+                    s(roms_salinity, k = 5) +
+                    s(roms_ssh, k = 5) +
                     s(lon, lat, by = ssh_pos),
                   family = tw(link = "log"),
                   method = "REML",
-                  data = yoy_sdab)
+                  data = yoy_sdab,
+                  select = TRUE)
 summary(sdab_large)
 
 sdab_year_large <- year_adjust(sdab_large, yoy_sdab)
@@ -1998,11 +2014,11 @@ yoy_sdab$y_large_catch <- yoy_sdab$large_catch1 + sdab_year_large[, 1]
 # Run GAMs with each year left out
 # Leave out one year, run model on remaining data
 sdab_large_formula <- formula(y_large_catch ~ s(lon, lat) +
-                                s(bottom_depth, k = 4) +
+                                s(bottom_depth, k = 5) +
                                 s(jday) +
-                                s(sst_anom, k = 4) +
-                                s(sss_anom, k = 4) +
-                                # s(ssh_anom, k = 4) +
+                                s(roms_temperature, k = 5) +
+                                s(roms_salinity, k = 5) +
+                                s(roms_ssh, k = 5) +
                                 s(lon, lat, by = ssh_pos)) # Note no year factor, added into response
 
 sdab_large_gams <- LOYO_validation(yoy_sdab, sdab_large_formula)
@@ -2017,7 +2033,7 @@ sdab_large_results <- LOYO_preds_large(sdab_large_gams, sdab_data, sdab_large_re
 sdab_large_error <- RMSE_calc_large(sdab_large_results, yoy_sdab)
 
 # Plot the RMSE for each year
-sdab_large_error[[2]]$ssh_anom <- yoy_sdab$ssh_anom[match(sdab_large_error[[2]]$year, yoy_sdab$year)]
+sdab_large_error[[2]]$roms_ssh <- yoy_sdab$roms_ssh[match(sdab_large_error[[2]]$year, yoy_sdab$year)]
 
 ggplot(sdab_large_error[[2]]) +
   geom_line(aes(year, RMSE),
@@ -2025,7 +2041,7 @@ ggplot(sdab_large_error[[2]]) +
             group = 1) 
 
 ggplot(sdab_large_error[[2]]) +
-  geom_line(aes(year, ssh_anom),
+  geom_line(aes(year, roms_ssh),
             size = 1,
             group = 1)
 
