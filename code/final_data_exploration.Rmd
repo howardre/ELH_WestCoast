@@ -111,18 +111,20 @@ size_calc <- function(sp, size){
   sizes <- mutate(sp, size_class = case_when(std_length <= size ~ "small",
                                              std_length > size ~ "large")) 
   subset <- sizes %>% 
-    dplyr::group_by(numeric_date, station, haul_no, cruise, haul_exp, size_class) %>%
+    dplyr::group_by(numeric_date, station, haul_no, haul_exp, size_class, cruise) %>%
     mutate(size_class = factor(size_class, levels = c("small", "large"))) %>%
     summarise(size_count = length(size_class)) %>%
     mutate(size_subset = size_count * haul_exp) %>%
     tidyr::pivot_wider(names_from = size_class,
-                       values_from = size_subset) %>%
+                       values_from = size_subset)
+  
+  subset_coalesce <- subset %>% group_by(numeric_date, station, haul_no, cruise) %>%
+    summarise_all(coalesce_by_column) 
+  
+  subset_final <- subset_coalesce %>% 
     mutate_at(c("small", "large"), ~tidyr::replace_na(., 0))
 
-subset_coalesce <- subset %>% group_by(numeric_date, station, haul_no, cruise) %>%
-    summarise_all(coalesce_by_column) 
-
-  return(subset_coalesce)
+  return(subset_final)
 }
 
 # Plot relevant variables
