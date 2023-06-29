@@ -1820,9 +1820,9 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly',
 dev.off()
 
 # Variable coefficient plots
-pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$ssh_pos, 8)
-pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$ssh_pos, 8)
-pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$ssh_pos, 8)
+pred_shortbelly_all <- variable_coefficient(shortbelly_total, yoy_shortbelly, yoy_shortbelly$ssh_pos, 7)
+pred_shortbelly_small <- variable_coefficient(shortbelly_small, yoy_shortbelly, yoy_shortbelly$ssh_pos, 6)
+pred_shortbelly_large <- variable_coefficient(shortbelly_large, yoy_shortbelly, yoy_shortbelly$ssh_pos, 6)
 
 windows()
 par(mfrow = c(1, 3),
