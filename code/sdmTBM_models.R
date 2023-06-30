@@ -24,9 +24,8 @@ read_data <- function(file){
   yoy <- readRDS(here('data', file)) %>% 
     tidyr::drop_na(roms_temperature, roms_salinity, roms_ssh, bottom_depth, year, jday, lat, lon) %>%
     filter(catch < 2500 &
-             year != 2020 &
-             year < 2019 &
-             year > 2010) %>%
+             year < 2020 &
+             lat < 42) %>%
     mutate(catch1 = catch + 1,
            small_catch1 = small + 1,
            large_catch1 = large + 1,
@@ -47,21 +46,20 @@ yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- read_data('yoy_dab.Rdata') 
 
 # Make mesh object with matrices
-yoy_widow_mesh <- make_mesh(yoy_widow, xy_cols = c("X", "Y"), cutoff = 10)
+yoy_widow_mesh <- make_mesh(yoy_widow, xy_cols = c("X", "Y"), cutoff = 5)
 plot(yoy_widow_mesh)
 
 # Fit model
 widow_model <- sdmTMB(catch1 ~ s(bottom_depth, k = 5) +
-                        s(jday) +
-                        s(roms_temperature, k = 5) + 
-                        s(roms_salinity, k = 5) + 
-                        s(roms_ssh, k = 5),
+                        s(roms_temperature, k = 5) +
+                        s(roms_salinity, k = 5) +
+                        s(jday),
                       data = yoy_widow,
                       mesh = yoy_widow_mesh,
                       time = "year",
-                      family = tweedie(link = "log"),
-                      spatial = "off",
-                      spatiotemporal =  "ar1")
+                      family = tweedie(),
+                      spatiotemporal = "rw",
+                      control = sdmTMBcontrol(newton_loops = 1))
 
 # Plot
 sanity(widow_model)
