@@ -50,6 +50,11 @@ yoy_widow_mesh <- make_mesh(yoy_widow, xy_cols = c("X", "Y"), cutoff = 10)
 plot(yoy_widow_mesh)
 
 # Fit model
+# Getting 'ln_smooth_sigma' error, can't get model to work
+# Sometimes have issues with convergence
+# Seems very temperamental, need to investigate further with other data sets
+# Works better with full time series, shortened time frame is more problematic
+# tidy() shows that there's no standard error
 widow_model <- sdmTMB(catch ~ s(bottom_depth, k = 5) +
                         s(roms_temperature, k = 5) +
                         s(roms_salinity, k = 5) +
@@ -60,12 +65,12 @@ widow_model <- sdmTMB(catch ~ s(bottom_depth, k = 5) +
                       family = tweedie(),
                       spatiotemporal = "rw",
                       control = sdmTMBcontrol(newton_loops = 1))
+sanity(widow_model)
 
 # Plot
-sanity(widow_model)
 tidy(widow_model)
 tidy(widow_model,
      effect = "ran_pars", 
      conf.int = T)
-plot_smooth(widow_model, 
-            ggplot = T)
+plot(widow_model, 
+     ggplot = T)
