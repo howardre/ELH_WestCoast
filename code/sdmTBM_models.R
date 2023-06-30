@@ -46,11 +46,11 @@ yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- read_data('yoy_dab.Rdata') 
 
 # Make mesh object with matrices
-yoy_widow_mesh <- make_mesh(yoy_widow, xy_cols = c("X", "Y"), cutoff = 5)
+yoy_widow_mesh <- make_mesh(yoy_widow, xy_cols = c("X", "Y"), cutoff = 10)
 plot(yoy_widow_mesh)
 
 # Fit model
-widow_model <- sdmTMB(catch1 ~ s(bottom_depth, k = 5) +
+widow_model <- sdmTMB(catch ~ s(bottom_depth, k = 5) +
                         s(roms_temperature, k = 5) +
                         s(roms_salinity, k = 5) +
                         s(jday),
