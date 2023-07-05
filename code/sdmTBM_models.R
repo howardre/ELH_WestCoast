@@ -32,12 +32,12 @@ read_data <- function(file){
 
 # Data
 yoy_hake <- read_data('yoy_hake.Rdata') 
-yoy_anchovy <- read_data('yoy_anch.Rdata') 
-yoy_anchovy <- filter(yoy_anchovy, year > 2013 & jday < 164)
-yoy_widow <- read_data('yoy_widw.Rdata')
-yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
-yoy_shortbelly <- read_data('yoy_sbly.Rdata') 
-yoy_sdab <- read_data('yoy_dab.Rdata') 
+# yoy_anchovy <- read_data('yoy_anch.Rdata') 
+# yoy_anchovy <- filter(yoy_anchovy, year > 2013 & jday < 164)
+# yoy_widow <- read_data('yoy_widw.Rdata')
+# yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
+# yoy_shortbelly <- read_data('yoy_sbly.Rdata') 
+# yoy_sdab <- read_data('yoy_dab.Rdata') 
 
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
@@ -47,19 +47,19 @@ yoy_hake_mesh <- make_mesh(yoy_hake,
 plot(yoy_hake_mesh)
 
 # Fit model
+# More info here: https://pbs-assess.github.io/sdmTMB/index.html
 # Can add k-fold cross validation
 hake_model <- sdmTMB(catch ~ 0 + as.factor(year) +
                        s(bottom_depth, k = 5) +
                        s(roms_temperature, k = 5) +
                        s(roms_salinity, k = 5) +
-                       s(jday),
-                     spatial_varying = ~ ssh_pos,
+                       s(jday) ,
+                     spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
                      data = yoy_hake,
                      mesh = yoy_hake_mesh,
                      time = "year",
                      family = tweedie(link = "log"),
-                     spatiotemporal = "off",
-                     control = sdmTMBcontrol(newton_loops = 1))
+                     spatiotemporal = "off")
 sanity(hake_model)
 
 # Plot
@@ -71,15 +71,20 @@ tidy(hake_model,
 
 visreg(hake_model, xvar = "bottom_depth", scale = "response")
 
-# Variable coefficient
+# Predict
+# Need to make grid, may fix the varying coefficient issues below
+hake_pred <- predict(hake_model)
+
+# Varying coefficient
 hake_vc_grid <- replicate_df(yoy_hake, "ssh_pos", unique(yoy_hake$ssh_pos))
-hake_vc_grid$scaled_ssh <- (hake_vc_grid$ssh_pos - mean(yoy_hake$ssh_pos)) / sd(yoy_hake$ssh_pos)
-hake_pred <- as.data.frame(predict(hake_model,
-                     newdata = hake_vc_grid))
+hake_vc_grid <- hake_vc_grid %>% 
+  mutate(across(c(lat, lon), round, digits = 4))
+hake_pred <- predict(hake_model,
+                     newdata = hake_vc_grid)
 
 plot_map_raster <- function(dat, column = est) {
   ggplot(dat, aes(X, Y, fill = {{ column }})) +
-    geom_tile() +
+    geom_raster() +
     facet_wrap(~ ssh_pos) +
     coord_fixed() +
     scale_fill_viridis_c()
