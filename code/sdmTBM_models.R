@@ -4,18 +4,12 @@
 
 # Load libraries ----
 library(readxl)
-library(plyr)
 library(tibble)
 library(here)
 library(ggplot2)
-library(lubridate)
-library(date)
 library(dplyr)
-library(maps)
-library(mapdata)
-library(gridExtra)
-library(grid)
 library(sdmTMB)
+library(visreg)
 
 # Load data and functions ----
 # Functions
@@ -46,31 +40,49 @@ yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- read_data('yoy_dab.Rdata') 
 
 # Make mesh object with matrices
-yoy_widow_mesh <- make_mesh(yoy_widow, xy_cols = c("X", "Y"), cutoff = 10)
-plot(yoy_widow_mesh)
+yoy_hake_mesh <- make_mesh(yoy_hake, 
+                           xy_cols = c("X", "Y"), 
+                           cutoff = 10,
+                           seed = 1993)
+plot(yoy_hake_mesh)
 
 # Fit model
-# Getting 'ln_smooth_sigma' error, can't get model to work
-# Sometimes have issues with convergence
-# Seems very temperamental, need to investigate further with other data sets
-# Works better with full time series, shortened time frame is more problematic
-# tidy() shows that there's no standard error
-widow_model <- sdmTMB(catch ~ s(bottom_depth, k = 5) +
-                        s(roms_temperature, k = 5) +
-                        s(roms_salinity, k = 5) +
-                        s(jday),
-                      data = yoy_widow,
-                      mesh = yoy_widow_mesh,
-                      time = "year",
-                      family = tweedie(),
-                      spatiotemporal = "rw",
-                      control = sdmTMBcontrol(newton_loops = 1))
-sanity(widow_model)
+# Can add k-fold cross validation
+hake_model <- sdmTMB(catch ~ 0 + as.factor(year) +
+                       s(bottom_depth, k = 5) +
+                       s(roms_temperature, k = 5) +
+                       s(roms_salinity, k = 5) +
+                       s(jday),
+                     spatial_varying = ~ ssh_pos,
+                     data = yoy_hake,
+                     mesh = yoy_hake_mesh,
+                     time = "year",
+                     family = tweedie(link = "log"),
+                     spatiotemporal = "off",
+                     control = sdmTMBcontrol(newton_loops = 1))
+sanity(hake_model)
 
 # Plot
-tidy(widow_model)
-tidy(widow_model,
+hake_model
+tidy(hake_model)
+tidy(hake_model,
      effect = "ran_pars", 
      conf.int = T)
-plot(widow_model, 
-     ggplot = T)
+
+visreg(hake_model, xvar = "bottom_depth", scale = "response")
+
+# Variable coefficient
+hake_vc_grid <- replicate_df(yoy_hake, "ssh_pos", unique(yoy_hake$ssh_pos))
+hake_vc_grid$scaled_ssh <- (hake_vc_grid$ssh_pos - mean(yoy_hake$ssh_pos)) / sd(yoy_hake$ssh_pos)
+hake_pred <- as.data.frame(predict(hake_model,
+                     newdata = hake_vc_grid))
+
+plot_map_raster <- function(dat, column = est) {
+  ggplot(dat, aes(X, Y, fill = {{ column }})) +
+    geom_tile() +
+    facet_wrap(~ ssh_pos) +
+    coord_fixed() +
+    scale_fill_viridis_c()
+}
+
+plot_map_raster(filter(hake_pred, ssh_pos == 10), zeta_s_ssh_pos)
