@@ -20,21 +20,9 @@ library(fields)
 # Functions
 source(here('code/functions', 'vis_gam_COLORS.R'))
 source(here('code/functions', 'distance_function.R'))
-read_data <- function(file){
-  yoy <- readRDS(here('data', file)) %>% 
-    tidyr::drop_na(roms_temperature, roms_salinity, roms_ssh, bottom_depth, year, jday, lat, lon) %>%
-    filter(catch < 2500 &
-             year < 2020 &
-             lat < 42) %>%
-    mutate(catch1 = catch + 1,
-           small_catch1 = small + 1,
-           large_catch1 = large + 1,
-           year_f = as.factor(year),
-           ssh_pos = year_ssh + abs(min(year_ssh)) + 10)
-  yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
-  yoy_utm <- add_utm_columns(yoy, c("lon", "lat")) # add UTM coordinates
-  return(yoy_utm)
-}
+source(here('code/functions', 'sdmTBM_grid.R'))
+source(here('code/functions', 'sdmTBM_map.R'))
+source(here('code/functions', 'read_data.R'))
 
 # Data
 yoy_hake <- read_data('yoy_hake.Rdata') 
@@ -44,6 +32,9 @@ yoy_hake <- read_data('yoy_hake.Rdata')
 # yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
 # yoy_shortbelly <- read_data('yoy_sbly.Rdata') 
 # yoy_sdab <- read_data('yoy_dab.Rdata') 
+
+# Models
+
 
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
@@ -79,4 +70,5 @@ visreg(hake_model,
        scale = "response")
 
 # Predict and plot
+hake_pred <- sdmTMB_grid(yoy_hake, hake_model)
 sdmTMB_map(yoy_hake, hake_pred)
