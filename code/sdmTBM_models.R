@@ -24,6 +24,26 @@ source(here('code/functions', 'sdmTBM_grid.R'))
 source(here('code/functions', 'sdmTBM_map.R'))
 source(here('code/functions', 'read_data.R'))
 
+# Functions
+LOYO_validation <- function(df){
+  models <- lapply(unique(df$year), function(x) {
+    the_mesh <- make_mesh(df[df$year != x, ], 
+                          xy_cols = c("X", "Y"), 
+                          cutoff = 10,
+                          seed = 1993)
+    output <- sdmTMB(catch ~ 0 + as.factor(year) +
+                       s(bottom_depth, k = 5) +
+                       s(roms_temperature, k = 5) +
+                       s(roms_salinity, k = 5) +
+                       s(jday),
+                     mesh = the_mesh,
+                     time = "year",
+                     family = tweedie(link = "log"),
+                     data = df[df$year != x, ])
+  }) # Gives the list of models with each year left out
+  return(models)
+}
+
 # Data
 yoy_hake <- read_data('yoy_hake.Rdata') 
 # yoy_anchovy <- read_data('yoy_anch.Rdata') 
@@ -34,7 +54,19 @@ yoy_hake <- read_data('yoy_hake.Rdata')
 # yoy_sdab <- read_data('yoy_dab.Rdata') 
 
 # Models
-
+sdmTMB_formula <- function(df, mesh){
+  sdmTMB(catch ~ 0 + as.factor(year) +
+           s(bottom_depth, k = 5) +
+           s(roms_temperature, k = 5) +
+           s(roms_salinity, k = 5) +
+           s(jday),
+         # spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
+         data = df,
+         mesh = mesh,
+         time = "year",
+         family = tweedie(link = "log"),
+         spatiotemporal = "rw")
+  }
 
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
@@ -46,23 +78,16 @@ plot(yoy_hake_mesh)
 # Fit model
 # More info here: https://pbs-assess.github.io/sdmTMB/index.html
 # Can add k-fold cross validation
-hake_model <- sdmTMB(catch ~ 0 + as.factor(year) +
-                       s(bottom_depth, k = 5) +
-                       s(roms_temperature, k = 5) +
-                       s(roms_salinity, k = 5) +
-                       s(jday) ,
-                     # spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
-                     data = yoy_hake,
-                     mesh = yoy_hake_mesh,
-                     time = "year",
-                     family = tweedie(link = "log"),
-                     spatiotemporal = "rw")
-sanity(hake_model)
+hake_model <- sdmTMB_formula(yoy_hake, yoy_hake_mesh)
 
+sanity(hake_model)
 tidy(hake_model)
 tidy(hake_model,
      effect = "ran_pars", 
      conf.int = T)
+
+# Leave-one-year-out cross validation
+hake_results <- LOYO_validation(yoy_hake)
 
 # Plot covariates
 visreg(hake_model, 
