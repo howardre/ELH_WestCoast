@@ -108,7 +108,7 @@ plot(yoy_hake_mesh)
 hake_model <- sdmTMB_formula(yoy_hake, 
                              yoy_hake_mesh)
 hake_model_small <- sdmTMB_small(yoy_hake,
-                                 yoy_hake_mesh)
+                                 yoy_hake_mesh) # still not quite working
 hake_model_large <- sdmTMB_large(yoy_hake,
                                  yoy_hake_mesh)
 
