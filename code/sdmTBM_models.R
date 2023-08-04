@@ -8,7 +8,7 @@ library(tibble)
 library(here)
 library(ggplot2)
 library(dplyr)
-library(sdmTMB)
+library(sdmTMB) # do not update TMB past 1.9.4
 library(visreg)
 library(raster)
 library(sf)
@@ -20,8 +20,8 @@ library(fields)
 # Functions
 source(here('code/functions', 'vis_gam_COLORS.R'))
 source(here('code/functions', 'distance_function.R'))
-source(here('code/functions', 'sdmTBM_grid.R'))
-source(here('code/functions', 'sdmTBM_map.R'))
+source(here('code/functions', 'sdmTMB_grid.R'))
+source(here('code/functions', 'sdmTMB_map.R'))
 source(here('code/functions', 'read_data.R'))
 
 # Functions
@@ -51,12 +51,14 @@ sdmTMB_formula <- function(df, mesh){
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
            s(jday),
-         # spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
+         spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
          data = df,
          mesh = mesh,
          time = "year",
+         spatial = "on",
          family = tweedie(link = "log"),
-         spatiotemporal = "rw")
+         spatiotemporal = "ar1",
+         control = sdmTMBcontrol(newton_loops = 1))
 }
 
 sdmTMB_small <- function(df, mesh){
@@ -65,12 +67,14 @@ sdmTMB_small <- function(df, mesh){
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
            s(jday),
-         # spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
+         spatial_varying = ~ 0 + ssh_pos, 
          data = df,
          mesh = mesh,
          time = "year",
+         spatial = "on",
          family = tweedie(link = "log"),
-         spatiotemporal = "rw")
+         spatiotemporal = "ar1",
+         control = sdmTMBcontrol(newton_loops = 1))
 }
 
 sdmTMB_large <- function(df, mesh){
@@ -79,12 +83,14 @@ sdmTMB_large <- function(df, mesh){
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
            s(jday),
-         # spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
+         spatial_varying = ~ 0 + ssh_pos, 
          data = df,
          mesh = mesh,
          time = "year",
+         spatial = "on",
          family = tweedie(link = "log"),
-         spatiotemporal = "rw")
+         spatiotemporal = "ar1",
+         control = sdmTMBcontrol(newton_loops = 1))
 }
 
 # Data
@@ -100,7 +106,8 @@ yoy_hake <- read_data('yoy_hake.Rdata')
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"), 
-                           cutoff = 10,
+                           n_knots = 200,
+                           type = "cutoff_search",
                            seed = 1993)
 plot(yoy_hake_mesh)
 
@@ -108,7 +115,7 @@ plot(yoy_hake_mesh)
 hake_model <- sdmTMB_formula(yoy_hake, 
                              yoy_hake_mesh)
 hake_model_small <- sdmTMB_small(yoy_hake,
-                                 yoy_hake_mesh) # still not quite working
+                                 yoy_hake_mesh)
 hake_model_large <- sdmTMB_large(yoy_hake,
                                  yoy_hake_mesh)
 
@@ -129,7 +136,7 @@ tidy(hake_model_large,
      conf.int = T)
 
 # Leave-one-year-out cross validation
-hake_results <- LOYO_validation(yoy_hake) # Not all converging
+hake_results <- LOYO_validation(yoy_hake) # Test to see if all converge
 
 # Plot covariates
 visreg(hake_model, 
