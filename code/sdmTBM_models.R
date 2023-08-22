@@ -46,7 +46,7 @@ LOYO_validation <- function(df){
 }
 
 sdmTMB_formula <- function(df, mesh){
-  sdmTMB(catch ~ 0 + as.factor(year) +
+  sdmTMB(catch + 1 ~ 0 +
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
@@ -62,7 +62,7 @@ sdmTMB_formula <- function(df, mesh){
 }
 
 sdmTMB_small <- function(df, mesh){
-  sdmTMB(small ~ 0 + as.factor(year) +
+  sdmTMB(small + 0.1 ~ 
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
@@ -78,7 +78,7 @@ sdmTMB_small <- function(df, mesh){
 }
 
 sdmTMB_large <- function(df, mesh){
-  sdmTMB(large ~ 0 + as.factor(year) +
+  sdmTMB(large + 0.1 ~ 
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
