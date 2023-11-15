@@ -46,12 +46,13 @@ LOYO_validation <- function(df){
 }
 
 sdmTMB_formula <- function(df, mesh){
-  sdmTMB(catch + 1 ~ 0 +
+  sdmTMB(catch ~ 0 +
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
+           s(ssh_anom, k = 5) +
            s(jday),
-         spatial_varying = ~ 0 + ssh_pos, # Not sure this is the right way to do this with SSH
+       # spatial_varying = ~ 0 + ssh_pos, # change to new variables
          data = df,
          mesh = mesh,
          time = "year",
@@ -62,12 +63,13 @@ sdmTMB_formula <- function(df, mesh){
 }
 
 sdmTMB_small <- function(df, mesh){
-  sdmTMB(small + 0.1 ~ 
+  sdmTMB(small ~ 0 +
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
+           s(ssh_anom, k = 5) +
            s(jday),
-         spatial_varying = ~ 0 + ssh_pos, 
+       #  spatial_varying = ~ 0 + ssh_pos, 
          data = df,
          mesh = mesh,
          time = "year",
@@ -78,12 +80,13 @@ sdmTMB_small <- function(df, mesh){
 }
 
 sdmTMB_large <- function(df, mesh){
-  sdmTMB(large + 0.1 ~ 
+  sdmTMB(large ~ 0 +
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
+           s(ssh_anom, k = 5) +
            s(jday),
-         spatial_varying = ~ 0 + ssh_pos, 
+       #  spatial_varying = ~ 0 + ssh_pos, 
          data = df,
          mesh = mesh,
          time = "year",
@@ -112,6 +115,8 @@ yoy_hake_mesh <- make_mesh(yoy_hake,
 plot(yoy_hake_mesh)
 
 # Fit models
+# Currently having issues with spatially varying term
+# May improve with the new variables?
 hake_model <- sdmTMB_formula(yoy_hake, 
                              yoy_hake_mesh)
 hake_model_small <- sdmTMB_small(yoy_hake,
@@ -119,7 +124,7 @@ hake_model_small <- sdmTMB_small(yoy_hake,
 hake_model_large <- sdmTMB_large(yoy_hake,
                                  yoy_hake_mesh)
 
-sanity(hake_model)
+sanity(hake_model) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model)
 tidy(hake_model,
      effect = "ran_pars", 
