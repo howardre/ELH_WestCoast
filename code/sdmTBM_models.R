@@ -15,6 +15,7 @@ library(sf)
 library(colorspace)
 library(mapdata)
 library(fields)
+library(ggpubr)
 
 # Load data and functions ----
 # Functions
@@ -125,17 +126,14 @@ hake_model_large <- sdmTMB_large(yoy_hake,
                                  yoy_hake_mesh)
 
 sanity(hake_model) # sigma_z is the SD of the spatially varying coefficient field
-tidy(hake_model)
 tidy(hake_model,
      effect = "ran_pars", 
      conf.int = T)
 sanity(hake_model_small)
-tidy(hake_model_small)
 tidy(hake_model_small,
      effect = "ran_pars", 
      conf.int = T)
 sanity(hake_model_large)
-tidy(hake_model_large)
 tidy(hake_model_large,
      effect = "ran_pars", 
      conf.int = T)
@@ -144,16 +142,81 @@ tidy(hake_model_large,
 hake_results <- LOYO_validation(yoy_hake) # Test to see if all converge
 
 # Plot covariates
-visreg(hake_model, 
-       xvar = "bottom_depth", 
-       scale = "response")
+individual_plot <- function(output, variable, xlab){
+  ggplot(output$fit, aes(x = variable, y = visregFit)) +
+    geom_line(color = "black",
+              linewidth = 1,
+              show.legend = FALSE) +
+    geom_ribbon(aes(ymin = visregLwr, 
+                    ymax = visregUpr,
+                    fill = "coral2"),
+                alpha = 0.5,
+                show.legend = FALSE) +
+    labs(x = xlab,
+         y = "Abundance Anomalies") 
+}
+
+plot_variables <- function(model, data){
+  depth <- visreg(model,
+                  data = data,
+                  xvar = "bottom_depth",
+                  plot = FALSE)
+  depth_plot <- individual_plot(depth, bottom_depth, "Bottom Depth")
+  
+  temp <- visreg(model,
+                 data = data,
+                 xvar = "roms_temperature",
+                 plot = FALSE)
+  temp_plot <- individual_plot(temp, roms_temperature, "Temperature (\u00B0C)")
+    
+  salt <- visreg(model,
+                 data = data,
+                 xvar = "roms_salinity",
+                 plot = FALSE)
+  salt_plot <- individual_plot(salt, roms_salinity, "Salinity")
+  
+  ssh <- visreg(model,
+                 data = data,
+                 xvar = "ssh_anom",
+                 plot = FALSE)
+  ssh_plot <- individual_plot(ssh, ssh_anom, "Sea Surface Height")
+  
+  doy <- visreg(model,
+                data = data,
+                xvar = "jday",
+                plot = FALSE)
+  doy_plot <- individual_plot(doy, jday, "Day of Year")
+  
+  ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot) +
+    theme_classic() +
+    theme(axis.ticks = element_blank(),
+          axis.text = element_text(family = "serif", size = 18),
+          axis.title = element_text(family = "serif", size = 22),
+          axis.text.x = element_text(angle = 0, vjust = 0.7))
+}
+
+plot_variables(hake_model, yoy_hake)
+plot_variables(hake_model_small, yoy_hake)
+plot_variables(hake_model_large, yoy_hake)
+
 
 # Predict and plot
+nlat = 40
+nlon = 60
+latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
+lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
+
 hake_pred <- sdmTMB_grid(yoy_hake, hake_model)
-sdmTMB_map(yoy_hake, hake_pred)
-
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small)
-sdmTMB_map(yoy_hake, hake_pred_small)
-
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large)
+
+
+windows(height = 15, width = 24)
+par(mfrow = c(1, 3),
+    mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_map(yoy_hake, hake_pred)
+sdmTMB_map(yoy_hake, hake_pred_small)
 sdmTMB_map(yoy_hake, hake_pred_large)

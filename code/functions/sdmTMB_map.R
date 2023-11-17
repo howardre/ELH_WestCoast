@@ -12,11 +12,6 @@ sdmTMB_map <- function(df, preds){
   breaks_to_include = min(which(n_in_class == T)):(max(which(n_in_class == T)) + 1)
   
   # Make map
-  windows(width = 7, height = 10)
-  par(mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
-      oma = c(1, 1, 1, 1),
-      mgp = c(5, 2, 0),
-      family = "serif")
   image(lond,
         latd,
         t(matrix(preds$est,

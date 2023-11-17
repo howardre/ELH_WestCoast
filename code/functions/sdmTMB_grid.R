@@ -1,4 +1,4 @@
-sdmTMB_grid <- function(df, gam){
+sdmTMB_grid <- function(df, model){
   nlat = 40
   nlon = 60
   latd = seq(min(df$lat), max(df$lat), length.out = nlat)
@@ -14,13 +14,14 @@ sdmTMB_grid <- function(df, gam){
     spatial_grid$dist[k] <- min(dist)
   }
   spatial_grid$year <- 2010
-  spatial_grid$bottom_depth <- median(df$bottom_depth, na.rm = T)
-  spatial_grid$roms_temperature <- median(df$roms_temperature, na.rm = T)
-  spatial_grid$roms_salinity <- median(df$roms_salinity, na.rm = T)
-  spatial_grid$jday <- median(df$jday, na.rm = T)
+  spatial_grid$bottom_depth <- median(df$bottom_depth, na.rm = TRUE)
+  spatial_grid$roms_temperature <- median(df$roms_temperature, na.rm = TRUE)
+  spatial_grid$roms_salinity <- median(df$roms_salinity, na.rm = TRUE)
+  spatial_grid$ssh_anom <- median(df$ssh_anom, na.rm = TRUE)
+  spatial_grid$jday <- median(df$jday, na.rm = TRUE)
   spatial_grid <- add_utm_columns(spatial_grid, c("lon", "lat"))
   
-  preds <- predict(gam, 
+  preds <- predict(model, 
                    newdata = spatial_grid, 
                    "response")
   preds$est[preds$dist > 50000] <- NA # may want to find a way to mask with a polygon
