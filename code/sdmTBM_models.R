@@ -161,32 +161,82 @@ plot_variables <- function(model, data){
                   data = data,
                   xvar = "bottom_depth",
                   plot = FALSE)
-  depth_plot <- individual_plot(depth, bottom_depth, "Bottom Depth")
-  
+  depth_plot <- ggplot(depth$fit, aes(x = bottom_depth, y = visregFit)) +
+    geom_line(color = "black",
+              linewidth = 1,
+              show.legend = FALSE) +
+    geom_ribbon(aes(ymin = visregLwr, 
+                    ymax = visregUpr,
+                    fill = "coral2"),
+                alpha = 0.5,
+                show.legend = FALSE) +
+    labs(x = 'Depth (m)',
+         y = "Abundance Anomalies") 
+
   temp <- visreg(model,
                  data = data,
                  xvar = "roms_temperature",
                  plot = FALSE)
-  temp_plot <- individual_plot(temp, roms_temperature, "Temperature (\u00B0C)")
-    
+  temp_plot <- ggplot(temp$fit, aes(x = roms_temperature, y = visregFit)) +
+    geom_line(color = "black",
+              linewidth = 1,
+              show.legend = FALSE) +
+    geom_ribbon(aes(ymin = visregLwr, 
+                    ymax = visregUpr,
+                    fill = "coral2"),
+                alpha = 0.5,
+                show.legend = FALSE) +
+    labs(x = 'Temperature (\u00B0C)',
+         y = "Abundance Anomalies") 
+
   salt <- visreg(model,
                  data = data,
                  xvar = "roms_salinity",
                  plot = FALSE)
-  salt_plot <- individual_plot(salt, roms_salinity, "Salinity")
-  
+  salt_plot <- ggplot(salt$fit, aes(x = roms_salinity, y = visregFit)) +
+    geom_line(color = "black",
+              linewidth = 1,
+              show.legend = FALSE) +
+    geom_ribbon(aes(ymin = visregLwr, 
+                    ymax = visregUpr,
+                    fill = "coral2"),
+                alpha = 0.5,
+                show.legend = FALSE) +
+    labs(x = 'Salinity',
+         y = "Abundance Anomalies") 
+
   ssh <- visreg(model,
                  data = data,
                  xvar = "ssh_anom",
                  plot = FALSE)
-  ssh_plot <- individual_plot(ssh, ssh_anom, "Sea Surface Height")
-  
+  ssh_plot <- ggplot(ssh$fit, aes(x = ssh_anom, y = visregFit)) +
+    geom_line(color = "black",
+              linewidth = 1,
+              show.legend = FALSE) +
+    geom_ribbon(aes(ymin = visregLwr, 
+                    ymax = visregUpr,
+                    fill = "coral2"),
+                alpha = 0.5,
+                show.legend = FALSE) +
+    labs(x = 'Sea Surface Height',
+         y = "Abundance Anomalies") 
+
   doy <- visreg(model,
                 data = data,
                 xvar = "jday",
                 plot = FALSE)
-  doy_plot <- individual_plot(doy, jday, "Day of Year")
-  
+  doy_plot <- ggplot(doy$fit, aes(x = jday, y = visregFit)) +
+    geom_line(color = "black",
+              linewidth = 1,
+              show.legend = FALSE) +
+    geom_ribbon(aes(ymin = visregLwr, 
+                    ymax = visregUpr,
+                    fill = "coral2"),
+                alpha = 0.5,
+                show.legend = FALSE) +
+    labs(x = 'Day of Year',
+         y = "Abundance Anomalies") 
+
   ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot) +
     theme_classic() +
     theme(axis.ticks = element_blank(),
