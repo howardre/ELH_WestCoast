@@ -108,8 +108,7 @@ coalesce_by_column <- function(data) {
   }
   
 size_calc <- function(sp, size){
-  size_filter <- sp %>% filter(num_measured > 0)
-  sizes <- mutate(size_filter, size_class = case_when(std_length <= size ~ "small",
+  sizes <- mutate(sp, size_class = case_when(std_length <= size ~ "small",
                                              std_length > size ~ "large")) 
   subset <- sizes %>% 
     dplyr::group_by(numeric_date, station, haul_no, haul_exp, size_class, cruise) %>%
@@ -240,14 +239,15 @@ sbly_catch <- other_catch %>%
   rename(catch = shortbelly)
 dab_catch <- other_catch %>% 
   dplyr::select(-c('shortbelly', 'hake', 'widow')) %>%
-  rename(catch = dab)
+  rename(catch = dab) %>%
+  filter(year > 2010)
 hake_catch <- other_catch %>% 
   dplyr::select(-c('shortbelly', 'widow', 'dab')) %>%
   rename(catch = hake)
 
 widow_sp <- filter(other_sp, species == 597)
 sbly_sp <- filter(other_sp, species == 604)
-dab_sp <- filter(other_sp, species == 147)
+dab_sp <- filter(other_sp, species == 147, year > 2010)
 hake_sp <- filter(other_sp, species == 382)
 
 rm(list = c('anch_data_list', 'other_catch', 
@@ -260,7 +260,7 @@ rm(list = c('anch_data_list', 'other_catch',
 ```{r}
 # Consolidate lengths
 anch_subset <- size_calc(anch_sp, 35)
-widow_subset <- size_calc(widow_sp, 31) # reevaluate this one
+widow_subset <- size_calc(widow_sp, 31) 
 sbly_subset <- size_calc(sbly_sp, 35)
 dab_subset <- size_calc(dab_sp, 25)
 hake_subset <- size_calc(hake_sp, 35)
