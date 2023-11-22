@@ -64,24 +64,25 @@ sdmTMB_formula <- function(df, mesh){
 }
 
 sdmTMB_small <- function(df, mesh){
-  sdmTMB(small ~ 0 +
+  sdmTMB(small_catch1 ~ 0 + 
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
            s(jday),
-#         spatial_varying = ~ 0 + ssh_pos, 
+         # spatial_varying = ~ ssh_pos,
          data = df,
          mesh = mesh,
          time = "year",
          spatial = "on",
          family = tweedie(link = "log"),
-         spatiotemporal = "ar1",
-         control = sdmTMBcontrol(newton_loops = 1))
+         spatiotemporal = "iid",
+         control = sdmTMBcontrol(nlminb_loops = 2,
+                                 newton_loops = 1))
 }
 
 sdmTMB_large <- function(df, mesh){
-  sdmTMB(large ~ 0 +
+  sdmTMB(large_catch1 ~ 0 +
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
@@ -94,7 +95,8 @@ sdmTMB_large <- function(df, mesh){
          spatial = "on",
          family = tweedie(link = "log"),
          spatiotemporal = "ar1",
-         control = sdmTMBcontrol(newton_loops = 1))
+         control = sdmTMBcontrol(nlminb_loops = 2,
+                                 newton_loops = 1))
 }
 
 # Data
@@ -125,7 +127,7 @@ hake_model_large <- sdmTMB_large(yoy_hake,
                                  yoy_hake_mesh)
 
 sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
-tidy(hake_model_small,
+tidy(hake_model_small, # no std error reported when using log link
      effect = "ran_pars", 
      conf.int = T)
 sanity(hake_model_large)
