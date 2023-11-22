@@ -70,7 +70,7 @@ sdmTMB_small <- function(df, mesh){
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
            s(jday),
-       #  spatial_varying = ~ 0 + ssh_pos, 
+#         spatial_varying = ~ 0 + ssh_pos, 
          data = df,
          mesh = mesh,
          time = "year",
@@ -98,19 +98,20 @@ sdmTMB_large <- function(df, mesh){
 }
 
 # Data
+# Need to fix length issues (allocating all to large sizes if no measurements)
 yoy_hake <- read_data('yoy_hake.Rdata') 
-# yoy_anchovy <- read_data('yoy_anch.Rdata') 
-# yoy_anchovy <- filter(yoy_anchovy, year > 2013 & jday < 164)
-# yoy_widow <- read_data('yoy_widw.Rdata')
-# yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
-# yoy_shortbelly <- read_data('yoy_sbly.Rdata') 
-# yoy_sdab <- read_data('yoy_dab.Rdata') 
+yoy_anchovy <- read_data('yoy_anch.Rdata')
+yoy_anchovy <- filter(yoy_anchovy, jday < 164)
+yoy_widow <- read_data('yoy_widw.Rdata')
+yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
+yoy_shortbelly <- read_data('yoy_sbly.Rdata')
+yoy_sdab <- read_data('yoy_dab.Rdata')
 
 # Pacific Hake ----
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"), 
-                           n_knots = 200,
+                           n_knots = 200, # increase back to 200
                            type = "cutoff_search",
                            seed = 1993)
 plot(yoy_hake_mesh)
@@ -118,18 +119,12 @@ plot(yoy_hake_mesh)
 # Fit models
 # Currently having issues with spatially varying term
 # May improve with the new variables?
-hake_model <- sdmTMB_formula(yoy_hake, 
-                             yoy_hake_mesh)
 hake_model_small <- sdmTMB_small(yoy_hake,
-                                 yoy_hake_mesh)
+                                 yoy_hake_mesh) # currently takes 6 minutes
 hake_model_large <- sdmTMB_large(yoy_hake,
                                  yoy_hake_mesh)
 
-sanity(hake_model) # sigma_z is the SD of the spatially varying coefficient field
-tidy(hake_model,
-     effect = "ran_pars", 
-     conf.int = T)
-sanity(hake_model_small)
+sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model_small,
      effect = "ran_pars", 
      conf.int = T)
