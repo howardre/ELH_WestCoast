@@ -64,39 +64,37 @@ sdmTMB_formula <- function(df, mesh){
 }
 
 sdmTMB_small <- function(df, mesh){
-  sdmTMB(small_catch1 ~ 0 + 
+  sdmTMB(small ~ 0 + 
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
-           s(jday),
-         # spatial_varying = ~ ssh_pos,
+           s(jday, k = 15),
+         # spatial_varying = ~ 0 + ssh_scaled,
          data = df,
          mesh = mesh,
          time = "year",
          spatial = "on",
          family = tweedie(link = "log"),
          spatiotemporal = "iid",
-         control = sdmTMBcontrol(nlminb_loops = 2,
-                                 newton_loops = 1))
+         control = sdmTMBcontrol(newton_loops = 1))
 }
 
 sdmTMB_large <- function(df, mesh){
-  sdmTMB(large_catch1 ~ 0 +
+  sdmTMB(large ~ 0 + 
            s(bottom_depth, k = 5) +
            s(roms_temperature, k = 5) +
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
-           s(jday),
-       #  spatial_varying = ~ 0 + ssh_pos, 
+           s(jday, k = 15),
+       #  spatial_varying = ~ 0 + ssh_scaled, 
          data = df,
          mesh = mesh,
          time = "year",
          spatial = "on",
          family = tweedie(link = "log"),
-         spatiotemporal = "ar1",
-         control = sdmTMBcontrol(nlminb_loops = 2,
-                                 newton_loops = 1))
+         spatiotemporal = "iid",
+       control = sdmTMBcontrol(newton_loops = 1))
 }
 
 # Data
@@ -113,8 +111,8 @@ yoy_sdab <- read_data('yoy_dab.Rdata')
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"), 
-                           n_knots = 200, # increase back to 200
-                           type = "cutoff_search",
+                           cutoff = 10,
+                           type = "cutoff",
                            seed = 1993)
 plot(yoy_hake_mesh)
 
@@ -129,14 +127,12 @@ hake_model_large <- sdmTMB_large(yoy_hake,
 sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model_small, # no std error reported when using log link
      effect = "ran_pars", 
-     conf.int = T)
+     conf.int = TRUE)
 sanity(hake_model_large)
 tidy(hake_model_large,
      effect = "ran_pars", 
-     conf.int = T)
-
-# Leave-one-year-out cross validation
-hake_results <- LOYO_validation(yoy_hake) # Test to see if all converge
+     conf.int = TRUE)
+hake_model_large
 
 # Plot covariates
 individual_plot <- function(output, variable, xlab){
@@ -168,8 +164,13 @@ plot_variables <- function(model, data){
                 alpha = 0.5,
                 show.legend = FALSE) +
     labs(x = 'Depth (m)',
-         y = "Abundance Anomalies") 
-
+         y = "Abundance Anomalies") +
+    theme_classic() +
+    theme(axis.ticks = element_blank(),
+          axis.text = element_text(family = "serif", size = 18),
+          axis.title = element_text(family = "serif", size = 22),
+          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
+  
   temp <- visreg(model,
                  data = data,
                  xvar = "roms_temperature",
@@ -184,7 +185,12 @@ plot_variables <- function(model, data){
                 alpha = 0.5,
                 show.legend = FALSE) +
     labs(x = 'Temperature (\u00B0C)',
-         y = "Abundance Anomalies") 
+         y = "Abundance Anomalies") +
+    theme_classic() +
+    theme(axis.ticks = element_blank(),
+          axis.text = element_text(family = "serif", size = 18),
+          axis.title = element_text(family = "serif", size = 22),
+          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
 
   salt <- visreg(model,
                  data = data,
@@ -200,7 +206,12 @@ plot_variables <- function(model, data){
                 alpha = 0.5,
                 show.legend = FALSE) +
     labs(x = 'Salinity',
-         y = "Abundance Anomalies") 
+         y = "Abundance Anomalies") +
+    theme_classic() +
+    theme(axis.ticks = element_blank(),
+          axis.text = element_text(family = "serif", size = 18),
+          axis.title = element_text(family = "serif", size = 22),
+          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
 
   ssh <- visreg(model,
                  data = data,
@@ -216,7 +227,12 @@ plot_variables <- function(model, data){
                 alpha = 0.5,
                 show.legend = FALSE) +
     labs(x = 'Sea Surface Height',
-         y = "Abundance Anomalies") 
+         y = "Abundance Anomalies") +
+    theme_classic() +
+    theme(axis.ticks = element_blank(),
+          axis.text = element_text(family = "serif", size = 18),
+          axis.title = element_text(family = "serif", size = 22),
+          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
 
   doy <- visreg(model,
                 data = data,
@@ -232,17 +248,16 @@ plot_variables <- function(model, data){
                 alpha = 0.5,
                 show.legend = FALSE) +
     labs(x = 'Day of Year',
-         y = "Abundance Anomalies") 
-
-  ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot) +
+         y = "Abundance Anomalies") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
           axis.text = element_text(family = "serif", size = 18),
           axis.title = element_text(family = "serif", size = 22),
           axis.text.x = element_text(angle = 0, vjust = 0.7))
+
+  ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot)
 }
 
-plot_variables(hake_model, yoy_hake)
 plot_variables(hake_model_small, yoy_hake)
 plot_variables(hake_model_large, yoy_hake)
 
@@ -267,3 +282,29 @@ par(mfrow = c(1, 3),
 sdmTMB_map(yoy_hake, hake_pred)
 sdmTMB_map(yoy_hake, hake_pred_small)
 sdmTMB_map(yoy_hake, hake_pred_large)
+
+# Northern Anchovy ----
+# Make mesh object with matrices
+yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
+                              xy_cols = c("X", "Y"),
+                              n_knots = 80,
+                              cutoff = "cutoff_search",
+                              seed = 1993)
+plot(yoy_anchovy_mesh)
+
+# Fit models
+# Currently having issues with spatially varying term
+# May improve with the new variables?
+anchovy_model_small <- sdmTMB_small(yoy_anchovy,
+                                    yoy_anchovy_mesh) # currently takes 6 minutes
+anchovy_model_large <- sdmTMB_large(yoy_anchovy,
+                                    yoy_anchovy_mesh)
+
+sanity(anchovy_model_small) # sigma_z is the SD of the spatially varying coefficient field
+tidy(anchovy_model_small, # no std error reported when using log link
+     effect = "ran_pars", 
+     conf.int = T)
+sanity(anchovy_model_large)
+tidy(anchovy_model_large,
+     effect = "ran_pars", 
+     conf.int = T)
