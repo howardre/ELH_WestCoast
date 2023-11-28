@@ -7,8 +7,11 @@ read_data <- function(file){
            small_catch1 = small + 1,
            large_catch1 = large + 1,
            year_f = as.factor(year),
-           ssh_pos = year_ssh + abs(min(year_ssh)) + 10)
+           ssh_pos = year_ssh + abs(min(year_ssh)) + 10,
+           ssh_scaled = (year_ssh - mean(year_ssh)) / sd(year_ssh))
   yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
-  yoy_utm <- add_utm_columns(yoy, c("lon", "lat")) # add UTM coordinates
+  yoy_utm <- add_utm_columns(yoy, 
+                             utm_crs = 32610, # UTM 10
+                             ll_names = c("lon", "lat")) # add UTM coordinates
   return(yoy_utm)
 }
