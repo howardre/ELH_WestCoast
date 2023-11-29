@@ -320,72 +320,6 @@ merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset)
 ```
 
 ```{r}
-add_roms <- function(tows){
-  # Add ROMS hindcast
-  nc <- nc_open(here('data', 'nep_srf_1995-2020.nc'))
-  lat <- ncvar_get(nc, "lat_rho")
-  lon <- ncvar_get(nc, "lon_rho")
-  sst <- ncvar_get(nc, "temp")
-  ssh <- ncvar_get(nc, "zeta")
-  sss <- ncvar_get(nc, "salt")
-  time <- data.frame(date = as.Date(ncvar_get(nc, varid = "ocean_time") / 86400, origin = '1900-01-01')) %>%
-    mutate(., year = year(date), month = month(date)) %>%
-    mutate(., year_month = paste(year, month, sep = "-"))
-  nc_close(nc)
-  
-    tows$year_month = paste(tows$year, tows$month, sep = "-")
-    
-    # Initialize result columns
-    tows$roms_sst = 0
-    tows$roms_ssh1 = 0
-    tows$roms_sss = 0
-    
-    # Set up progress bar
-    pb <- txtProgressBar(min = 0,
-                         max = nrow(tows),
-                         char = "=",
-                         style = 3)
-    for (i in 1:nrow(tows)) {
-      # Cancel current iteration if year is out of range
-      if (tows$year[i] < min(time$year) | tows$year[i] > max(time$year))
-        next
-      target_lat = tows$lat[i]
-      target_lon = tows$lon[i]
-      
-      # Get the best date match (ROMS output is monthly)
-      date_index <- which(tows$year_month[i] == time$year_month)
-      
-      # Find all ROMS lat/lons within 0.5 deg of the sampling point
-      nearby_lat_indices <- which(abs(lat - target_lat) <= min(abs(lat - target_lat) + 0.5))
-      nearby_lon_indices <- which(abs(lon - target_lon) <= min(abs(lon - target_lon) + 0.5))
-      
-      # Find potential nearby points with valid latitude/longitudes
-      match_indices <- which(nearby_lat_indices %in% nearby_lon_indices == TRUE)
-      
-      # Calculate the best match (assumed to be the one with the closest latitude)
-      differences = lat[nearby_lat_indices[match_indices]] - target_lat
-      best_match = match_indices[which(abs(differences) == min(abs(differences)))]
-      
-      # Get the matching latitude
-      match_lat = lat[nearby_lat_indices[best_match]]
-      
-      # Get row/column info (necessary for accessing the matrices)
-      row = which(lat == match_lat, arr.ind = TRUE)[1]
-      column = which(lat == match_lat, arr.ind = TRUE)[2]
-      
-      # Extract sst, ssh, salinity, spiciness values
-      tows$roms_sst[i] = sst[row, column, date_index]
-      tows$roms_ssh1[i] = ssh[row, column, date_index]
-      tows$roms_sss[i] = sss[row, column, date_index]
-      setTxtProgressBar(pb, i)
-      }
-    close(pb)
-    return(tows)
-    }
-
-anch_test <- add_roms(merge_anch)
-dab_test <- add_roms(merge_dab)
-
 nep <- tidync(here('data','nep_srf_1995-2020.nc'))
 nep_var <- nep %>% 
   hyper_tibble() 
@@ -474,7 +408,6 @@ saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 
 ```{r}
 # Match to the fish data
-anch2 <- hindcast_match(anch_test, hindcast_means, 28, 29)
 # No ROMS past 2018 right now
 yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 24, 25)
 yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 25, 26)
