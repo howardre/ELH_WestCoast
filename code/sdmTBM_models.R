@@ -70,14 +70,15 @@ sdmTMB_small <- function(df, mesh){
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
            s(jday, k = 15),
-         # spatial_varying = ~ 0 + ssh_scaled,
+         # spatial_varying = ~ 0 + ssh_scaled, 
          data = df,
          mesh = mesh,
          time = "year",
          spatial = "on",
          family = tweedie(link = "log"),
          spatiotemporal = "iid",
-         control = sdmTMBcontrol(newton_loops = 1))
+         control = sdmTMBcontrol(newton_loops = 1,
+                                 nlminb_loops = 2))
 }
 
 sdmTMB_large <- function(df, mesh){
@@ -87,7 +88,7 @@ sdmTMB_large <- function(df, mesh){
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
            s(jday, k = 15),
-       #  spatial_varying = ~ 0 + ssh_scaled, 
+         # spatial_varying = ~ 0 + ssh_scaled,
          data = df,
          mesh = mesh,
          time = "year",
@@ -98,7 +99,7 @@ sdmTMB_large <- function(df, mesh){
 }
 
 # Data
-# Need to fix length issues (allocating all to large sizes if no measurements)
+# Had to filter salinity and depth due to outliers
 yoy_hake <- read_data('yoy_hake.Rdata') 
 yoy_anchovy <- read_data('yoy_anch.Rdata')
 yoy_anchovy <- filter(yoy_anchovy, jday < 164)
@@ -112,8 +113,7 @@ yoy_sdab <- read_data('yoy_dab.Rdata')
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"), 
                            cutoff = 10,
-                           type = "cutoff",
-                           seed = 1993)
+                           type = "cutoff")
 plot(yoy_hake_mesh)
 
 # Fit models
