@@ -9,7 +9,7 @@ library(here)
 library(ggplot2)
 library(dplyr)
 library(sdmTMB) # do not update TMB past 1.9.4
-library(visreg)
+library(visreg) # still waiting on v2.7.1 to fix SVC issue
 library(raster)
 library(sf)
 library(colorspace)
@@ -70,7 +70,7 @@ sdmTMB_small <- function(df, mesh){
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
            s(jday, k = 15),
-         # spatial_varying = ~ 0 + ssh_scaled, 
+         spatial_varying = ~ 0 + ssh_annual_scaled,
          data = df,
          mesh = mesh,
          time = "year",
@@ -88,53 +88,17 @@ sdmTMB_large <- function(df, mesh){
            s(roms_salinity, k = 5) +
            s(ssh_anom, k = 5) +
            s(jday, k = 15),
-         # spatial_varying = ~ 0 + ssh_scaled,
+         spatial_varying = ~ 0 + ssh_annual_scaled,
          data = df,
          mesh = mesh,
          time = "year",
          spatial = "on",
          family = tweedie(link = "log"),
          spatiotemporal = "iid",
-       control = sdmTMBcontrol(newton_loops = 1))
+       control = sdmTMBcontrol(newton_loops = 1,
+                               nlminb_loops = 2))
 }
 
-# Data
-# Had to filter salinity and depth due to outliers
-yoy_hake <- read_data('yoy_hake.Rdata') 
-yoy_anchovy <- read_data('yoy_anch.Rdata')
-yoy_anchovy <- filter(yoy_anchovy, jday < 164)
-yoy_widow <- read_data('yoy_widw.Rdata')
-yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
-yoy_shortbelly <- read_data('yoy_sbly.Rdata')
-yoy_sdab <- read_data('yoy_dab.Rdata')
-
-# Pacific Hake ----
-# Make mesh object with matrices
-yoy_hake_mesh <- make_mesh(yoy_hake, 
-                           xy_cols = c("X", "Y"), 
-                           cutoff = 10,
-                           type = "cutoff")
-plot(yoy_hake_mesh)
-
-# Fit models
-# Currently having issues with spatially varying term
-# May improve with the new variables?
-hake_model_small <- sdmTMB_small(yoy_hake,
-                                 yoy_hake_mesh) # currently takes 6 minutes
-hake_model_large <- sdmTMB_large(yoy_hake,
-                                 yoy_hake_mesh)
-
-sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
-tidy(hake_model_small, # no std error reported when using log link
-     effect = "ran_pars", 
-     conf.int = TRUE)
-sanity(hake_model_large)
-tidy(hake_model_large,
-     effect = "ran_pars", 
-     conf.int = TRUE)
-hake_model_large
-
-# Plot covariates
 individual_plot <- function(output, variable, xlab){
   ggplot(output$fit, aes(x = variable, y = visregFit)) +
     geom_line(color = "black",
@@ -153,7 +117,8 @@ plot_variables <- function(model, data){
   depth <- visreg(model,
                   data = data,
                   xvar = "bottom_depth",
-                  plot = FALSE)
+                  plot = FALSE,
+                  cond = list(ssh_annual_scaled = 1)) # currently required with SVCs
   depth_plot <- ggplot(depth$fit, aes(x = bottom_depth, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
@@ -174,7 +139,8 @@ plot_variables <- function(model, data){
   temp <- visreg(model,
                  data = data,
                  xvar = "roms_temperature",
-                 plot = FALSE)
+                 plot = FALSE,
+                 cond = list(ssh_annual_scaled = 1))
   temp_plot <- ggplot(temp$fit, aes(x = roms_temperature, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
@@ -191,11 +157,12 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 18),
           axis.title = element_text(family = "serif", size = 22),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
-
+  
   salt <- visreg(model,
                  data = data,
                  xvar = "roms_salinity",
-                 plot = FALSE)
+                 plot = FALSE,
+                 cond = list(ssh_annual_scaled = 1))
   salt_plot <- ggplot(salt$fit, aes(x = roms_salinity, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
@@ -212,11 +179,12 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 18),
           axis.title = element_text(family = "serif", size = 22),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
-
+  
   ssh <- visreg(model,
-                 data = data,
-                 xvar = "ssh_anom",
-                 plot = FALSE)
+                data = data,
+                xvar = "ssh_anom",
+                plot = FALSE,
+                cond = list(ssh_annual_scaled = 1))
   ssh_plot <- ggplot(ssh$fit, aes(x = ssh_anom, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
@@ -233,11 +201,12 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 18),
           axis.title = element_text(family = "serif", size = 22),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
-
+  
   doy <- visreg(model,
                 data = data,
                 xvar = "jday",
-                plot = FALSE)
+                plot = FALSE,
+                cond = list(ssh_annual_scaled = 1))
   doy_plot <- ggplot(doy$fit, aes(x = jday, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
@@ -254,13 +223,49 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 18),
           axis.title = element_text(family = "serif", size = 22),
           axis.text.x = element_text(angle = 0, vjust = 0.7))
-
+  
   ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot)
 }
 
+# Data
+# May have to filter salinity and depth due to outliers?
+yoy_hake <- read_data('yoy_hake.Rdata') 
+yoy_anchovy <- read_data('yoy_anch.Rdata')
+yoy_anchovy <- filter(yoy_anchovy, jday < 164)
+yoy_widow <- read_data('yoy_widw.Rdata')
+yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
+yoy_shortbelly <- read_data('yoy_sbly.Rdata')
+yoy_sdab <- read_data('yoy_dab.Rdata')
+
+# Pacific Hake ----
+# Make mesh object with matrices
+yoy_hake_mesh <- make_mesh(yoy_hake, 
+                           xy_cols = c("X", "Y"), 
+                           n_knots = 200,
+                           type = "cutoff_search",
+                           seed = 2024)
+plot(yoy_hake_mesh)
+
+# Fit models
+hake_model_small <- sdmTMB_small(yoy_hake,
+                                 yoy_hake_mesh) 
+hake_model_large <- sdmTMB_large(yoy_hake,
+                                 yoy_hake_mesh) # requires model simplification
+
+sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
+tidy(hake_model_small, # no std error reported when using log link
+     effect = "ran_pars", 
+     conf.int = TRUE)
+sanity(hake_model_large) 
+tidy(hake_model_large,
+     effect = "ran_pars", 
+     conf.int = TRUE)
+hake_model_small
+hake_model_large
+
+# Plot covariates
 plot_variables(hake_model_small, yoy_hake)
 plot_variables(hake_model_large, yoy_hake)
-
 
 # Predict and plot
 nlat = 40
