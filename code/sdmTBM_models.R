@@ -46,23 +46,6 @@ LOYO_validation <- function(df){
   return(models)
 }
 
-sdmTMB_formula <- function(df, mesh){
-  sdmTMB(catch ~ 0 +
-           s(bottom_depth, k = 5) +
-           s(roms_temperature, k = 5) +
-           s(roms_salinity, k = 5) +
-           s(ssh_anom, k = 5) +
-           s(jday),
-       # spatial_varying = ~ 0 + ssh_pos, # change to new variables
-         data = df,
-         mesh = mesh,
-         time = "year",
-         spatial = "on",
-         family = tweedie(link = "log"),
-         spatiotemporal = "ar1",
-         control = sdmTMBcontrol(newton_loops = 1))
-}
-
 sdmTMB_small <- function(df, mesh){
   sdmTMB(small ~ 0 + 
            s(bottom_depth, k = 5) +
@@ -231,7 +214,7 @@ plot_variables <- function(model, data){
 # May have to filter salinity and depth due to outliers?
 yoy_hake <- read_data('yoy_hake.Rdata') 
 yoy_anchovy <- read_data('yoy_anch.Rdata')
-yoy_anchovy <- filter(yoy_anchovy, jday < 164)
+yoy_anchovy <- filter(yoy_anchovy, jday < 164 & survey == "RREAS")
 yoy_widow <- read_data('yoy_widw.Rdata')
 yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
@@ -273,43 +256,62 @@ nlon = 60
 latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
-hake_pred <- sdmTMB_grid(yoy_hake, hake_model)
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small)
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large)
 
-
-windows(height = 15, width = 24)
-par(mfrow = c(1, 3),
+windows(height = 15, width = 20)
+par(mfrow = c(1, 2),
     mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_map(yoy_hake, hake_pred)
 sdmTMB_map(yoy_hake, hake_pred_small)
 sdmTMB_map(yoy_hake, hake_pred_large)
 
 # Northern Anchovy ----
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
-                              xy_cols = c("X", "Y"),
-                              n_knots = 80,
-                              cutoff = "cutoff_search",
-                              seed = 1993)
+                              xy_cols = c("X", "Y"), 
+                              n_knots = 200,
+                              type = "cutoff_search",
+                              seed = 2024)
 plot(yoy_anchovy_mesh)
 
 # Fit models
-# Currently having issues with spatially varying term
-# May improve with the new variables?
 anchovy_model_small <- sdmTMB_small(yoy_anchovy,
-                                    yoy_anchovy_mesh) # currently takes 6 minutes
+                                    yoy_anchovy_mesh) # this SVC not a good fit
 anchovy_model_large <- sdmTMB_large(yoy_anchovy,
-                                    yoy_anchovy_mesh)
+                                    yoy_anchovy_mesh) # needs simplification
 
-sanity(anchovy_model_small) # sigma_z is the SD of the spatially varying coefficient field
-tidy(anchovy_model_small, # no std error reported when using log link
+sanity(anchovy_model_small) 
+tidy(anchovy_model_small, 
      effect = "ran_pars", 
      conf.int = T)
 sanity(anchovy_model_large)
 tidy(anchovy_model_large,
      effect = "ran_pars", 
      conf.int = T)
+anchovy_model_small
+anchovy_model_large
+
+# Plot covariates
+plot_variables(anchovy_model_small, yoy_anchovy)
+plot_variables(anchovy_model_large, yoy_anchovy)
+
+# Predict and plot
+nlat = 40
+nlon = 60
+latd = seq(min(yoy_anchovy$lat), max(yoy_anchovy$lat), length.out = nlat)
+lond = seq(min(yoy_anchovy$lon), max(yoy_anchovy$lon), length.out = nlon)
+
+anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small)
+anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large)
+
+windows(height = 15, width = 20)
+par(mfrow = c(1, 2),
+    mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_map(yoy_anchovy, anchovy_pred_small)
+sdmTMB_map(yoy_anchovy, anchovy_pred_large)
