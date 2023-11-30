@@ -13,13 +13,15 @@ sdmTMB_grid <- function(df, model){
                                df$lon)
     spatial_grid$dist[k] <- min(dist)
   }
-  spatial_grid$year <- 2010
+  spatial_grid$year <- 2014
   spatial_grid$bottom_depth <- median(df$bottom_depth, na.rm = TRUE)
   spatial_grid$roms_temperature <- median(df$roms_temperature, na.rm = TRUE)
   spatial_grid$roms_salinity <- median(df$roms_salinity, na.rm = TRUE)
   spatial_grid$ssh_anom <- median(df$ssh_anom, na.rm = TRUE)
   spatial_grid$jday <- median(df$jday, na.rm = TRUE)
-  spatial_grid <- add_utm_columns(spatial_grid, c("lon", "lat"))
+  spatial_grid$ssh_annual_scaled <- median(df$ssh_annual_scaled, na.rm = TRUE)
+  spatial_grid <- add_utm_columns(spatial_grid, c("lon", "lat"), 
+                                  utm_crs = 32610,)
   
   preds <- predict(model, 
                    newdata = spatial_grid, 
