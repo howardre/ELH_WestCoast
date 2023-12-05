@@ -268,6 +268,7 @@ par(mfrow = c(1, 2),
 sdmTMB_map(yoy_hake, hake_pred_small)
 sdmTMB_map(yoy_hake, hake_pred_large)
 
+
 # Northern Anchovy ----
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
@@ -315,3 +316,150 @@ par(mfrow = c(1, 2),
     family = "serif")
 sdmTMB_map(yoy_anchovy, anchovy_pred_small)
 sdmTMB_map(yoy_anchovy, anchovy_pred_large)
+
+
+# Pacific Sanddab ----
+# Make mesh object with matrices
+yoy_sdab_mesh <- make_mesh(yoy_sdab,
+                           xy_cols = c("X", "Y"),
+                           n_knots = 200,
+                           type = "cutoff_search",
+                           seed =  2024)
+plot(yoy_sdab_mesh)
+
+# Fit models
+sdab_model_small <- sdmTMB_small(yoy_sdab,
+                                 yoy_sdab_mesh) # this SVC not a good fit
+sdab_model_large <- sdmTMB_large(yoy_sdab,
+                                 yoy_sdab_mesh) # needs simplification
+
+sanity(sdab_model_small) 
+tidy(sdab_model_small, 
+     effect = "ran_pars", 
+     conf.int = T)
+sanity(sdab_model_large)
+tidy(sdab_model_large,
+     effect = "ran_pars", 
+     conf.int = T)
+sdab_model_small
+sdab_model_large
+
+# Plot covariates
+plot_variables(sdab_model_small, yoy_sdab)
+plot_variables(sdab_model_large, yoy_sdab)
+
+# Predict and plot
+nlat = 40
+nlon = 60
+latd = seq(min(yoy_sdab$lat), max(yoy_sdab$lat), length.out = nlat)
+lond = seq(min(yoy_sdab$lon), max(yoy_sdab$lon), length.out = nlon)
+
+sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small)
+sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large)
+
+windows(height = 15, width = 20)
+par(mfrow = c(1, 2),
+    mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_map(yoy_sdab, sdab_pred_small)
+sdmTMB_map(yoy_sdab, sdab_pred_large)
+
+
+# Shortbelly Rockfish ----
+# Make mesh object with matrices
+yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
+                              xy_cols = c("X", "Y"), 
+                              n_knots = 200,
+                              type = "cutoff_search",
+                              seed = 2024)
+plot(yoy_shortbelly_mesh)
+
+# Fit models
+shortbelly_model_small <- sdmTMB_small(yoy_shortbelly,
+                                    yoy_shortbelly_mesh) # lots of problems
+shortbelly_model_large <- sdmTMB_large(yoy_shortbelly,
+                                    yoy_shortbelly_mesh) # SVC may not be good fit
+
+sanity(shortbelly_model_small) 
+tidy(shortbelly_model_small, 
+     effect = "ran_pars", 
+     conf.int = T)
+sanity(shortbelly_model_large)
+tidy(shortbelly_model_large,
+     effect = "ran_pars", 
+     conf.int = T)
+shortbelly_model_small
+shortbelly_model_large
+
+# Plot covariates
+plot_variables(shortbelly_model_small, yoy_shortbelly)
+plot_variables(shortbelly_model_large, yoy_shortbelly)
+
+# Predict and plot
+nlat = 40
+nlon = 60
+latd = seq(min(yoy_shortbelly$lat), max(yoy_shortbelly$lat), length.out = nlat)
+lond = seq(min(yoy_shortbelly$lon), max(yoy_shortbelly$lon), length.out = nlon)
+
+shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small)
+shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large)
+
+windows(height = 15, width = 20)
+par(mfrow = c(1, 2),
+    mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_map(yoy_shortbelly, shortbelly_pred_small)
+sdmTMB_map(yoy_shortbelly, shortbelly_pred_large)
+
+
+# Widow Rockfish ----
+# Make mesh object with matrices
+yoy_widow_mesh <- make_mesh(yoy_widow,
+                              xy_cols = c("X", "Y"), 
+                              n_knots = 200,
+                              type = "cutoff_search",
+                              seed = 2024)
+plot(yoy_widow_mesh)
+
+# Fit models
+widow_model_small <- sdmTMB_small(yoy_widow,
+                                    yoy_widow_mesh) # didn't converge
+widow_model_large <- sdmTMB_large(yoy_widow,
+                                    yoy_widow_mesh) # bad
+
+sanity(widow_model_small) 
+tidy(widow_model_small, 
+     effect = "ran_pars", 
+     conf.int = T)
+sanity(widow_model_large)
+tidy(widow_model_large,
+     effect = "ran_pars", 
+     conf.int = T)
+widow_model_small
+widow_model_large
+
+# Plot covariates
+plot_variables(widow_model_small, yoy_widow)
+plot_variables(widow_model_large, yoy_widow)
+
+# Predict and plot
+nlat = 40
+nlon = 60
+latd = seq(min(yoy_widow$lat), max(yoy_widow$lat), length.out = nlat)
+lond = seq(min(yoy_widow$lon), max(yoy_widow$lon), length.out = nlon)
+
+widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small)
+widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large)
+
+windows(height = 15, width = 20)
+par(mfrow = c(1, 2),
+    mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_map(yoy_widow, widow_pred_small)
+sdmTMB_map(yoy_widow, widow_pred_large)
