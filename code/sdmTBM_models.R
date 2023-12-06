@@ -272,7 +272,7 @@ sdmTMB_map(yoy_hake, hake_pred_large)
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'hake_distributions_sdmtmb.jpg'), 
          height = 15, 
-         width = 18, 
+         width = 16, 
          units = 'in', 
          res = 200)
 dev.off()
