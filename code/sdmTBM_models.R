@@ -48,7 +48,8 @@ individual_plot <- function(model, data, variable, xlab){
     theme(axis.ticks = element_blank(),
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
+          axis.text.x = element_text(angle = 0, vjust = 0.7),
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   return(object_plot)
 } # use for individual variables
 
@@ -73,7 +74,8 @@ plot_variables <- function(model, data){
     theme(axis.ticks = element_blank(),
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
+          axis.text.x = element_text(angle = 0, vjust = 0.7),
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   
   temp <- visreg(model,
                  data = data,
@@ -95,7 +97,8 @@ plot_variables <- function(model, data){
     theme(axis.ticks = element_blank(),
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
+          axis.text.x = element_text(angle = 0, vjust = 0.7),
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   
   salt <- visreg(model,
                  data = data,
@@ -117,7 +120,8 @@ plot_variables <- function(model, data){
     theme(axis.ticks = element_blank(),
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
+          axis.text.x = element_text(angle = 0, vjust = 0.7),
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   
   ssh <- visreg(model,
                 data = data,
@@ -139,7 +143,8 @@ plot_variables <- function(model, data){
     theme(axis.ticks = element_blank(),
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
+          axis.text.x = element_text(angle = 0, vjust = 0.7),
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   
   doy <- visreg(model,
                 data = data,
@@ -161,7 +166,8 @@ plot_variables <- function(model, data){
     theme(axis.ticks = element_blank(),
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7))
+          axis.text.x = element_text(angle = 0, vjust = 0.7),
+          plot.margin = margin(2, 2, 2, 2, "cm"))
   
   ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot, ncol = 5, nrow = 1)
 } # works only if all variables retained
@@ -176,6 +182,12 @@ yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused hu
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- read_data('yoy_dab.Rdata')
 
+state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
+                           lat = c(47, 44.0, 37.0),
+                           lon = c(-121.0, -121.0, -120.0))
+nlat = 40
+nlon = 60
+
 # Pacific Hake ----
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
@@ -183,7 +195,7 @@ yoy_hake_mesh <- make_mesh(yoy_hake,
                            n_knots = 200,
                            type = "cutoff_search",
                            seed = 2024)
-plot(yoy_hake_mesh)
+plot(yoy_hake_mesh) 
 
 # Fit models
 hake_model_small <- sdmTMB(small ~ 0 + 
@@ -201,7 +213,7 @@ hake_model_small <- sdmTMB(small ~ 0 +
                            spatiotemporal = "iid",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
-hake_model_large <- sdmTMB(small ~ 0 + 
+hake_model_large <- sdmTMB(large ~ 0 + 
                              s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
                              s(roms_salinity, k = 5) +
@@ -253,8 +265,6 @@ ggarrange(hake_large_depth, hake_large_temp, hake_large_salt, hake_large_jday, n
 dev.off()
 
 # Predict and plot
-nlat = 40
-nlon = 60
 latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
@@ -263,12 +273,12 @@ hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large)
 
 windows(height = 15, width = 18)
 par(mfrow = c(1, 2),
-    mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_map(yoy_hake, hake_pred_small)
-sdmTMB_map(yoy_hake, hake_pred_large)
+sdmTMB_map(yoy_hake, hake_pred_small, "Small (7-35 mm)", "Latitude")
+sdmTMB_map(yoy_hake, hake_pred_large, "Large (36-134 mm)", " ")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'hake_distributions_sdmtmb.jpg'), 
          height = 15, 
