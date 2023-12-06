@@ -46,8 +46,8 @@ individual_plot <- function(model, data, variable, xlab){
          y = "Abundance Anomalies") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 18),
-          axis.title = element_text(family = "serif", size = 22),
+          axis.text = element_text(family = "serif", size = 38),
+          axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
   return(object_plot)
 } # use for individual variables
@@ -71,8 +71,8 @@ plot_variables <- function(model, data){
          y = "Abundance Anomalies") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 18),
-          axis.title = element_text(family = "serif", size = 22),
+          axis.text = element_text(family = "serif", size = 38),
+          axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
   
   temp <- visreg(model,
@@ -93,8 +93,8 @@ plot_variables <- function(model, data){
          y = "Abundance Anomalies") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 18),
-          axis.title = element_text(family = "serif", size = 22),
+          axis.text = element_text(family = "serif", size = 38),
+          axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
   
   salt <- visreg(model,
@@ -115,8 +115,8 @@ plot_variables <- function(model, data){
          y = "Abundance Anomalies") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 18),
-          axis.title = element_text(family = "serif", size = 22),
+          axis.text = element_text(family = "serif", size = 38),
+          axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
   
   ssh <- visreg(model,
@@ -137,8 +137,8 @@ plot_variables <- function(model, data){
          y = "Abundance Anomalies") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 18),
-          axis.title = element_text(family = "serif", size = 22),
+          axis.text = element_text(family = "serif", size = 38),
+          axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7)) 
   
   doy <- visreg(model,
@@ -159,11 +159,11 @@ plot_variables <- function(model, data){
          y = "Abundance Anomalies") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 18),
-          axis.title = element_text(family = "serif", size = 22),
+          axis.text = element_text(family = "serif", size = 38),
+          axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7))
   
-  ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot)
+  ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot, ncol = 5, nrow = 1)
 } # works only if all variables retained
 
 # Data
@@ -229,13 +229,28 @@ hake_model_small
 hake_model_large
 
 # Plot covariates
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence_small_sdmtmb.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 200)
 plot_variables(hake_model_small, yoy_hake)
+dev.off()
 
 hake_large_depth <- individual_plot(hake_model_large, yoy_hake, "bottom_depth", "Depth (m)")
 hake_large_temp <- individual_plot(hake_model_large, yoy_hake, "roms_temperature", "Temperature (\u00B0C)")
 hake_large_salt <- individual_plot(hake_model_large, yoy_hake, "roms_salinity", "Salinity")
 hake_large_jday <- individual_plot(hake_model_large, yoy_hake, "jday", "Day of Year")
-ggarrange(hake_large_depth, hake_large_temp, hake_large_salt, hake_large_jday)
+
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence_large_sdmtmb.jpg'),
+     units = "in",
+     width = 50,
+     height = 12,
+     res = 200)
+ggarrange(hake_large_depth, hake_large_temp, hake_large_salt, hake_large_jday, ncol = 4, nrow = 1)
+dev.off()
 
 # Predict and plot
 nlat = 40
@@ -246,7 +261,7 @@ lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small)
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large)
 
-windows(height = 15, width = 20)
+windows(height = 15, width = 18)
 par(mfrow = c(1, 2),
     mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
@@ -254,6 +269,13 @@ par(mfrow = c(1, 2),
     family = "serif")
 sdmTMB_map(yoy_hake, hake_pred_small)
 sdmTMB_map(yoy_hake, hake_pred_large)
+dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
+                    'hake_distributions_sdmtmb.jpg'), 
+         height = 15, 
+         width = 18, 
+         units = 'in', 
+         res = 200)
+dev.off()
 
 
 # Northern Anchovy ----
