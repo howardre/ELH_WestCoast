@@ -1,4 +1,4 @@
-sdmTMB_map <- function(df, preds){
+sdmTMB_map <- function(df, preds, title, lat_label){
   
   my_color = colorRampPalette(c(sequential_hcl(15, palette = "Mint")))
   color_levels = 100
@@ -32,32 +32,40 @@ sdmTMB_map <- function(df, preds){
                  ncol = length(lond),
                  byrow = T)),
         col = my_color(n = color_levels)[col_to_include],
-        ylab = "Latitude",
+        main = title,
+        ylab = lat_label,
         xlab = "Longitude",
         xlim = c(-126, -116),
         ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
-        cex.main = 2,
-        cex.lab = 2,
-        cex.axis = 1.8)
-  map("worldHires",
-      fill = T,
-      col = "wheat4",
-      add = T)
+        cex.lab = 3.1,
+        cex.axis = 2.3,
+        cex.main = 3.4)
+  maps::map("state",
+            boundary = FALSE,
+            fill = TRUE,
+            col = "wheat4",
+            add = TRUE)
+  text(x = state_labels$lon, 
+       y = state_labels$lat,
+       state_labels$name, 
+       pos = 1,
+       col = "black",
+       cex = 2.6,
+       family = "serif")
   image.plot(legend.only = T,
              col = my_color(n = color_levels)[col_to_include],
              legend.shrink = 0.2,
-             smallplot = c(.18, .21, .17, .38),
-             legend.cex = 1.3,
-             axis.args = list(cex.axis = 1.6,
+             smallplot = c(.3, .35, .11, .24),
+             legend.cex = 1.5,
+             axis.args = list(cex.axis = 1.8,
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(preds$est, na.rm = T), 
                       max(preds$est, na.rm = T)),
-             legend.args = list("CPUE",
-                                side = 2,
-                                cex = 1.8,
-                                line = 1.3,
-                                family =  "serif"))
-  
+             legend.args = list("log(CPUE + 1)",
+                                side = 2, 
+                                cex = 2.2,
+                                family = "serif",
+                                line = 1))
 }
