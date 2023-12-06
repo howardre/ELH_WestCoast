@@ -27,63 +27,13 @@ source(here('code/functions', 'read_data.R'))
 
 # Functions
 # More info here: https://pbs-assess.github.io/sdmTMB/index.html
-LOYO_validation <- function(df){
-  models <- lapply(unique(df$year), function(x) {
-    the_mesh <- make_mesh(df[df$year != x, ], 
-                          xy_cols = c("X", "Y"), 
-                          cutoff = 10,
-                          seed = 1993)
-    output <- sdmTMB(catch ~ 0 + as.factor(year) +
-                       s(bottom_depth, k = 5) +
-                       s(roms_temperature, k = 5) +
-                       s(roms_salinity, k = 5) +
-                       s(jday),
-                     mesh = the_mesh,
-                     time = "year",
-                     family = tweedie(link = "log"),
-                     data = df[df$year != x, ])
-  }) # Gives the list of models with each year left out
-  return(models)
-}
-
-sdmTMB_small <- function(df, mesh){
-  sdmTMB(small ~ 0 + 
-           s(bottom_depth, k = 5) +
-           s(roms_temperature, k = 5) +
-           s(roms_salinity, k = 5) +
-           s(ssh_anom, k = 5) +
-           s(jday, k = 15),
-         spatial_varying = ~ 0 + ssh_annual_scaled,
-         data = df,
-         mesh = mesh,
-         time = "year",
-         spatial = "on",
-         family = tweedie(link = "log"),
-         spatiotemporal = "iid",
-         control = sdmTMBcontrol(newton_loops = 1,
-                                 nlminb_loops = 2))
-}
-
-sdmTMB_large <- function(df, mesh){
-  sdmTMB(large ~ 0 + 
-           s(bottom_depth, k = 5) +
-           s(roms_temperature, k = 5) +
-           s(roms_salinity, k = 5) +
-           s(ssh_anom, k = 5) +
-           s(jday, k = 15),
-         spatial_varying = ~ 0 + ssh_annual_scaled,
-         data = df,
-         mesh = mesh,
-         time = "year",
-         spatial = "on",
-         family = tweedie(link = "log"),
-         spatiotemporal = "iid",
-       control = sdmTMBcontrol(newton_loops = 1,
-                               nlminb_loops = 2))
-}
-
-individual_plot <- function(output, variable, xlab){
-  ggplot(output$fit, aes(x = variable, y = visregFit)) +
+individual_plot <- function(model, data, variable, xlab){
+  object <- visreg(model,
+                   data = data,
+                   xvar = variable,
+                   plot = FALSE,
+                   cond = list(ssh_annual_scaled = 1)) # currently required with SVCs
+  object_plot <- ggplot(object$fit, aes(x = !!sym(variable), y = visregFit)) + # !!sym() removes quotes
     geom_line(color = "black",
               linewidth = 1,
               show.legend = FALSE) +
@@ -93,8 +43,14 @@ individual_plot <- function(output, variable, xlab){
                 alpha = 0.5,
                 show.legend = FALSE) +
     labs(x = xlab,
-         y = "Abundance Anomalies") 
-}
+         y = "Abundance Anomalies") +
+    theme_classic() +
+    theme(axis.ticks = element_blank(),
+          axis.text = element_text(family = "serif", size = 18),
+          axis.title = element_text(family = "serif", size = 22),
+          axis.text.x = element_text(angle = 0, vjust = 0.7)) 
+  return(object_plot)
+} # use for individual variables
 
 plot_variables <- function(model, data){
   depth <- visreg(model,
@@ -208,7 +164,7 @@ plot_variables <- function(model, data){
           axis.text.x = element_text(angle = 0, vjust = 0.7))
   
   ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot)
-}
+} # works only if all variables retained
 
 # Data
 # May have to filter salinity and depth due to outliers?
@@ -230,10 +186,36 @@ yoy_hake_mesh <- make_mesh(yoy_hake,
 plot(yoy_hake_mesh)
 
 # Fit models
-hake_model_small <- sdmTMB_small(yoy_hake,
-                                 yoy_hake_mesh) 
-hake_model_large <- sdmTMB_large(yoy_hake,
-                                 yoy_hake_mesh) # requires model simplification
+hake_model_small <- sdmTMB(small ~ 0 + 
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_hake,
+                           mesh = yoy_hake_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
+hake_model_large <- sdmTMB(small ~ 0 + 
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             # s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_hake,
+                           mesh = yoy_hake_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2)) # removed SSH due to plot
 
 sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model_small, # no std error reported when using log link
@@ -248,7 +230,12 @@ hake_model_large
 
 # Plot covariates
 plot_variables(hake_model_small, yoy_hake)
-plot_variables(hake_model_large, yoy_hake)
+
+hake_large_depth <- individual_plot(hake_model_large, yoy_hake, "bottom_depth", "Depth (m)")
+hake_large_temp <- individual_plot(hake_model_large, yoy_hake, "roms_temperature", "Temperature (\u00B0C)")
+hake_large_salt <- individual_plot(hake_model_large, yoy_hake, "roms_salinity", "Salinity")
+hake_large_jday <- individual_plot(hake_model_large, yoy_hake, "jday", "Day of Year")
+ggarrange(hake_large_depth, hake_large_temp, hake_large_salt, hake_large_jday)
 
 # Predict and plot
 nlat = 40
