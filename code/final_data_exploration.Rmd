@@ -245,10 +245,11 @@ hake_catch <- other_catch %>%
   dplyr::select(-c('shortbelly', 'widow', 'dab')) %>%
   rename(catch = hake)
 
-widow_sp <- filter(other_sp, species == 597)
-sbly_sp <- filter(other_sp, species == 604)
-dab_sp <- filter(other_sp, species == 147, year > 2010)
-hake_sp <- filter(other_sp, species == 382)
+widow_sp <- filter(other_sp, species == 597, std_length > 16 & std_length < 65 & !is.na(std_length))
+sbly_sp <- filter(other_sp, species == 604, std_length > 10 & std_length < 79 & !is.na(std_length))
+dab_sp <- filter(other_sp, species == 147, year > 2010, std_length > 15 & std_length < 56 & !is.na(std_length))
+hake_sp <- filter(other_sp, species == 382, std_length > 14 & std_length < 82 & !is.na(std_length))
+anch_sp <- filter(anch_sp, std_length > 20 & std_length < 86)
 
 rm(list = c('anch_data_list', 'other_catch', 
             'other_data_list', 'other_sp',
@@ -408,6 +409,7 @@ saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 
 ```{r}
 # Match to the fish data
+hindcast_anom <- readRDS("../data/hindcast_means.Rdata")
 # No ROMS past 2018 right now
 yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 24, 25)
 yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 25, 26)
