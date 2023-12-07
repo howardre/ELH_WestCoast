@@ -16,6 +16,7 @@ library(colorspace)
 library(mapdata)
 library(fields)
 library(ggpubr)
+library(future)
 
 # Load data and functions ----
 # Functions
@@ -271,6 +272,7 @@ lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small)
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large)
 
+# Overall predictions
 windows(height = 15, width = 18)
 par(mfrow = c(1, 2),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
@@ -287,6 +289,69 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_hake',
          res = 200)
 dev.off()
 
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (7-35 mm)", "Latitude")
+sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-134 mm)", " ")
+dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
+                    'hake_SVC_sdmtmb.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# Cross validation
+plan(multisession)
+clust <- as.numeric(as.factor(yoy_hake$year)) # year clusters, may not work with spatiotemporal "on"
+hake_small_cv <- sdmTMB_cv(small ~ 0 + 
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_hake,
+                           mesh = yoy_hake_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2),
+                           fold_ids = clust,
+                           k_folds = length(unique(clust)))
+
+plot(hake_small_cv$fold_elpd) # higher values better
+hake_small_cv$elpd
+
+plot(hake_small_cv$fold_loglik) # higher values better
+hake_small_cv$sum_loglik
+
+clust <- kmeans(yoy_hake[, c("X", "Y")], 20)$cluster # spatial clustering
+hake_large_cv <- sdmTMB_cv(large ~ 0 + 
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             # s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_hake,
+                           mesh = yoy_hake_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2),
+                           parallel = TRUE, 
+                           fold_ids = clust,
+                           k_folds = length(unique(clust))) # not working
 
 # Northern Anchovy ----
 # Make mesh object with matrices
