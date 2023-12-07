@@ -27,5 +27,6 @@ sdmTMB_grid <- function(df, model){
                    newdata = spatial_grid, 
                    "link")
   preds$est[preds$dist > 50000] <- NA # may want to find a way to mask with a polygon
+  preds$zeta_s_ssh_annual_scaled[preds$dist > 50000] <- NA # may want to find a way to mask with a polygon
   return(preds)
 }
