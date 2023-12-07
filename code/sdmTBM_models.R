@@ -357,51 +357,121 @@ hake_large_cv <- sdmTMB_cv(large ~ 0 +
 # Northern Anchovy ----
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
-                              xy_cols = c("X", "Y"), 
+                              xy_cols = c("X", "Y"),
                               n_knots = 200,
                               type = "cutoff_search",
                               seed = 2024)
-plot(yoy_anchovy_mesh)
+plot(yoy_anchovy_mesh) 
 
 # Fit models
-anchovy_model_small <- sdmTMB_small(yoy_anchovy,
-                                    yoy_anchovy_mesh) # this SVC not a good fit
-anchovy_model_large <- sdmTMB_large(yoy_anchovy,
-                                    yoy_anchovy_mesh) # needs simplification
+anchovy_model_small <- sdmTMB(small ~ 0 + 
+                             # s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             # s(roms_salinity, k = 5) +
+                             # s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           spatial_varying = ~ 0 + ssh_annual_scaled, # currently needs to be removed
+                           data = yoy_anchovy,
+                           mesh = yoy_anchovy_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
+anchovy_model_large <- sdmTMB(large ~ 0 + 
+                             # s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             # s(roms_salinity, k = 5) +
+                             # s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_anchovy,
+                           mesh = yoy_anchovy_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2)) # removed SSH due to plot
 
-sanity(anchovy_model_small) 
-tidy(anchovy_model_small, 
+sanity(anchovy_model_small) # sigma_z is the SD of the spatially varying coefficient field
+tidy(anchovy_model_small, # no std error reported when using log link
      effect = "ran_pars", 
-     conf.int = T)
-sanity(anchovy_model_large)
+     conf.int = TRUE)
+sanity(anchovy_model_large) 
 tidy(anchovy_model_large,
      effect = "ran_pars", 
-     conf.int = T)
+     conf.int = TRUE)
 anchovy_model_small
 anchovy_model_large
 
 # Plot covariates
-plot_variables(anchovy_model_small, yoy_anchovy)
-plot_variables(anchovy_model_large, yoy_anchovy)
+anchovy_small_temp <- individual_plot(anchovy_model_large, yoy_anchovy, "roms_temperature", "Temperature (\u00B0C)")
+anchovy_small_jday <- individual_plot(anchovy_model_large, yoy_anchovy, "jday", "Day of Year")
+
+tiff(here('results/hindcast_output/yoy_anchovy',
+          'anchovy_partial_dependence_small_sdmtmb.jpg'),
+     units = "in",
+     width = 30,
+     height = 12,
+     res = 200)
+ggarrange(anchovy_small_temp, anchovy_small_jday, ncol = 2, nrow = 1)
+dev.off()
+
+anchovy_large_temp <- individual_plot(anchovy_model_large, yoy_anchovy, "roms_temperature", "Temperature (\u00B0C)")
+anchovy_large_jday <- individual_plot(anchovy_model_large, yoy_anchovy, "jday", "Day of Year")
+
+tiff(here('results/hindcast_output/yoy_anchovy',
+          'anchovy_partial_dependence_large_sdmtmb.jpg'),
+     units = "in",
+     width = 30,
+     height = 12,
+     res = 200)
+ggarrange(anchovy_large_temp, anchovy_large_jday, ncol = 2, nrow = 1)
+dev.off()
+
 
 # Predict and plot
-nlat = 40
-nlon = 60
 latd = seq(min(yoy_anchovy$lat), max(yoy_anchovy$lat), length.out = nlat)
 lond = seq(min(yoy_anchovy$lon), max(yoy_anchovy$lon), length.out = nlon)
 
 anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small)
 anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large)
 
-windows(height = 15, width = 20)
+# Overall predictions
+windows(height = 15, width = 18)
 par(mfrow = c(1, 2),
-    mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_map(yoy_anchovy, anchovy_pred_small)
-sdmTMB_map(yoy_anchovy, anchovy_pred_large)
+sdmTMB_map(yoy_anchovy, anchovy_pred_small, "Small (15-35 mm)", "Latitude")
+sdmTMB_map(yoy_anchovy, anchovy_pred_large, "Large (36-92 mm)", " ")
+dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
+                    'anchovy_distributions_sdmtmb.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
 
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_SVC(yoy_anchovy, anchovy_pred_small, "Small (15-35 mm)", "Latitude")
+sdmTMB_SVC(yoy_anchovy, anchovy_pred_large, "Large (36-92 mm)", " ")
+dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
+                    'anchovy_SVC_sdmtmb.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
 
 # Pacific Sanddab ----
 # Make mesh object with matrices
