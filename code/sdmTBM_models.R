@@ -13,6 +13,7 @@ library(visreg) # still waiting on v2.7.1 to fix SVC issue
 library(raster)
 library(sf)
 library(colorspace)
+library(RColorBrewer)
 library(mapdata)
 library(fields)
 library(ggpubr)
