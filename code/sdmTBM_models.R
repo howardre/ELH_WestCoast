@@ -194,9 +194,7 @@ nlon = 60
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"), 
-                           n_knots = 200,
-                           type = "cutoff_search",
-                           seed = 2024)
+                           cutoff = 10)
 plot(yoy_hake_mesh) 
 
 # Fit models
@@ -219,7 +217,7 @@ hake_model_large <- sdmTMB(large ~ 0 +
                              s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
                              s(roms_salinity, k = 5) +
-                             # s(ssh_anom, k = 5) +
+                             s(ssh_anom, k = 5) +
                              s(jday, k = 15),
                            spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_hake,
