@@ -193,12 +193,14 @@ nlon = 60
 # Pacific Hake ----
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
-                           xy_cols = c("X", "Y"), 
-                           cutoff = 10)
+                           xy_cols = c("X", "Y"),
+                              n_knots = 200,
+                              type = "cutoff_search",
+                              seed = 2024)
 plot(yoy_hake_mesh) 
 
 # Fit models
-hake_model_small <- sdmTMB(small ~ 0 + 
+hake_model_small <- sdmTMB(small ~ 0 +
                              s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
                              s(roms_salinity, k = 5) +
@@ -248,6 +250,15 @@ tiff(here('results/hindcast_output/yoy_hake',
      height = 12,
      res = 200)
 plot_variables(hake_model_small, yoy_hake)
+dev.off()
+
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence_large_sdmtmb.jpg'),
+     units = "in",
+     width = 56,
+     height = 12,
+     res = 200)
+plot_variables(hake_model_large, yoy_hake)
 dev.off()
 
 hake_large_depth <- individual_plot(hake_model_large, yoy_hake, "bottom_depth", "Depth (m)")
@@ -363,12 +374,12 @@ plot(yoy_anchovy_mesh)
 
 # Fit models
 anchovy_model_small <- sdmTMB(small ~ 0 + 
-                             # s(bottom_depth, k = 5) +
+                             s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
-                             # s(roms_salinity, k = 5) +
-                             # s(ssh_anom, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             s(ssh_anom, k = 5) +
                              s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled, # currently needs to be removed
+                           # spatial_varying = ~ 0 + ssh_annual_scaled, # currently needs to be removed
                            data = yoy_anchovy,
                            mesh = yoy_anchovy_mesh,
                            time = "year",
@@ -378,12 +389,12 @@ anchovy_model_small <- sdmTMB(small ~ 0 +
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 anchovy_model_large <- sdmTMB(large ~ 0 + 
-                             # s(bottom_depth, k = 5) +
+                             s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
-                             # s(roms_salinity, k = 5) +
+                             s(roms_salinity, k = 5) +
                              # s(ssh_anom, k = 5) +
                              s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_anchovy,
                            mesh = yoy_anchovy_mesh,
                            time = "year",
@@ -481,10 +492,36 @@ yoy_sdab_mesh <- make_mesh(yoy_sdab,
 plot(yoy_sdab_mesh)
 
 # Fit models
-sdab_model_small <- sdmTMB_small(yoy_sdab,
-                                 yoy_sdab_mesh) # this SVC not a good fit
-sdab_model_large <- sdmTMB_large(yoy_sdab,
-                                 yoy_sdab_mesh) # needs simplification
+sdab_model_small <- sdmTMB(small ~ 0 +
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_sdab,
+                           mesh = yoy_sdab_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
+sdab_model_large <- sdmTMB(large ~ 0 + 
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             s(ssh_anom, k = 5) +
+                             s(jday, k = 15),
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_sdab,
+                           mesh = yoy_sdab_mesh,
+                           time = "year",
+                           spatial = "on",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "iid",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
 
 sanity(sdab_model_small) 
 tidy(sdab_model_small, 
