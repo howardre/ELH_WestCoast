@@ -47,59 +47,20 @@ clean_sp <- function(data_list, i){
   return(data_frame)
 }
 
-# Match the climate data to the catch (haul level) data
-# climate_match <- function(data){
-#   data <- merge(data, npgo_index,
-#                 by.x = c("year", "month"),
-#                 by.y = c("YEAR", "MONTH"),
-#                 all.x = T, all.y = F)
-#   data <- merge(data, pdo_index,
-#                 by.x = c("year", "month"),
-#                 by.y = c("year", "month"),
-#                 all.x = T, all.y = F)
-#   data <- subset(data, select = -c(Date))
-#   data <- merge(data, oni_matrix,
-#                 by.x = c("year", "month"),
-#                 by.y = c("year", "month"),
-#                 all.x = T, all.y = F)
-#   match_npgo <- match(data$year, npgo_means$YEAR)
-#   data$NPGO_mean <- npgo_means$NPGO_mean[match_npgo]
-#   match_pdo <- match(data$year, pdo_means$year)
-#   data$PDO_mean <- pdo_means$PDO_mean[match_pdo]
-#   match_oni <- match(data$year, oni_means$year)
-#   data$ONI_mean <- oni_means$ONI_mean[match_oni]
-#   data$NPGO_pos <- data$NPGO_mean + abs(min(data$NPGO_mean))
-#   data$PDO_pos <- data$PDO_mean + abs(min(data$PDO_mean))
-#   data$ONI_pos <- data$ONI_mean + abs(min(data$ONI_mean))
-#   return(data)
-# }
-
 # Combine the grouped length data with the catch data
 merge_lengths <- function(catch, hauls, subset){
   data <- merge(catch,
                 subset[, c("haul_no", "cruise", "small", "large")],
-                by = c("haul_no", "cruise")) # Add the catch info to the length data
-  data_id <- merge(hauls[, c("haul_no", "cruise", "ctd_index")],
-                   data,
+                by = c("haul_no", "cruise"),
+                all.x = TRUE) # Add the catch info to the length data
+  data_zero <- data %>% mutate(small = ifelse(is.na(small), 0, small),
+                               large = ifelse(is.na(large), 0, large)) %>%
+    filter(catch == small + large)
+  data_id <- merge(hauls[, c("haul_no", "cruise")],
+                   data_zero,
                    by = c("haul_no", "cruise"),
-                   all.y = T) # add in ctd_index for RREAS
-  # data_ctd <- merge(data_id,
-  #                   RREAS_means,
-  #                   by = c('cruise',
-  #                          'ctd_index',
-  #                          'year'), # match the RREAS ctds
-  #                   all.x = T)
-  # data_ctd_all <- merge(data_ctd,
-  #                       PRS_means,
-  #                       by.x = c("numeric_date", "station"),
-  #                       by.y = c("date", "swfcs.station"),
-  #                       all.x = T) # Add the pre-recruit CTD data
-  # data_comb <- mutate(data_ctd_all,
-  #                     temperature = coalesce(temperature, temperature_c),
-  #                     salinity = coalesce(salinity, salinity_psu),
-  #                     oxygen = coalesce(oxygen, dissolved_oxygen)) # Combine env data
-  data_final <- data_id
-  return(data_final)
+                   all.y = TRUE)
+  return(data_id)
 }
 
 # Group into two size classes
@@ -109,10 +70,11 @@ coalesce_by_column <- function(data) {
   
 size_calc <- function(sp, size){
   sizes <- mutate(sp, size_class = case_when(std_length <= size ~ "small",
-                                             std_length > size ~ "large")) 
+                                             std_length > size ~ "large",
+                                             is.na(std_length) ~ "NA")) 
   subset <- sizes %>% 
-    dplyr::group_by(numeric_date, station, haul_no, haul_exp, size_class, cruise) %>%
-    mutate(size_class = factor(size_class, levels = c("small", "large"))) %>%
+    dplyr::group_by(numeric_date, station, haul_no, haul_exp, size_class, cruise, catch) %>%
+    mutate(size_class = factor(size_class, levels = c("small", "large", "NA"))) %>%
     summarise(size_count = length(size_class)) %>%
     mutate(size_subset = size_count * haul_exp) %>%
     tidyr::pivot_wider(names_from = size_class,
@@ -245,11 +207,23 @@ hake_catch <- other_catch %>%
   dplyr::select(-c('shortbelly', 'widow', 'dab')) %>%
   rename(catch = hake)
 
-widow_sp <- filter(other_sp, species == 597, std_length > 16 & std_length < 65 & !is.na(std_length))
-sbly_sp <- filter(other_sp, species == 604, std_length > 10 & std_length < 79 & !is.na(std_length))
-dab_sp <- filter(other_sp, species == 147, year > 2010, std_length > 15 & std_length < 56 & !is.na(std_length))
-hake_sp <- filter(other_sp, species == 382, std_length > 14 & std_length < 82 & !is.na(std_length))
-anch_sp <- filter(anch_sp, std_length > 20 & std_length < 86)
+# Keep NA's because these are hauls with no catch at all
+# Have hauls with 0 measurements as well, but catches (so if num_measured > 1 but catch = 0 then remove)
+widow_sp <- filter(other_sp, species == 597, 
+                   std_length > 16 & std_length < 65 | is.na(std_length), 
+                   num_measured > 0 | catch == 0)
+sbly_sp <- filter(other_sp, species == 604, 
+                  std_length > 10 & std_length < 79 | is.na(std_length), 
+                   num_measured > 0 | catch == 0)
+dab_sp <- filter(other_sp, species == 147, year > 2010, 
+                 std_length > 15 & std_length < 56 | is.na(std_length), 
+                   num_measured > 0 | catch == 0)
+hake_sp <- filter(other_sp, species == 382, 
+                  std_length > 14 & std_length < 82 | is.na(std_length), 
+                   num_measured > 0 | catch == 0)
+anch_sp <- filter(anch_sp, 
+                  std_length > 20 & std_length < 86 | is.na(std_length), 
+                   num_measured > 0 | catch == 0)
 
 rm(list = c('anch_data_list', 'other_catch', 
             'other_data_list', 'other_sp',
@@ -410,12 +384,13 @@ saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 ```{r}
 # Match to the fish data
 hindcast_anom <- readRDS("../data/hindcast_means.Rdata")
+
 # No ROMS past 2018 right now
-yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 24, 25)
-yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 25, 26)
-yoy_hake <- hindcast_match(merge_hake, hindcast_anom, 25, 26)
-yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, 25, 26)
-yoy_widw <- hindcast_match(merge_widw, hindcast_anom, 25, 26)
+yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 23, 24)
+yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 24, 25)
+yoy_hake <- hindcast_match(merge_hake, hindcast_anom, 24, 25)
+yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, 24, 25)
+yoy_widw <- hindcast_match(merge_widw, hindcast_anom, 24, 25)
 ```
 
 ```{r, warning = FALSE}
