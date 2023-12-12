@@ -48,7 +48,7 @@ clean_sp <- function(data_list, i){
 }
 
 # Combine the grouped length data with the catch data
-merge_lengths <- function(catch, hauls, subset){
+merge_lengths <- function(catch, hauls, subset, RREAS_means, PRS_means){
   data <- merge(catch,
                 subset[, c("haul_no", "cruise", "small", "large")],
                 by = c("haul_no", "cruise"),
@@ -56,11 +56,22 @@ merge_lengths <- function(catch, hauls, subset){
   data_zero <- data %>% mutate(small = ifelse(is.na(small), 0, small),
                                large = ifelse(is.na(large), 0, large)) %>%
     filter(catch == small + large)
-  data_id <- merge(hauls[, c("haul_no", "cruise")],
+  data_id <- merge(hauls[, c("haul_no", "cruise", "ctd_index")],
                    data_zero,
                    by = c("haul_no", "cruise"),
                    all.y = TRUE)
-  return(data_id)
+  data_ctd <- merge(data_id,
+                    RREAS_means,
+                    by = c('cruise', 'ctd_index', 'year')) # match RREAS ctds
+  data_ctd_all <- merge(data_ctd,
+                        PRS_means,
+                        by.x = c('numeric_date', 'station'),
+                        by.y = c('date', 'swfcs.station'),
+                        all.x = TRUE)
+  data_comb <- mutate(data_ctd_all,
+                      temperature = coalesce(temperature, temperature_c),
+                      salinity = coalesce(salinity, salinity_psu))
+  return(data_comb)
 }
 
 # Group into two size classes
@@ -183,12 +194,12 @@ col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station',
                      'bottom_depth', 'station_bottom_depth', 'species',
                   'catch', 'num_measured', 'haul_exp', 'sp_no', 'std_length')
 
-other_catch[col_names_catch] <- sapply(other_catch[col_names_catch], as.numeric)
+other_catch[col_names_catch] <- sapply(other_catch[col_names_catch], as.numeric) # changes NA's to actual NA
 other_catch <- other_catch %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
 other_catch$numeric_date <- as.numeric(format(as.Date(other_catch$date, format = "%Y%j"),
                                            "%m%d%Y"))
 
-other_sp[col_names_sp] <- sapply(other_sp[col_names_sp], as.numeric)
+other_sp[col_names_sp] <- sapply(other_sp[col_names_sp], as.numeric) # Creates actual NA's
 other_sp <- other_sp %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
 other_sp$numeric_date <- as.numeric(format(as.Date(other_sp$date, format = "%Y%j"),
                                            "%m%d%Y"))
@@ -250,36 +261,35 @@ hake_subset[is.na(hake_subset)] <- 0
 ```{r}
 # # Extract CTD data
 # # RREAS
-# RREAS_CTD_info <- info('FED_Rockfish_CTD')
-# 
-# RREAS_ctds <- tabledap(RREAS_CTD_info,
-#                        fields = c('cruise', 'ctd_index',
-#                                   'temperature', 'salinity', 
-#                                   'oxygen', 'station',
-#                                   'ctd_depth', 'time'),
-#                        'ctd_depth<=10')
-# 
-# RREAS_cols <- c('temperature', 'salinity', 'oxygen')
-# RREAS_ctds[RREAS_cols] <- sapply(RREAS_ctds[RREAS_cols], as.numeric)
-# 
-# RREAS_ctd_means <- RREAS_ctds %>%
-#   mutate(date = format(as.POSIXct(time, tz = "UTC", format = "%Y-%m-%d")),
-#          year = lubridate::year(date)) %>%
-#   group_by(cruise, ctd_index, year) %>%
-#   summarise_at(vars('temperature', 'salinity', 'oxygen'), mean) %>%
-#   mutate_all(~ifelse(is.nan(.), NA, .)) 
-# 
-# # Pre-recruit
-# PRS_ctds <- read.csv(here::here('data', 'Prerecruit_env.csv'))[, -1]
-# 
-# PRS_avg_ctds <- PRS_ctds %>%
-#   filter(depth_m <= 10) %>%
-#   group_by(date, swfcs.station) %>%
-#   mutate(date = as.numeric(format(as.Date(date, 
-#                                           format = "%Y-%m-%d"),
-#                                   "%m%d%Y"))) %>%
-#   summarise_at(vars('temperature_c', 'salinity_psu', 'dissolved_oxygen'), mean) %>%
-#   mutate_all(~ifelse(is.nan(.), NA, .))
+RREAS_CTD_info <- info('FED_Rockfish_CTD')
+
+RREAS_ctds <- tabledap(RREAS_CTD_info,
+                       fields = c('cruise', 'ctd_index',
+                                  'temperature', 'salinity',
+                                  'station', 'ctd_depth', 'time'),
+                       'ctd_depth<=10')
+
+RREAS_cols <- c('temperature', 'salinity')
+RREAS_ctds[RREAS_cols] <- sapply(RREAS_ctds[RREAS_cols], as.numeric)
+
+RREAS_ctd_means <- RREAS_ctds %>%
+  mutate(date = format(as.POSIXct(time, tz = "UTC", format = "%Y-%m-%d")),
+         year = lubridate::year(date)) %>%
+  group_by(cruise, ctd_index, year) %>%
+  summarise_at(vars('temperature', 'salinity'), mean) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .))
+
+# Pre-recruit
+PRS_ctds <- read.csv(here::here('data', 'Prerecruit_env.csv'))[, -1]
+
+PRS_avg_ctds <- PRS_ctds %>%
+  filter(depth_m <= 10) %>%
+  group_by(date, swfcs.station) %>%
+  mutate(date = as.numeric(format(as.Date(date,
+                                          format = "%Y-%m-%d"),
+                                  "%m%d%Y"))) %>%
+  summarise_at(vars('temperature_c', 'salinity_psu'), mean) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .))
 ```
 
 ```{r}
@@ -287,11 +297,11 @@ hake_subset[is.na(hake_subset)] <- 0
 haul_data <- read_excel(here('data', 'haul_data_through2021.xlsx'))
 names(haul_data) <- tolower(names(haul_data))
 
-merge_anch <- merge_lengths(anch_catch, haul_data, anch_subset)
-merge_widw <- merge_lengths(widow_catch, haul_data, widow_subset)
-merge_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset)
-merge_dab <- merge_lengths(dab_catch, haul_data, dab_subset)
-merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset)
+merge_anch <- merge_lengths(anch_catch, haul_data, anch_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_widw <- merge_lengths(widow_catch, haul_data, widow_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_dab <- merge_lengths(dab_catch, haul_data, dab_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means, PRS_avg_ctds)
 ```
 
 ```{r}
@@ -386,11 +396,11 @@ saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 hindcast_anom <- readRDS("../data/hindcast_means.Rdata")
 
 # No ROMS past 2018 right now
-yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 23, 24)
-yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 24, 25)
-yoy_hake <- hindcast_match(merge_hake, hindcast_anom, 24, 25)
-yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, 24, 25)
-yoy_widw <- hindcast_match(merge_widw, hindcast_anom, 24, 25)
+yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 28, 29)
+yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 29, 30)
+yoy_hake <- hindcast_match(merge_hake, hindcast_anom, 29, 30)
+yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, 29, 30)
+yoy_widw <- hindcast_match(merge_widw, hindcast_anom, 29, 30)
 ```
 
 ```{r, warning = FALSE}
