@@ -141,7 +141,7 @@ species_filter <- function(data, species){
 }
 
 # Match ROMS hindcast to the fish data
-hindcast_match <- function(data, roms, a, b){
+hindcast_match <- function(data, roms, ssh, a, b){
   data[, c(a, b)] <- as.data.frame(RANN::nn2(roms[, c('lat', 'lon', 'month', 'year')],
                                              data[, c('lat', 'lon', 'month', 'year')],
                                              k = 1))
@@ -152,7 +152,12 @@ hindcast_match <- function(data, roms, a, b){
   data$sss_anom <- as.data.frame(roms)[c(data$nn.idx), 23]
   data$sst_anom <- as.data.frame(roms)[c(data$nn.idx), 22]
   data$year_ssh <- as.data.frame(roms)[c(data$nn.idx), 25]
+  data[, c(a, b)] <- as.data.frame(RANN::nn2(ssh[, c('latitude', 'longitude', 'month', 'year')],
+                                             data[, c('lat', 'lon', 'month', 'year')],
+                                             k = 1))
+  data$ssh_nc <- as.data.frame(ssh)[c(data$nn.idx), 10]
   data <- data[-c(a, b)] # remove extra columns before predicting
+  return(data)
 }
 ```
 
@@ -343,55 +348,6 @@ hindcast_trim <- nep_hindcast %>%
 ```
 
 ```{r}
-nc_extract <- function(file, variable, varid_name){
-  lon <- ncvar_get(file, varid = 'longitude')
-  lon1 <- ifelse(lon >= 180, lon -360, lon)
-  lat <- ncvar_get(file, varid = 'latitude')
-  time <- ncvar_get(file, varid = 'time')
-  time1 <- as.Date(time / (60 * 60 * 24), origin = "1900-01-01 00:00:00")
-
-  month <- as.numeric(substr(time1, 6, 7))
-
-  fillvalue_t <- ncatt_get(file, varid_name, "_FillValue")
-  
-  variable <- ncvar_get(file, varid = varid_name)
-  variable[variable == fillvalue_t$value] <- NA
-  
-  return_list <- list("lon1" = lon1, "lat" = lat, "time1" = time1, "variable" = variable)
-} 
-
-years_list <- as.character(c(1993:2014))
-get_filepath <- function(years){
-  filepath = paste('C:/Users/howar/Documents/Oregon State/ELH_WestCoast/data/aviso_tg_ssh/osu_daily_sla_geovel_',
-                   years, '_v2.nc.gz', sep = '')
-  return(filepath)
-}
-
-ssh_var <- list()
-for(j in 1:22){
-  model_ssh <- nc_open(get_filepath(years_list[j]))
-  ssh_output <- nc_extract(model_ssh, 
-                           sea_surface_height_above_sea_level, 
-                           'sea_surface_height_above_sea_level')
-  nc_close(model_ssh)
-  gc()
-  ssh_var[[paste("ssh_output", j, sep = "")]] <- ssh_output
-}
-
-ssh_combined <- list()
-for(j in 1:22){
-  model_ssh <- nc_open(get_filepath(years_list[j]))
-  ssh_output <- cbind(ncvar_get(model_ssh, 'sea_surface_height_above_sea_level'))
-  var <- model_ssh$var[]
-  nc_close(model_ssh)
-  gc()
-  ssh_var[[paste("ssh_output", j, sep = "")]] <- ssh_output
-}
-
-ssh_df <- bind_rows(ssh_var)
-```
-
-```{r}
 # Get means by month for each unique lat/lon combo
 # Subtract value at each location/time by monthly value then divide by SD
 hindcast_anom <- hindcast_trim %>%
@@ -404,7 +360,7 @@ hindcast_anom <- hindcast_trim %>%
          sss_sd = sd(salt)) %>%
   mutate(ssh_anom = (zeta - ssh_month)/ssh_sd,
          sst_anom = (temp - sst_month)/sst_sd,
-         sss_anom = (salt - sss_month)/sss_sd,)
+         sss_anom = (salt - sss_month)/sss_sd)
 ```
 
 ```{r}
@@ -432,7 +388,6 @@ hindcast_year <- hindcast_depths %>%
             year_temp = mean(sst_anom, na.rm = TRUE),
             year_salt = mean(sss_anom, na.rm = TRUE))
 
-
 # Match back to the main data frame
 hindcast_anom$year_ssh <- hindcast_year$year_ssh[match(hindcast_anom$year,
                                                        hindcast_year$year)]
@@ -441,15 +396,58 @@ saveRDS(hindcast_anom, file = "../data/hindcast_means.Rdata")
 ```
 
 ```{r}
+# Import the AVISO + TG files
+ssh_files <- list.files(path = "C:/Users/howar/Documents/Oregon State/ELH_WestCoast/data/aviso_tg_ssh/")
+
+prestring <- "C:/Users/howar/Documents/Oregon State/ELH_WestCoast/data/aviso_tg_ssh/"
+
+ssh_df <- list()
+
+for(i in ssh_files){
+  ssh_df[[i]] <- paste0(prestring, i)
+  ssh_df
+}
+
+ssh_dat <- list()
+
+for(i in ssh_df){
+  ssh_dat[[i]] <- tidync(i) %>%
+    hyper_tibble(select_var = "sea_surface_height_above_sea_level")
+  ssh_dat
+}
+
+ssh <- bind_rows(ssh_dat)
+ssh$date <- as.Date(ssh$time, origin = "1970-01-01")
+ssh$lon <- case_when(ssh$longitude >= 180 ~ ssh$longitude - 360,
+                     ssh$longitude < 180 ~ ssh$longitude)
+ssh$lat <- ssh$latitude
+ssh$month <- month(ssh$date)
+ssh$year <- year(ssh$date)
+
+ssh_filter <- ssh %>% filter(between(month, 4, 8) & # must use between, no %in% for numeric
+                               between(latitude, 32.7, 47.6) &
+                               between(longitude, -125.4, -117.3))
+
+ssh_anom <- ssh_filter %>%
+  group_by(month, latitude, longitude) %>%
+  mutate(ssh_month = mean(sea_surface_height_above_sea_level),
+         ssh_sd = sd(sea_surface_height_above_sea_level)) %>%
+  mutate(ssh_anom = (sea_surface_height_above_sea_level - ssh_month)/ssh_sd)
+
+saveRDS(ssh_anom, file = "../data/ssh_data.Rdata")
+```
+
+```{r}
 # Match to the fish data
 hindcast_anom <- readRDS("../data/hindcast_means.Rdata")
+ssh_anom <- readRDS("../data/ssh_data.Rdata")
 
 # No ROMS past 2018 right now
-yoy_anch <- hindcast_match(merge_anch, hindcast_anom, 28, 29)
-yoy_dab <- hindcast_match(merge_dab, hindcast_anom, 29, 30)
-yoy_hake <- hindcast_match(merge_hake, hindcast_anom, 29, 30)
-yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, 29, 30)
-yoy_widw <- hindcast_match(merge_widw, hindcast_anom, 29, 30)
+yoy_anch <- hindcast_match(merge_anch, hindcast_anom, ssh_anom, 28, 29)
+yoy_dab <- hindcast_match(merge_dab, hindcast_anom, ssh_anom, 29, 30)
+yoy_hake <- hindcast_match(merge_hake, hindcast_anom, ssh_anom, 29, 30)
+yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, ssh_anom, 29, 30)
+yoy_widw <- hindcast_match(merge_widw, hindcast_anom, ssh_anom, 29, 30)
 ```
 
 ```{r, warning = FALSE}
