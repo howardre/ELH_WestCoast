@@ -343,6 +343,55 @@ hindcast_trim <- nep_hindcast %>%
 ```
 
 ```{r}
+nc_extract <- function(file, variable, varid_name){
+  lon <- ncvar_get(file, varid = 'longitude')
+  lon1 <- ifelse(lon >= 180, lon -360, lon)
+  lat <- ncvar_get(file, varid = 'latitude')
+  time <- ncvar_get(file, varid = 'time')
+  time1 <- as.Date(time / (60 * 60 * 24), origin = "1900-01-01 00:00:00")
+
+  month <- as.numeric(substr(time1, 6, 7))
+
+  fillvalue_t <- ncatt_get(file, varid_name, "_FillValue")
+  
+  variable <- ncvar_get(file, varid = varid_name)
+  variable[variable == fillvalue_t$value] <- NA
+  
+  return_list <- list("lon1" = lon1, "lat" = lat, "time1" = time1, "variable" = variable)
+} 
+
+years_list <- as.character(c(1993:2014))
+get_filepath <- function(years){
+  filepath = paste('C:/Users/howar/Documents/Oregon State/ELH_WestCoast/data/aviso_tg_ssh/osu_daily_sla_geovel_',
+                   years, '_v2.nc.gz', sep = '')
+  return(filepath)
+}
+
+ssh_var <- list()
+for(j in 1:22){
+  model_ssh <- nc_open(get_filepath(years_list[j]))
+  ssh_output <- nc_extract(model_ssh, 
+                           sea_surface_height_above_sea_level, 
+                           'sea_surface_height_above_sea_level')
+  nc_close(model_ssh)
+  gc()
+  ssh_var[[paste("ssh_output", j, sep = "")]] <- ssh_output
+}
+
+ssh_combined <- list()
+for(j in 1:22){
+  model_ssh <- nc_open(get_filepath(years_list[j]))
+  ssh_output <- cbind(ncvar_get(model_ssh, 'sea_surface_height_above_sea_level'))
+  var <- model_ssh$var[]
+  nc_close(model_ssh)
+  gc()
+  ssh_var[[paste("ssh_output", j, sep = "")]] <- ssh_output
+}
+
+ssh_df <- bind_rows(ssh_var)
+```
+
+```{r}
 # Get means by month for each unique lat/lon combo
 # Subtract value at each location/time by monthly value then divide by SD
 hindcast_anom <- hindcast_trim %>%
