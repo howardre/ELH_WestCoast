@@ -152,8 +152,8 @@ hindcast_match <- function(data, roms, ssh, a, b){
   data$sss_anom <- as.data.frame(roms)[c(data$nn.idx), 23]
   data$sst_anom <- as.data.frame(roms)[c(data$nn.idx), 22]
   data$year_ssh <- as.data.frame(roms)[c(data$nn.idx), 25]
-  data[, c(a, b)] <- as.data.frame(RANN::nn2(ssh[, c('latitude', 'longitude', 'month', 'year')],
-                                             data[, c('lat', 'lon', 'month', 'year')],
+  data[, c(a, b)] <- as.data.frame(RANN::nn2(ssh[, c('latitude', 'longitude', 'date')],
+                                             data[, c('lat', 'lon', 'date')],
                                              k = 1))
   data$ssh_nc <- as.data.frame(ssh)[c(data$nn.idx), 10]
   data <- data[-c(a, b)] # remove extra columns before predicting
@@ -173,9 +173,11 @@ anch_data_list <- lapply(anch_tab_names, function(x) read_excel(path = anch_exl_
 anch_catch <- clean_catch(anch_data_list, 1)
 anch_catch$numeric_date <- as.numeric(format(as.Date(anch_catch$haul_date, format = "%Y-%m-%d"),
                                            "%m%d%Y"))
+anch_catch$date <- as.Date(anch_catch$haul_date)
 anch_sp <- clean_sp(anch_data_list, 2)
 anch_sp$numeric_date <- as.numeric(format(as.Date(anch_sp$haul_date, format = "%Y-%m-%d"),
                                            "%m%d%Y"))
+anch_sp$date <- as.Date(anch_sp$haul_date)
 
 other_exl_data <- here('data', 'rockfish_dab_hake.xlsx')
 excel_sheets(path = other_exl_data) # view the worksheets
@@ -203,11 +205,13 @@ other_catch[col_names_catch] <- sapply(other_catch[col_names_catch], as.numeric)
 other_catch <- other_catch %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
 other_catch$numeric_date <- as.numeric(format(as.Date(other_catch$date, format = "%Y%j"),
                                            "%m%d%Y"))
+other_catch$date <- as.Date(other_catch$date)
 
 other_sp[col_names_sp] <- sapply(other_sp[col_names_sp], as.numeric) # Creates actual NA's
 other_sp <- other_sp %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
 other_sp$numeric_date <- as.numeric(format(as.Date(other_sp$date, format = "%Y%j"),
                                            "%m%d%Y"))
+other_sp$date <- as.Date(other_sp$date)
 
 widow_catch <- other_catch %>% 
   dplyr::select(-c('shortbelly', 'hake', 'dab')) %>%
@@ -443,7 +447,7 @@ hindcast_anom <- readRDS("../data/hindcast_means.Rdata")
 ssh_anom <- readRDS("../data/ssh_data.Rdata")
 
 # No ROMS past 2018 right now
-yoy_anch <- hindcast_match(merge_anch, hindcast_anom, ssh_anom, 28, 29)
+yoy_anch <- hindcast_match(merge_anch, hindcast_anom, ssh_anom, 29, 30)
 yoy_dab <- hindcast_match(merge_dab, hindcast_anom, ssh_anom, 29, 30)
 yoy_hake <- hindcast_match(merge_hake, hindcast_anom, ssh_anom, 29, 30)
 yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, ssh_anom, 29, 30)
