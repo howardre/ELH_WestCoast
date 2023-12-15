@@ -18,15 +18,11 @@ state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47.5, 45.0, 37.0),
                            lon = c(-120.0, -121.0, -119.5))
 
-# Add google font
-sysfonts::font_add_google("Lato")
-showtext::showtext_auto()
-
 # Create map
 windows(width = 20,
         height = 32,)
 par(mfrow = c(1, 1),
-    family = 'Lato',
+    family = 'serif',
     mar = c(4, 5, 3, .2) + .15)
 plot.bathy(WC_bathy,
            image = T,
@@ -49,6 +45,20 @@ plot.bathy(WC_bathy,
            cex.lab = 1.2,
            cex.main = 1.7,
            cex.axis = 1)
+plot(WC_bathy,
+     deep = -200,
+     shallow = -200,
+     lwd = 0.4,
+     drawlabels = T,
+     add = T,
+     col = "slategrey")
+plot(WC_bathy,
+     deep = -2000,
+     shallow = -2000,
+     lwd = 0.4,
+     drawlabels = T,
+     add = T,
+     col =  "slategrey")
 maps::map("state",
           boundary = FALSE,
           fill = TRUE,
@@ -60,7 +70,7 @@ text(x = state_labels$lon,
      pos = 1,
      col = "black",
      cex = 1.2,
-     family = "Lato")
+     family = "serif")
 points(yoy_hake_catch$lon[yoy_hake_catch$year == 2018],
        yoy_hake_catch$lat[yoy_hake_catch$year == 2018],
        pch = 18,
