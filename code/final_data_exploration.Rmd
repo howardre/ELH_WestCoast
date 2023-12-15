@@ -62,7 +62,8 @@ merge_lengths <- function(catch, hauls, subset, RREAS_means, PRS_means){
                    all.y = TRUE)
   data_ctd <- merge(data_id,
                     RREAS_means,
-                    by = c('cruise', 'ctd_index', 'year')) # match RREAS ctds
+                    by = c('cruise', 'ctd_index', 'year'),
+                    all.x = TRUE) # match RREAS ctds
   data_ctd_all <- merge(data_ctd,
                         PRS_means,
                         by.x = c('numeric_date', 'station'),
