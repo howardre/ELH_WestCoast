@@ -71,8 +71,8 @@ text(x = state_labels$lon,
      col = "black",
      cex = 1.2,
      family = "serif")
-points(yoy_hake_catch$lon[yoy_hake_catch$year == 2018],
-       yoy_hake_catch$lat[yoy_hake_catch$year == 2018],
+points(yoy_hake_catch$lon,
+       yoy_hake_catch$lat,
        pch = 18,
        col = 'darkmagenta',
        cex = .9)
