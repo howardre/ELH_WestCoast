@@ -210,7 +210,7 @@ hake_model_small <- sdmTMB(small ~ 0 +
                            spatial = "on",
                            time = "year",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "iid",
+                           spatiotemporal = "rw",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 hake_model_large <- sdmTMB(large ~ 0 + 
@@ -219,13 +219,13 @@ hake_model_large <- sdmTMB(large ~ 0 +
                              s(roms_salinity, k = 5) +
                              s(ssh_anom, k = 5) +
                              s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_hake,
                            mesh = yoy_hake_mesh,
                            spatial = "on",
                            time = "year",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "iid",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2)) # removed SSH due to plot
 
@@ -558,18 +558,19 @@ yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
 plot(yoy_shortbelly_mesh)
 
 # Fit models
-shortbelly_model_small <- sdmTMB(small_catch1 ~ 0 +
+shortbelly_model_small <- sdmTMB(small ~ 0 +
                                    s(bottom_depth, k = 4) +
                                    s(roms_temperature, k = 4) +
                                    s(roms_salinity, k = 4) +
-                                   s(ssh_anom, k = 4),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                                   s(ssh_anom, k = 4) +
+                                   s(jday, k = 15),
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_shortbelly,
                            mesh = yoy_shortbelly_mesh,
                            time = "year",
-                           spatial = "on",
-                           family = nbinom2(),
-                           spatiotemporal = "ar1",
+                           spatial = "off",
+                           family = tweedie(),
+                           spatiotemporal = "rw",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 shortbelly_model_large <- sdmTMB(large ~ 0 + 
@@ -584,7 +585,7 @@ shortbelly_model_large <- sdmTMB(large ~ 0 +
                            time = "year",
                            spatial = "on",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "rw",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 
