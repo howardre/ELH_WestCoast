@@ -28,22 +28,20 @@ Functions
 clean_catch <- function(data_list, i){
   data_frame <- as.data.frame(data_list[[i]])
   names(data_frame) <- tolower(names(data_frame))
-  names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
-  names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
+  names(data_frame)[names(data_frame) == 'net_in_latdd'] <- 'lat'
+  names(data_frame)[names(data_frame) == 'net_in_londd'] <- 'lon'
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
-  data_frame <- data_frame %>% filter(active == 'Y') 
   return(data_frame)
 }
 
 clean_sp <- function(data_list, i){
   data_frame <- as.data.frame(data_list[[i]])
   names(data_frame) <- tolower(names(data_frame))
-  names(data_frame)[names(data_frame) == 'latdd'] <- 'lat'
-  names(data_frame)[names(data_frame) == 'londd'] <- 'lon'
+  names(data_frame)[names(data_frame) == 'net_in_latdd'] <- 'lat'
+  names(data_frame)[names(data_frame) == 'net_in_londd'] <- 'lon'
   names(data_frame)[names(data_frame) == 'total_no'] <- 'catch'
   names(data_frame)[names(data_frame) == 'nmeas'] <- 'num_measured'
   names(data_frame)[names(data_frame) == 'exp'] <- 'haul_exp'
-  data_frame <- data_frame %>% filter(active == 'Y') 
   return(data_frame)
 }
 
@@ -180,6 +178,14 @@ anch_sp$numeric_date <- as.numeric(format(as.Date(anch_sp$haul_date, format = "%
                                            "%m%d%Y"))
 anch_sp$date <- as.Date(anch_sp$haul_date)
 
+new_data <- here('data', 'datatoRHoward.xlsx')
+excel_sheets(path = new_data) # view the worksheets
+new_tab_names <- excel_sheets(path = new_data)
+new_data_list <- lapply(new_tab_names, 
+                          function(x) read_excel(path = new_data, 
+                                                 sheet = x, 
+                                                 col_types = 'text'))
+
 other_exl_data <- here('data', 'rockfish_dab_hake.xlsx')
 excel_sheets(path = other_exl_data) # view the worksheets
 other_tab_names <- excel_sheets(path = other_exl_data)
@@ -189,62 +195,73 @@ other_data_list <- lapply(other_tab_names,
                                                  sheet = x, 
                                                  col_types = 'text'))
 
+hake_short_widow_catch <- clean_catch(new_data_list, 1)
+squid_catch <- clean_catch(new_data_list, 2)
+squid_sp <- clean_sp(new_data_list, 3)
+widow_sp_new <- clean_sp(new_data_list, 4)
+sbly_sp_new <- clean_sp(new_data_list, 5)
+hake_sp_new <- clean_sp(new_data_list, 6)
+
 other_catch <- clean_catch(other_data_list, 1)
 other_sp <- clean_sp(other_data_list, 2)
 
-col_names_catch <- c('haul_no', 'year', 'month', 'jday', 'station', 
-                     'net_in_latdd', 'net_in_londd', 'lat', 'lon', 
-                     'bottom_depth', 'station_bottom_depth', 'shortbelly',
-                     'widow', 'hake', 'dab')
-
+other_names_catch <- c('haul_no', 'year', 'month', 'jday',
+                       'station', 'lat', 'lon', 'bottom_depth', "dab")
+other_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station', 
+                  'lat', 'lon', 'bottom_depth', 'catch', 'num_measured', 
+                  'haul_exp', 'std_length', 'species')
+new_names_catch <- c('haul_no', 'year', 'month', 'jday', 
+                     'station', 'lat', 'lon', 'bottom_depth', 
+                     'yoy_pacific_hake', 'yoy_shortbelly', 'yoy_widow')
+squid_names_catch <- c('haul_no', 'year', 'month', 'jday', 
+                       'station', 'lat', 'lon', 'bottom_depth', 'market_squid')
 col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station', 
-                     'net_in_latdd', 'net_in_londd', 'lat', 'lon', 
-                     'bottom_depth', 'station_bottom_depth', 'species',
-                  'catch', 'num_measured', 'haul_exp', 'sp_no', 'std_length')
+                  'lat', 'lon', 'bottom_depth', 'catch', 'num_measured', 
+                  'haul_exp', 'std_length')
 
-other_catch[col_names_catch] <- sapply(other_catch[col_names_catch], as.numeric) # changes NA's to actual NA
-other_catch <- other_catch %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
-other_catch$numeric_date <- as.numeric(format(as.Date(other_catch$date, format = "%Y%j"),
-                                           "%m%d%Y"))
-other_catch$date <- as.Date(other_catch$date)
+date_conversion <- function(catch, names){
+  catch[names] <- sapply(catch[names], as.numeric) # changes NA's to actual NA
+  new_catch <- catch %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
+  new_catch$numeric_date <- as.numeric(format(as.Date(new_catch$date, format = "%Y%j"),
+                                              "%m%d%Y"))
+  new_catch$date <- as.Date(new_catch$date)
+  return(new_catch)
+}
 
-other_sp[col_names_sp] <- sapply(other_sp[col_names_sp], as.numeric) # Creates actual NA's
-other_sp <- other_sp %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
-other_sp$numeric_date <- as.numeric(format(as.Date(other_sp$date, format = "%Y%j"),
-                                           "%m%d%Y"))
-other_sp$date <- as.Date(other_sp$date)
+hws_catch <- date_conversion(hake_short_widow_catch, new_names_catch)
+dab_catch <- date_conversion(other_catch, other_names_catch)
+squid_catch <- date_conversion(squid_catch, squid_names_catch)
+squid_sp <- date_conversion(squid_sp, col_names_sp)
+hake_sp <- date_conversion(hake_sp_new, col_names_sp)
+widow_sp <- date_conversion(widow_sp_new, col_names_sp)
+sbly_sp <- date_conversion(sbly_sp_new, col_names_sp)
+dab_sp <- date_conversion(other_sp, other_names_sp)
 
-widow_catch <- other_catch %>% 
-  dplyr::select(-c('shortbelly', 'hake', 'dab')) %>%
-  rename(catch = widow)
-sbly_catch <- other_catch %>% 
-  dplyr::select(-c('widow', 'hake', 'dab')) %>%
-  rename(catch = shortbelly)
-dab_catch <- other_catch %>% 
+dab_catch <- dab_catch %>% 
   dplyr::select(-c('shortbelly', 'hake', 'widow')) %>%
   rename(catch = dab) %>%
   filter(year > 2010)
-hake_catch <- other_catch %>% 
-  dplyr::select(-c('shortbelly', 'widow', 'dab')) %>%
-  rename(catch = hake)
 
 # Keep NA's because these are hauls with no catch at all
 # Have hauls with 0 measurements as well, but catches (so if num_measured > 1 but catch = 0 then remove)
-widow_sp <- filter(other_sp, species == 597, 
+widow_sp <- filter(widow_sp, 
                    std_length > 16 & std_length < 65 | is.na(std_length), 
                    num_measured > 0 | catch == 0)
-sbly_sp <- filter(other_sp, species == 604, 
+sbly_sp <- filter(sbly_sp, 
                   std_length > 10 & std_length < 79 | is.na(std_length), 
-                   num_measured > 0 | catch == 0)
-dab_sp <- filter(other_sp, species == 147, year > 2010, 
-                 std_length > 15 & std_length < 56 | is.na(std_length), 
-                   num_measured > 0 | catch == 0)
-hake_sp <- filter(other_sp, species == 382, 
+                  num_measured > 0 | catch == 0)
+hake_sp <- filter(hake_sp, 
                   std_length > 14 & std_length < 82 | is.na(std_length), 
+                  num_measured > 0 | catch == 0)
+squid_sp <- filter(squid_sp, 
+                   std_length > 10 & std_length < 140 | is.na(std_length), 
                    num_measured > 0 | catch == 0)
+dab_sp <- filter(dab_sp, species == 147, year > 2010, 
+                 std_length > 15 & std_length < 56 | is.na(std_length), 
+                 num_measured > 0 | catch == 0)
 anch_sp <- filter(anch_sp, 
                   std_length > 20 & std_length < 86 | is.na(std_length), 
-                   num_measured > 0 | catch == 0)
+                  num_measured > 0 | catch == 0)
 
 rm(list = c('anch_data_list', 'other_catch', 
             'other_data_list', 'other_sp',
