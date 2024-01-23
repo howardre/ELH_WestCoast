@@ -45,6 +45,15 @@ clean_sp <- function(data_list, i){
   return(data_frame)
 }
 
+date_conversion <- function(catch, names){
+  catch[names] <- sapply(catch[names], as.numeric) # changes NA's to actual NA
+  new_catch <- catch %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
+  new_catch$numeric_date <- as.numeric(format(as.Date(new_catch$date, format = "%Y%j"),
+                                              "%m%d%Y"))
+  new_catch$date <- as.Date(new_catch$date)
+  return(new_catch)
+}
+
 # Combine the grouped length data with the catch data
 merge_lengths <- function(catch, hauls, subset, RREAS_means, PRS_means){
   data <- merge(catch,
@@ -219,18 +228,20 @@ col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station',
                   'lat', 'lon', 'bottom_depth', 'catch', 'num_measured', 
                   'haul_exp', 'std_length')
 
-date_conversion <- function(catch, names){
-  catch[names] <- sapply(catch[names], as.numeric) # changes NA's to actual NA
-  new_catch <- catch %>% mutate(date = strptime(paste(as.numeric(year), as.numeric(jday)), format = "%Y%j"))
-  new_catch$numeric_date <- as.numeric(format(as.Date(new_catch$date, format = "%Y%j"),
-                                              "%m%d%Y"))
-  new_catch$date <- as.Date(new_catch$date)
-  return(new_catch)
-}
-
 hws_catch <- date_conversion(hake_short_widow_catch, new_names_catch)
+hake_catch <- hws_catch %>% 
+  select(-yoy_shortbelly, -yoy_widow) %>%
+  rename(catch = yoy_pacific_hake)
+sbly_catch <- hws_catch %>% 
+  select(-yoy_pacific_hake, -yoy_widow) %>%
+  rename(catch = yoy_shortbelly)
+widow_catch <- hws_catch %>% 
+  select(-yoy_shortbelly, -yoy_pacific_hake) %>%
+  rename(catch = yoy_widow)
 dab_catch <- date_conversion(other_catch, other_names_catch)
 squid_catch <- date_conversion(squid_catch, squid_names_catch)
+squid_catch <- squid_catch %>%
+  rename(catch = market_squid)
 squid_sp <- date_conversion(squid_sp, col_names_sp)
 hake_sp <- date_conversion(hake_sp_new, col_names_sp)
 widow_sp <- date_conversion(widow_sp_new, col_names_sp)
@@ -266,8 +277,13 @@ anch_sp <- filter(anch_sp,
 rm(list = c('anch_data_list', 'other_catch', 
             'other_data_list', 'other_sp',
             'anch_exl_data', 'anch_tab_names',
-            'col_names_catch', 'col_names_sp',
-            'other_exl_data', 'other_tab_names'))
+            'col_names_sp', 'hws_catch',
+            'other_exl_data', 'other_tab_names',
+            'other_names_catch', 'new_data_list',
+            'hake_short_widow_catch', 'hake_sp_new',
+            'sbly_sp_new', 'widow_sp_new', 'new_data',
+            'new_names_catch', 'new_tab_names',
+            'other_names_sp', 'squid_names_catch'))
 ```
 
 ```{r}
@@ -277,12 +293,14 @@ widow_subset <- size_calc(widow_sp, 31)
 sbly_subset <- size_calc(sbly_sp, 35)
 dab_subset <- size_calc(dab_sp, 25)
 hake_subset <- size_calc(hake_sp, 35)
+squid_subset <- size_calc(squid_sp, 70)
 
 anch_subset[is.na(anch_subset)] <- 0
 widow_subset[is.na(widow_subset)] <- 0
 sbly_subset[is.na(sbly_subset)] <- 0
 dab_subset[is.na(dab_subset)] <- 0
 hake_subset[is.na(hake_subset)] <- 0
+squid_subset[is.na(squid_subset)] <- 0
 ```
 
 ```{r}
@@ -329,6 +347,7 @@ merge_widw <- merge_lengths(widow_catch, haul_data, widow_subset, RREAS_ctd_mean
 merge_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, RREAS_ctd_means, PRS_avg_ctds)
 merge_dab <- merge_lengths(dab_catch, haul_data, dab_subset, RREAS_ctd_means, PRS_avg_ctds)
 merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_squid <- merge_lengths(squid_catch, haul_data, squid_subset, RREAS_ctd_means, PRS_avg_ctds)
 ```
 
 ```{r}
@@ -467,9 +486,10 @@ ssh_anom <- readRDS("../data/ssh_data.Rdata")
 # No ROMS past 2018 right now
 yoy_anch <- hindcast_match(merge_anch, hindcast_anom, ssh_anom, 29, 30)
 yoy_dab <- hindcast_match(merge_dab, hindcast_anom, ssh_anom, 29, 30)
-yoy_hake <- hindcast_match(merge_hake, hindcast_anom, ssh_anom, 29, 30)
-yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, ssh_anom, 29, 30)
-yoy_widw <- hindcast_match(merge_widw, hindcast_anom, ssh_anom, 29, 30)
+yoy_hake <- hindcast_match(merge_hake, hindcast_anom, ssh_anom, 26, 27)
+yoy_sbly <- hindcast_match(merge_sbly, hindcast_anom, ssh_anom, 26, 27)
+yoy_widw <- hindcast_match(merge_widw, hindcast_anom, ssh_anom, 26, 27)
+yoy_squid <- hindcast_match(merge_squid, hindcast_anom, ssh_anom, 26, 27)
 ```
 
 ```{r, warning = FALSE}
@@ -485,6 +505,7 @@ saveRDS(yoy_widw, file = "../data/yoy_widw.Rdata")
 saveRDS(yoy_sbly, file = "../data/yoy_sbly.Rdata")
 saveRDS(yoy_dab, file = "../data/yoy_dab.Rdata")
 saveRDS(yoy_hake, file = "../data/yoy_hake.Rdata")
+saveRDS(yoy_squid, file = "../data/yoy_squid.Rdata")
 ```
 
 ```{r}
