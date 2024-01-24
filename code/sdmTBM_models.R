@@ -176,11 +176,12 @@ plot_variables <- function(model, data){
 
 # Data
 # May have to filter salinity and depth due to outliers?
-yoy_hake <- filter(read_data('yoy_hake.Rdata')) 
+yoy_hake <- read_data('yoy_hake.Rdata') 
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), survey == "RREAS" & year > 2012 & lat < 41.01)
 yoy_widow <- filter(read_data('yoy_widw.Rdata'), catch < 2000 & lat > 36) # two large hauls in 2016 caused huge errors
-yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), lat < 40)
+yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2013)
+yoy_squid <- read_data('yoy_squid.Rdata')
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
@@ -202,7 +203,6 @@ hake_model_small <- sdmTMB(small ~ 0 +
                              s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
                              s(roms_salinity, k = 5) +
-                             s(ssh_anom, k = 5) +
                              s(jday, k = 15),
                            spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_hake,
@@ -210,14 +210,13 @@ hake_model_small <- sdmTMB(small ~ 0 +
                            spatial = "on",
                            time = "year",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "rw",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 hake_model_large <- sdmTMB(large ~ 0 + 
                              s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
                              s(roms_salinity, k = 5) +
-                             s(ssh_anom, k = 5) +
                              s(jday, k = 15),
                            # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_hake,
@@ -373,30 +372,28 @@ anchovy_model_small <- sdmTMB(small ~ 0 +
                                 s(bottom_depth, k = 5) +
                                 s(roms_temperature, k = 5) +
                                 s(roms_salinity, k = 5) +
-                                s(ssh_anom, k = 5) +
                                 s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled, # currently needs to be removed
+                           # spatial_varying = ~ 0 + ssh_annual_scaled, # currently needs to be removed
                            data = yoy_anchovy,
                            mesh = yoy_anchovy_mesh,
                            spatial = "on",
                            time = "year",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "iid",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 anchovy_model_large <- sdmTMB(large ~ 0 +
                                 s(bottom_depth, k = 5) +
                                 s(roms_temperature, k = 5) +
                                 s(roms_salinity, k = 5) +
-                                s(ssh_anom, k = 5) +
                                 s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_anchovy,
                            mesh = yoy_anchovy_mesh,
                            spatial = "on",
                            time = "year",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "iid",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2)) # removed SSH due to plot
 
@@ -488,13 +485,13 @@ sdab_model_small <- sdmTMB(small ~ 0 +
                              s(roms_salinity, k = 5) +
                              s(ssh_anom, k = 5) +
                              s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_sdab,
                            mesh = yoy_sdab_mesh,
                            time = "year",
                            spatial = "on",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "iid",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 sdab_model_large <- sdmTMB(large ~ 0 + 
@@ -503,13 +500,13 @@ sdab_model_large <- sdmTMB(large ~ 0 +
                              s(roms_salinity, k = 5) +
                              s(ssh_anom, k = 5) +
                              s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_sdab,
                            mesh = yoy_sdab_mesh,
                            time = "year",
                            spatial = "on",
                            family = tweedie(link = "log"),
-                           spatiotemporal = "iid",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 
@@ -559,27 +556,25 @@ plot(yoy_shortbelly_mesh)
 
 # Fit models
 shortbelly_model_small <- sdmTMB(small ~ 0 +
-                                   s(bottom_depth, k = 4) +
-                                   s(roms_temperature, k = 4) +
-                                   s(roms_salinity, k = 4) +
-                                   s(ssh_anom, k = 4) +
+                                   s(bottom_depth, k = 5) +
+                                   s(roms_temperature, k = 5) +
+                                   s(roms_salinity, k = 5) +
                                    s(jday, k = 15),
                            # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_shortbelly,
                            mesh = yoy_shortbelly_mesh,
                            time = "year",
-                           spatial = "off",
+                           spatial = "on",
                            family = tweedie(),
-                           spatiotemporal = "rw",
+                           spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
 shortbelly_model_large <- sdmTMB(large ~ 0 + 
-                             s(bottom_depth, k = 4) +
-                             s(roms_temperature, k = 4) +
-                             s(roms_salinity, k = 4) +
-                             s(ssh_anom, k = 4) +
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
                              s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           # spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_shortbelly,
                            mesh = yoy_shortbelly_mesh,
                            time = "year",
