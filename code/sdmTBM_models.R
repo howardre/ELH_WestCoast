@@ -621,17 +621,41 @@ sdmTMB_map(yoy_shortbelly, shortbelly_pred_large)
 # Widow Rockfish ----
 # Make mesh object with matrices
 yoy_widow_mesh <- make_mesh(yoy_widow,
-                              xy_cols = c("X", "Y"), 
-                              n_knots = 200,
-                              type = "cutoff_search",
-                              seed = 2024)
+                            xy_cols = c("X", "Y"),
+                            n_knots = 200,
+                            type = "cutoff_search",
+                            seed = 2024)
 plot(yoy_widow_mesh)
 
 # Fit models
-widow_model_small <- sdmTMB_small(yoy_widow,
-                                    yoy_widow_mesh) # didn't converge
-widow_model_large <- sdmTMB_large(yoy_widow,
-                                    yoy_widow_mesh) # bad
+widow_model_small <- sdmTMB(small ~ 0 +
+                              s(bottom_depth, k = 5) +
+                              s(roms_temperature, k = 5) +
+                              s(roms_salinity, k = 5) +
+                              s(jday, k = 15),
+                            # spatial_varying = ~ 0 + ssh_annual_scaled,
+                            data = yoy_widow,
+                            mesh = yoy_widow_mesh,
+                            time = "year",
+                            spatial = "on",
+                            family = tweedie(),
+                            spatiotemporal = "ar1",
+                            control = sdmTMBcontrol(newton_loops = 1,
+                                                    nlminb_loops = 2))
+widow_model_large <- sdmTMB(large ~ 0 + 
+                              s(bottom_depth, k = 5) +
+                              s(roms_temperature, k = 5) +
+                              s(roms_salinity, k = 5) +
+                              s(jday, k = 15),
+                            # spatial_varying = ~ 0 + ssh_annual_scaled,
+                            data = yoy_widow,
+                            mesh = yoy_widow_mesh,
+                            time = "year",
+                            spatial = "on",
+                            family = tweedie(link = "log"),
+                            spatiotemporal = "ar1",
+                            control = sdmTMBcontrol(newton_loops = 1,
+                                                    nlminb_loops = 2))
 
 sanity(widow_model_small) 
 tidy(widow_model_small, 
