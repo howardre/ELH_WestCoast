@@ -565,7 +565,7 @@ shortbelly_model_small <- sdmTMB(small ~ 0 +
                            mesh = yoy_shortbelly_mesh,
                            time = "year",
                            spatial = "on",
-                           family = tweedie(),
+                           family = tweedie(link = "log"),
                            spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
                                                    nlminb_loops = 2))
@@ -630,15 +630,13 @@ plot(yoy_widow_mesh)
 # Fit models
 widow_model_small <- sdmTMB(small ~ 0 +
                               s(bottom_depth, k = 5) +
-                              s(roms_temperature, k = 5) +
-                              s(roms_salinity, k = 5) +
-                              s(jday, k = 15),
-                            # spatial_varying = ~ 0 + ssh_annual_scaled,
+                              s(roms_temperature, k = 5),
+                            spatial_varying = ~ 0 + ssh_annual_scaled,
                             data = yoy_widow,
                             mesh = yoy_widow_mesh,
                             time = "year",
                             spatial = "on",
-                            family = tweedie(),
+                            family = tweedie(link = "log"),
                             spatiotemporal = "ar1",
                             control = sdmTMBcontrol(newton_loops = 1,
                                                     nlminb_loops = 2))
@@ -651,7 +649,7 @@ widow_model_large <- sdmTMB(large ~ 0 +
                             data = yoy_widow,
                             mesh = yoy_widow_mesh,
                             time = "year",
-                            spatial = "on",
+                            spatial = "off",
                             family = tweedie(link = "log"),
                             spatiotemporal = "ar1",
                             control = sdmTMBcontrol(newton_loops = 1,
