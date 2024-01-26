@@ -51,7 +51,7 @@ individual_plot <- function(model, data, variable, xlab){
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, k = 5, k = 5, k = 5, "cm")) 
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   return(object_plot)
 } # use for individual variables
 
@@ -77,7 +77,7 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, k = 5, k = 5, k = 5, "cm")) 
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   
   temp <- visreg(model,
                  data = data,
@@ -100,7 +100,7 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, k = 5, k = 5, k = 5, "cm")) 
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   
   salt <- visreg(model,
                  data = data,
@@ -123,30 +123,30 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, k = 5, k = 5, k = 5, "cm")) 
+          plot.margin = margin(2, 2, 2, 2, "cm")) 
   
-  ssh <- visreg(model,
-                data = data,
-                xvar = "ssh_anom",
-                plot = FALSE,
-                cond = list(ssh_annual_scaled = 1))
-  ssh_plot <- ggplot(ssh$fit, aes(x = ssh_anom, y = visregFit)) +
-    geom_line(color = "black",
-              linewidth = 1,
-              show.legend = FALSE) +
-    geom_ribbon(aes(ymin = visregLwr, 
-                    ymax = visregUpr,
-                    fill = "coral2"),
-                alpha = 0.5,
-                show.legend = FALSE) +
-    labs(x = 'Sea Surface Height',
-         y = "Abundance Anomalies") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 38),
-          axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, k = 5, k = 5, k = 5, "cm")) 
+  # ssh <- visreg(model,
+  #               data = data,
+  #               xvar = "ssh_anom",
+  #               plot = FALSE,
+  #               cond = list(ssh_annual_scaled = 1))
+  # ssh_plot <- ggplot(ssh$fit, aes(x = ssh_anom, y = visregFit)) +
+  #   geom_line(color = "black",
+  #             linewidth = 1,
+  #             show.legend = FALSE) +
+  #   geom_ribbon(aes(ymin = visregLwr, 
+  #                   ymax = visregUpr,
+  #                   fill = "coral2"),
+  #               alpha = 0.5,
+  #               show.legend = FALSE) +
+  #   labs(x = 'Sea Surface Height',
+  #        y = "Abundance Anomalies") +
+  #   theme_classic() +
+  #   theme(axis.ticks = element_blank(),
+  #         axis.text = element_text(family = "serif", size = 38),
+  #         axis.title = element_text(family = "serif", size = 42),
+  #         axis.text.x = element_text(angle = 0, vjust = 0.7),
+  #         plot.margin = margin(2, 2, 2, 2, "cm")) 
   
   doy <- visreg(model,
                 data = data,
@@ -169,9 +169,9 @@ plot_variables <- function(model, data){
           axis.text = element_text(family = "serif", size = 38),
           axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, k = 5, k = 5, k = 5, "cm"))
+          plot.margin = margin(2, 2, 2, 2, "cm"))
   
-  ggarrange(depth_plot, temp_plot, salt_plot, ssh_plot, doy_plot, ncol = 5, nrow = 1)
+  ggarrange(depth_plot, temp_plot, salt_plot, doy_plot, ncol = 4, nrow = 1)
 } # works only if all variables retained
 
 # Data
@@ -181,7 +181,7 @@ yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), survey == "RREAS" & year > 20
 yoy_widow <- filter(read_data('yoy_widw.Rdata'), catch < 2000 & lat > 36) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2013)
-yoy_squid <- read_data('yoy_squid.Rdata')
+yoy_squid <- filter(read_data('yoy_squid.Rdata'), year > 2003) # no lengths before 2004
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
@@ -216,9 +216,9 @@ hake_model_small <- sdmTMB(small ~ 0 +
 hake_model_large <- sdmTMB(large ~ 0 + 
                              s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
+                             # s(roms_salinity, k = 5) +
                              s(jday, k = 15),
-                           # spatial_varying = ~ 0 + ssh_annual_scaled,
+                           spatial_varying = ~ 0 + ssh_annual_scaled,
                            data = yoy_hake,
                            mesh = yoy_hake_mesh,
                            spatial = "on",
@@ -243,33 +243,23 @@ hake_model_large
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_small_sdmtmb.jpg'),
      units = "in",
-     width = 56,
+     width = 50,
      height = 12,
      res = 200)
 plot_variables(hake_model_small, yoy_hake)
 dev.off()
 
-tiff(here('results/hindcast_output/yoy_hake',
-          'hake_partial_dependence_large_sdmtmb.jpg'),
-     units = "in",
-     width = 56,
-     height = 12,
-     res = 200)
-plot_variables(hake_model_large, yoy_hake)
-dev.off()
-
 hake_large_depth <- individual_plot(hake_model_large, yoy_hake, "bottom_depth", "Depth (m)")
 hake_large_temp <- individual_plot(hake_model_large, yoy_hake, "roms_temperature", "Temperature (\u00B0C)")
-hake_large_salt <- individual_plot(hake_model_large, yoy_hake, "roms_salinity", "Salinity")
 hake_large_jday <- individual_plot(hake_model_large, yoy_hake, "jday", "Day of Year")
 
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_large_sdmtmb.jpg'),
      units = "in",
-     width = 50,
+     width = 46,
      height = 12,
      res = 200)
-ggarrange(hake_large_depth, hake_large_temp, hake_large_salt, hake_large_jday, ncol = 4, nrow = 1)
+ggarrange(hake_large_depth, hake_large_temp, hake_large_jday, ncol = 3, nrow = 1)
 dev.off()
 
 # Predict and plot
@@ -281,13 +271,13 @@ hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large)
 
 # Overall predictions
 windows(height = 15, width = 18)
-par(mfrow = c(1, k = 5),
+par(mfrow = c(1, 2),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
-    mgp = c(5, k = 5, 0),
+    mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_map(yoy_hake, hake_pred_small, "Small (7-35 mm)", "Latitude")
-sdmTMB_map(yoy_hake, hake_pred_large, "Large (36-134 mm)", " ")
+sdmTMB_map(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude")
+sdmTMB_map(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'hake_distributions_sdmtmb.jpg'), 
          height = 15, 
@@ -298,13 +288,13 @@ dev.off()
 
 # SVC maps
 windows(height = 15, width = 18)
-par(mfrow = c(1, k = 5),
+par(mfrow = c(1, 2),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
-    mgp = c(5, k = 5, 0),
+    mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (7-35 mm)", "Latitude")
-sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-134 mm)", " ")
+sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude")
+sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'hake_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -437,10 +427,10 @@ anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large)
 
 # Overall predictions
 windows(height = 15, width = 18)
-par(mfrow = c(1, k = 5),
+par(mfrow = c(2),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
-    mgp = c(5, k = 5, 0),
+    mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_map(yoy_anchovy, anchovy_pred_small, "Small (15-35 mm)", "Latitude")
 sdmTMB_map(yoy_anchovy, anchovy_pred_large, "Large (36-92 mm)", " ")
@@ -454,10 +444,10 @@ dev.off()
 
 # SVC maps
 windows(height = 15, width = 18)
-par(mfrow = c(1, k = 5),
+par(mfrow = c(2),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
-    mgp = c(5, k = 5, 0),
+    mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_anchovy, anchovy_pred_small, "Small (15-35 mm)", "Latitude")
 sdmTMB_SVC(yoy_anchovy, anchovy_pred_large, "Large (36-92 mm)", " ")
@@ -535,10 +525,10 @@ sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small)
 sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large)
 
 windows(height = 15, width = 20)
-par(mfrow = c(1, k = 5),
+par(mfrow = c(2),
     mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
-    mgp = c(5, k = 5, 0),
+    mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_map(yoy_sdab, sdab_pred_small)
 sdmTMB_map(yoy_sdab, sdab_pred_large)
@@ -609,10 +599,10 @@ shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small)
 shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large)
 
 windows(height = 15, width = 20)
-par(mfrow = c(1, k = 5),
+par(mfrow = c(2),
     mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
-    mgp = c(5, k = 5, 0),
+    mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_map(yoy_shortbelly, shortbelly_pred_small)
 sdmTMB_map(yoy_shortbelly, shortbelly_pred_large)
@@ -680,10 +670,10 @@ widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small)
 widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large)
 
 windows(height = 15, width = 20)
-par(mfrow = c(1, k = 5),
+par(mfrow = c(2),
     mar = c(6.4, 7.2, 1.6, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
-    mgp = c(5, k = 5, 0),
+    mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_map(yoy_widow, widow_pred_small)
 sdmTMB_map(yoy_widow, widow_pred_large)
