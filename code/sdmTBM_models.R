@@ -26,6 +26,7 @@ source(here('code/functions', 'distance_function.R'))
 source(here('code/functions', 'sdmTMB_grid.R'))
 source(here('code/functions', 'sdmTMB_map.R'))
 source(here('code/functions', 'read_data.R'))
+source(here('code/functions', 'sdmTMB_select.R'))
 
 # Functions
 # More info here: https://pbs-assess.github.io/sdmTMB/index.html
@@ -216,6 +217,20 @@ hake_model_small <- sdmTMB(small ~ 0 +
 hake_model_large <- sdmTMB(large ~ 0 + 
                              s(bottom_depth, k = 5) +
                              s(roms_temperature, k = 5) +
+                             s(roms_salinity, k = 5) +
+                             s(jday, k = 15),
+                           spatial_varying = ~ 0 + ssh_annual_scaled,
+                           data = yoy_hake,
+                           mesh = yoy_hake_mesh,
+                           spatial = "on",
+                           time = "year",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "ar1",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
+hake_model_large3 <- sdmTMB(large ~ 0 + 
+                             s(bottom_depth, k = 5) +
+                             s(roms_temperature, k = 5) +
                              # s(roms_salinity, k = 5) +
                              s(jday, k = 15),
                            spatial_varying = ~ 0 + ssh_annual_scaled,
@@ -226,13 +241,18 @@ hake_model_large <- sdmTMB(large ~ 0 +
                            family = tweedie(link = "log"),
                            spatiotemporal = "ar1",
                            control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2)) # removed SSH due to plot
+                                                   nlminb_loops = 2))
+
+AIC(hake_model_large) # 9598
+AIC(hake_model_large1) # 9595
+AIC(hake_model_large2) # 9595
+AIC(hake_model_large3) # 9685
 
 sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model_small, # no std error reported when using log link
      effect = "ran_pars", 
      conf.int = TRUE)
-sanity(hake_model_large) 
+sanity(hake_model_large1) 
 tidy(hake_model_large,
      effect = "ran_pars", 
      conf.int = TRUE)
