@@ -203,19 +203,16 @@ plot(yoy_hake_mesh)
 hake_model_small <- sdmTMB_select_small(yoy_hake, yoy_hake_mesh) # time elapsed: 1:20
 hake_model_small[[2]] # best model is full model
 hake_model_large <- sdmTMB_select_large(yoy_hake, yoy_hake_mesh) 
+hake_model_large[[2]]
 
-
-
-sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
-tidy(hake_model_small, # no std error reported when using log link
+sanity(hake_model_small[[2]]) # sigma_z is the SD of the spatially varying coefficient field
+tidy(hake_model_small[[2]], # no std error reported when using log link
      effect = "ran_pars", 
      conf.int = TRUE)
-sanity(hake_model_large1) 
-tidy(hake_model_large,
+sanity(hake_model_large[[2]]) 
+tidy(hake_model_large[[2]],
      effect = "ran_pars", 
      conf.int = TRUE)
-hake_model_small
-hake_model_large
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_hake',
@@ -224,12 +221,12 @@ tiff(here('results/hindcast_output/yoy_hake',
      width = 50,
      height = 12,
      res = 200)
-plot_variables(hake_model_small, yoy_hake)
+plot_variables(hake_model_small[[2]], yoy_hake)
 dev.off()
 
-hake_large_depth <- individual_plot(hake_model_large, yoy_hake, "bottom_depth", "Depth (m)")
-hake_large_temp <- individual_plot(hake_model_large, yoy_hake, "roms_temperature", "Temperature (\u00B0C)")
-hake_large_jday <- individual_plot(hake_model_large, yoy_hake, "jday", "Day of Year")
+hake_large_depth <- individual_plot(hake_model_large[[2]], yoy_hake, "bottom_depth", "Depth (m)")
+hake_large_temp <- individual_plot(hake_model_large[[2]], yoy_hake, "roms_temperature", "Temperature (\u00B0C)")
+hake_large_jday <- individual_plot(hake_model_large[[2]], yoy_hake, "jday", "Day of Year")
 
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_large_sdmtmb.jpg'),
@@ -244,8 +241,8 @@ dev.off()
 latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
-hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small)
-hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large)
+hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small[[2]])
+hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large[[2]])
 
 # Overall predictions
 windows(height = 15, width = 18)
