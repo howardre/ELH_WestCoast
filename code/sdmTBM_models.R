@@ -199,54 +199,12 @@ yoy_hake_mesh <- make_mesh(yoy_hake,
                            seed = 2024)
 plot(yoy_hake_mesh) 
 
-# Fit models
-hake_model_small <- sdmTMB(small ~ 0 +
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
-                             s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_hake,
-                           mesh = yoy_hake_mesh,
-                           spatial = "on",
-                           time = "year",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
-hake_model_large <- sdmTMB(large ~ 0 + 
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
-                             s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_hake,
-                           mesh = yoy_hake_mesh,
-                           spatial = "on",
-                           time = "year",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
-hake_model_large3 <- sdmTMB(large ~ 0 + 
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             # s(roms_salinity, k = 5) +
-                             s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_hake,
-                           mesh = yoy_hake_mesh,
-                           spatial = "on",
-                           time = "year",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
+# Select models
+hake_model_small <- sdmTMB_select_small(yoy_hake, yoy_hake_mesh) # time elapsed: 1:20
+hake_model_small[[2]] # best model is full model
+hake_model_large <- sdmTMB_select_large(yoy_hake, yoy_hake_mesh) 
 
-AIC(hake_model_large) # 9598
-AIC(hake_model_large1) # 9595
-AIC(hake_model_large2) # 9595
-AIC(hake_model_large3) # 9685
+
 
 sanity(hake_model_small) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model_small, # no std error reported when using log link
