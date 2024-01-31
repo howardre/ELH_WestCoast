@@ -50,8 +50,8 @@ sdmTMB_select_small <- function(df, fish_mesh){
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
   sdm_list <- list(sdm_full, sdm_sss, sdm_sst, sdm_jday)
-  best_sdm <- sdm_list[[which.min(sapply(1:length(sdm_list),
-                                         function(x) min(sdm_list[[x]]$aic)))]]
+  best_sdm <- sdm_list[[which.min(sapply(1:length(sdm_list), 
+                                         function(x) AIC(sdm_list[[x]])))]]
   return_list <- list(sdm_list, best_sdm)
 }
 
@@ -107,7 +107,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
   sdm_list <- list(sdm_full, sdm_sss, sdm_sst, sdm_jday)
-  best_sdm <- sdm_list[[which.min(sapply(1:length(sdm_list),
-                                         function(x) min(sdm_list[[x]]$aic)))]]
+  best_sdm <- sdm_list[[which.min(sapply(1:length(sdm_list), 
+                                         function(x) AIC(sdm_list[[x]])))]]
   return_list <- list(sdm_list, best_sdm)
 }
