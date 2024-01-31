@@ -332,46 +332,20 @@ yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
                               seed = 2024)
 plot(yoy_anchovy_mesh) 
 
-# Fit models
-anchovy_model_small <- sdmTMB(small ~ 0 +
-                                s(bottom_depth, k = 5) +
-                                s(roms_temperature, k = 5) +
-                                s(roms_salinity, k = 5) +
-                                s(jday, k = 15),
-                           # spatial_varying = ~ 0 + ssh_annual_scaled, # currently needs to be removed
-                           data = yoy_anchovy,
-                           mesh = yoy_anchovy_mesh,
-                           spatial = "on",
-                           time = "year",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
-anchovy_model_large <- sdmTMB(large ~ 0 +
-                                s(bottom_depth, k = 5) +
-                                s(roms_temperature, k = 5) +
-                                s(roms_salinity, k = 5) +
-                                s(jday, k = 15),
-                           # spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_anchovy,
-                           mesh = yoy_anchovy_mesh,
-                           spatial = "on",
-                           time = "year",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2)) # removed SSH due to plot
+# Select models
+anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
+anchovy_model_small[[2]]  # having issues using VC term for anchovy
+anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
+anchovy_model_large[[2]]
 
-sanity(anchovy_model_small) # sigma_z is the SD of the spatially varying coefficient field
-tidy(anchovy_model_small, # no std error reported when using log link
+sanity(anchovy_model_small[[2]]) 
+tidy(anchovy_model_small[[2]], 
      effect = "ran_pars", 
      conf.int = TRUE)
-sanity(anchovy_model_large) 
-tidy(anchovy_model_large,
+sanity(anchovy_model_large[[2]]) 
+tidy(anchovy_model_large[[2]],
      effect = "ran_pars", 
      conf.int = TRUE)
-anchovy_model_small
-anchovy_model_large
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_anchovy',
@@ -443,48 +417,20 @@ yoy_sdab_mesh <- make_mesh(yoy_sdab,
                            seed =  2024)
 plot(yoy_sdab_mesh)
 
-# Fit models
-sdab_model_small <- sdmTMB(small ~ 0 +
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
-                             s(ssh_anom, k = 5) +
-                             s(jday, k = 15),
-                           # spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_sdab,
-                           mesh = yoy_sdab_mesh,
-                           time = "year",
-                           spatial = "on",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
-sdab_model_large <- sdmTMB(large ~ 0 + 
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
-                             s(ssh_anom, k = 5) +
-                             s(jday, k = 15),
-                           # spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_sdab,
-                           mesh = yoy_sdab_mesh,
-                           time = "year",
-                           spatial = "on",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
+# Select models
+sdab_model_small <- sdmTMB_select_small(yoy_sdab, yoy_sdab_mesh) 
+sdab_model_small[[2]] # having issues using VC term for sdab
+sdab_model_large <- sdmTMB_select_large(yoy_sdab, yoy_sdab_mesh) 
+sdab_model_large[[2]]
 
-sanity(sdab_model_small) 
-tidy(sdab_model_small, 
+sanity(sdab_model_small[[2]]) 
+tidy(sdab_model_small[[2]], 
      effect = "ran_pars", 
-     conf.int = T)
-sanity(sdab_model_large)
-tidy(sdab_model_large,
+     conf.int = TRUE)
+sanity(sdab_model_large[[2]]) 
+tidy(sdab_model_large[[2]],
      effect = "ran_pars", 
-     conf.int = T)
-sdab_model_small
-sdab_model_large
+     conf.int = TRUE)
 
 # Plot covariates
 plot_variables(sdab_model_small, yoy_sdab)
@@ -519,46 +465,20 @@ yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
                                                                      
 plot(yoy_shortbelly_mesh)
 
-# Fit models
-shortbelly_model_small <- sdmTMB(small ~ 0 +
-                                   s(bottom_depth, k = 5) +
-                                   s(roms_temperature, k = 5) +
-                                   s(roms_salinity, k = 5) +
-                                   s(jday, k = 15),
-                           # spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_shortbelly,
-                           mesh = yoy_shortbelly_mesh,
-                           time = "year",
-                           spatial = "on",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
-shortbelly_model_large <- sdmTMB(large ~ 0 + 
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
-                             s(jday, k = 15),
-                           # spatial_varying = ~ 0 + ssh_annual_scaled,
-                           data = yoy_shortbelly,
-                           mesh = yoy_shortbelly_mesh,
-                           time = "year",
-                           spatial = "on",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "ar1",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
+# Select models
+shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
+shortbelly_model_small[[2]] # having issues using VC term for shortbelly
+shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
+shortbelly_model_large[[2]]
 
-sanity(shortbelly_model_small) 
-tidy(shortbelly_model_small, 
+sanity(shortbelly_model_small[[2]]) 
+tidy(shortbelly_model_small[[2]], 
      effect = "ran_pars", 
-     conf.int = T)
-sanity(shortbelly_model_large)
-tidy(shortbelly_model_large,
+     conf.int = TRUE)
+sanity(shortbelly_model_large[[2]]) 
+tidy(shortbelly_model_large[[2]],
      effect = "ran_pars", 
-     conf.int = T)
-shortbelly_model_small
-shortbelly_model_large
+     conf.int = TRUE)
 
 # Plot covariates
 plot_variables(shortbelly_model_small, yoy_shortbelly)
@@ -592,44 +512,20 @@ yoy_widow_mesh <- make_mesh(yoy_widow,
                             seed = 2024)
 plot(yoy_widow_mesh)
 
-# Fit models
-widow_model_small <- sdmTMB(small ~ 0 +
-                              s(bottom_depth, k = 5) +
-                              s(roms_temperature, k = 5),
-                            spatial_varying = ~ 0 + ssh_annual_scaled,
-                            data = yoy_widow,
-                            mesh = yoy_widow_mesh,
-                            time = "year",
-                            spatial = "on",
-                            family = tweedie(link = "log"),
-                            spatiotemporal = "ar1",
-                            control = sdmTMBcontrol(newton_loops = 1,
-                                                    nlminb_loops = 2))
-widow_model_large <- sdmTMB(large ~ 0 + 
-                              s(bottom_depth, k = 5) +
-                              s(roms_temperature, k = 5) +
-                              s(roms_salinity, k = 5) +
-                              s(jday, k = 15),
-                            # spatial_varying = ~ 0 + ssh_annual_scaled,
-                            data = yoy_widow,
-                            mesh = yoy_widow_mesh,
-                            time = "year",
-                            spatial = "off",
-                            family = tweedie(link = "log"),
-                            spatiotemporal = "ar1",
-                            control = sdmTMBcontrol(newton_loops = 1,
-                                                    nlminb_loops = 2))
+# Select models
+widow_model_small <- sdmTMB_select_small(yoy_widow, yoy_widow_mesh) 
+widow_model_small[[2]] # having issues using VC term for widow
+widow_model_large <- sdmTMB_select_large(yoy_widow, yoy_widow_mesh) 
+widow_model_large[[2]]
 
-sanity(widow_model_small) 
-tidy(widow_model_small, 
+sanity(widow_model_small[[2]]) 
+tidy(widow_model_small[[2]], 
      effect = "ran_pars", 
-     conf.int = T)
-sanity(widow_model_large)
-tidy(widow_model_large,
+     conf.int = TRUE)
+sanity(widow_model_large[[2]]) 
+tidy(widow_model_large[[2]],
      effect = "ran_pars", 
-     conf.int = T)
-widow_model_small
-widow_model_large
+     conf.int = TRUE)
 
 # Plot covariates
 plot_variables(widow_model_small, yoy_widow)
@@ -652,3 +548,28 @@ par(mfrow = c(2),
     family = "serif")
 sdmTMB_map(yoy_widow, widow_pred_small)
 sdmTMB_map(yoy_widow, widow_pred_large)
+
+
+# Market Squid ----
+# Make mesh object with matrices
+yoy_squid_mesh <- make_mesh(yoy_squid,
+                            xy_cols = c("X", "Y"),
+                            n_knots = 200,
+                            type = "cutoff_search",
+                            seed = 2024)
+plot(yoy_squid_mesh)
+
+# Select models
+squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
+squid_model_small[[2]] # having issues using VC term for squid
+squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
+squid_model_large[[2]]
+
+sanity(squid_model_small[[2]]) 
+tidy(squid_model_small[[2]], 
+     effect = "ran_pars", 
+     conf.int = TRUE)
+sanity(squid_model_large[[2]]) 
+tidy(squid_model_large[[2]],
+     effect = "ran_pars", 
+     conf.int = TRUE)
