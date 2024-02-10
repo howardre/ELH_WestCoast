@@ -178,8 +178,27 @@ plot_variables <- function(model, data){
 # Data
 # May have to filter salinity and depth due to outliers?
 yoy_hake <- read_data('yoy_hake.Rdata') 
-yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), survey == "RREAS" & year > 2012 & lat < 41.01)
-yoy_widow <- filter(read_data('yoy_widw.Rdata'), catch < 2000 & lat > 36) # two large hauls in 2016 caused huge errors
+yoy_anchovy <- read_data('yoy_anch.Rdata') %>% filter(survey == "RREAS" & year > 2013 & lat < 41.01) %>%
+  tidyr::drop_na(roms_temperature, roms_salinity, roms_ssh, bottom_depth, year, jday, lat, lon) %>%
+  filter(catch < 2500 &
+           year < 2020) %>%
+  mutate(catch1 = catch + 1,
+         small_catch1 = small + 1,
+         large_catch1 = large + 1,
+         year_f = as.factor(year),
+         ssh_pos = year_ssh + abs(min(year_ssh)) + 10,
+         ssh_annual_scaled = scale((year_ssh - mean(year_ssh)) / sd(year_ssh))[, 1],
+         depth_scaled = scale(bottom_depth)[, 1],
+         sss_scaled = scale(roms_salinity)[, 1],
+         sst_scaled = scale(roms_temperature)[, 1],
+         ssh_scaled = scale(ssh_anom)[, 1])
+yoy_anchovy <- yoy_anchovy[!(yoy_anchovy$small == 0 & yoy_anchovy$large == 0 & yoy_anchovy$catch > 0), ]
+yoy_anchovy <- add_utm_columns(yoy_anchovy, 
+                               utm_crs = 32610, # UTM 10
+                               ll_names = c("lon", "lat"))
+
+
+yoy_widow <- filter(read_data('yoy_widw.Rdata'), catch < 2000) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2013)
 yoy_squid <- filter(read_data('yoy_squid.Rdata'), year > 2003) # no lengths before 2004
@@ -327,16 +346,23 @@ hake_large_cv <- sdmTMB_cv(large ~ 0 +
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
                               xy_cols = c("X", "Y"),
-                              n_knots = 200,
-                              type = "cutoff_search",
-                              seed = 2024)
+                              cutoff = 10)
 plot(yoy_anchovy_mesh) 
 
 # Select models
 anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
 anchovy_model_small[[2]]  # having issues using VC term for anchovy
 anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_large[[2]]
+anchovy_model_large[[2]] # having issues using VC term for anchovy
+
+test <- sdmTMB(small ~ 0 + ssh_annual_scaled + s(sst_scaled),
+               data = yoy_anchovy,
+               mesh = yoy_anchovy_mesh,
+               spatial = "on",
+               spatial_varying = ~ 0 + ssh_annual_scaled,
+               family = tweedie(link = "log"),
+               spatiotemporal = "off")
+sanity(test)
 
 sanity(anchovy_model_small[[2]]) 
 tidy(anchovy_model_small[[2]], 
@@ -421,7 +447,7 @@ plot(yoy_sdab_mesh)
 sdab_model_small <- sdmTMB_select_small(yoy_sdab, yoy_sdab_mesh) 
 sdab_model_small[[2]] # having issues using VC term for sdab
 sdab_model_large <- sdmTMB_select_large(yoy_sdab, yoy_sdab_mesh) 
-sdab_model_large[[2]]
+sdab_model_large[[2]] # having issues using VC term for sdab
 
 sanity(sdab_model_small[[2]]) 
 tidy(sdab_model_small[[2]], 
@@ -469,7 +495,7 @@ plot(yoy_shortbelly_mesh)
 shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
 shortbelly_model_small[[2]] # having issues using VC term for shortbelly
 shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_model_large[[2]]
+shortbelly_model_large[[2]] # having issues using VC term for shortbelly
 
 sanity(shortbelly_model_small[[2]]) 
 tidy(shortbelly_model_small[[2]], 
