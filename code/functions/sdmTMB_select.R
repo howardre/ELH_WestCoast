@@ -1,5 +1,5 @@
 sdmTMB_select_small <- function(df, fish_mesh){
-  sdm_full <- sdmTMB(small ~ 0 +
+  sdm_full <- sdmTMB(small ~ 0 + ssh_annual_scaled +
                        s(bottom_depth, k = 5) +
                        s(roms_temperature, k = 5) +
                        s(roms_salinity, k = 5) +
@@ -13,7 +13,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                      spatiotemporal = "ar1",
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
-  sdm_sss <- sdmTMB(small ~ 0 +
+  sdm_sss <- sdmTMB(small ~ 0 + ssh_annual_scaled +
                       s(bottom_depth, k = 5) +
                       s(roms_temperature, k = 5) +
                       s(jday, k = 15),
@@ -26,7 +26,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                     spatiotemporal = "ar1",
                     control = sdmTMBcontrol(newton_loops = 1,
                                             nlminb_loops = 2))
-  sdm_sst <- sdmTMB(small ~ 0 +
+  sdm_sst <- sdmTMB(small ~ 0 + ssh_annual_scaled +
                       s(bottom_depth, k = 5) +
                       s(jday, k = 15),
                     spatial_varying = ~ 0 + ssh_annual_scaled,
@@ -38,7 +38,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                     spatiotemporal = "ar1",
                     control = sdmTMBcontrol(newton_loops = 1,
                                             nlminb_loops = 2))
-  sdm_jday <- sdmTMB(small ~ 0 +
+  sdm_jday <- sdmTMB(small ~ 0 + ssh_annual_scaled +
                        s(jday, k = 15),
                      spatial_varying = ~ 0 + ssh_annual_scaled,
                      data = df,
@@ -56,7 +56,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
 }
 
 sdmTMB_select_large <- function(df, fish_mesh){
-  sdm_full <- sdmTMB(large ~ 0 +
+  sdm_full <- sdmTMB(large ~ 0 + ssh_annual_scaled +
                        s(bottom_depth, k = 5) +
                        s(roms_temperature, k = 5) +
                        s(roms_salinity, k = 5) +
@@ -70,7 +70,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                      spatiotemporal = "ar1",
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
-  sdm_sss <- sdmTMB(large ~ 0 +
+  sdm_sss <- sdmTMB(large ~ 0 + ssh_annual_scaled +
                       s(bottom_depth, k = 5) +
                       s(roms_temperature, k = 5) +
                       s(jday, k = 15),
@@ -83,7 +83,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                     spatiotemporal = "ar1",
                     control = sdmTMBcontrol(newton_loops = 1,
                                             nlminb_loops = 2))
-  sdm_sst <- sdmTMB(large ~ 0 +
+  sdm_sst <- sdmTMB(large ~ 0 + ssh_annual_scaled +
                       s(bottom_depth, k = 5) +
                       s(jday, k = 15),
                     spatial_varying = ~ 0 + ssh_annual_scaled,
@@ -95,7 +95,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                     spatiotemporal = "ar1",
                     control = sdmTMBcontrol(newton_loops = 1,
                                             nlminb_loops = 2))
-  sdm_jday <- sdmTMB(large ~ 0 +
+  sdm_jday <- sdmTMB(large ~ 0 + ssh_annual_scaled +
                        s(jday, k = 15),
                      spatial_varying = ~ 0 + ssh_annual_scaled,
                      data = df,
