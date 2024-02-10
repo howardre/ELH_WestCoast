@@ -55,7 +55,7 @@ date_conversion <- function(catch, names){
 }
 
 # Combine the grouped length data with the catch data
-merge_lengths <- function(catch, hauls, subset, RREAS_means, PRS_means){
+merge_lengths <- function(catch, hauls, subset){
   data <- merge(catch,
                 subset[, c("haul_no", "cruise", "small", "large")],
                 by = c("haul_no", "cruise"),
@@ -67,19 +67,7 @@ merge_lengths <- function(catch, hauls, subset, RREAS_means, PRS_means){
                    data_zero,
                    by = c("haul_no", "cruise"),
                    all.y = TRUE)
-  data_ctd <- merge(data_id,
-                    RREAS_means,
-                    by = c('cruise', 'ctd_index', 'year'),
-                    all.x = TRUE) # match RREAS ctds
-  data_ctd_all <- merge(data_ctd,
-                        PRS_means,
-                        by.x = c('numeric_date', 'station'),
-                        by.y = c('date', 'swfcs.station'),
-                        all.x = TRUE)
-  data_comb <- mutate(data_ctd_all,
-                      temperature = coalesce(temperature, temperature_c),
-                      salinity = coalesce(salinity, salinity_psu))
-  return(data_comb)
+  return(data_id)
 }
 
 # Group into two size classes
@@ -342,16 +330,101 @@ PRS_avg_ctds <- PRS_ctds %>%
 haul_data <- read_excel(here('data', 'haul_data_through2021.xlsx'))
 names(haul_data) <- tolower(names(haul_data))
 
-merge_anch <- merge_lengths(anch_catch, haul_data, anch_subset, RREAS_ctd_means, PRS_avg_ctds)
-merge_widw <- merge_lengths(widow_catch, haul_data, widow_subset, RREAS_ctd_means, PRS_avg_ctds)
-merge_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset, RREAS_ctd_means, PRS_avg_ctds)
-merge_dab <- merge_lengths(dab_catch, haul_data, dab_subset, RREAS_ctd_means, PRS_avg_ctds)
-merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset, RREAS_ctd_means, PRS_avg_ctds)
-merge_squid <- merge_lengths(squid_catch, haul_data, squid_subset, RREAS_ctd_means, PRS_avg_ctds)
+merge_anch <- merge_lengths(anch_catch, haul_data, anch_subset)
+merge_widw <- merge_lengths(widow_catch, haul_data, widow_subset)
+merge_sbly <- merge_lengths(sbly_catch, haul_data, sbly_subset)
+merge_dab <- merge_lengths(dab_catch, haul_data, dab_subset)
+merge_hake <- merge_lengths(hake_catch, haul_data, hake_subset)
+merge_squid <- merge_lengths(squid_catch, haul_data, squid_subset)
 ```
 
 ```{r}
-nep <- tidync(here('data','nep_srf_1995-2020.nc'))
+add_roms <- function(tows){
+  # Add ROMS hindcast
+  nc <- nc_open(here('data', 'NEP_variables_AvgMarchMay_1995-2020.nc'))
+  lat <- ncvar_get(nc, "latitude")
+  vgeo <- ncvar_get(nc, "vgeo") # surface geostrophic v-component avg from coast to 50 km offshore
+  uv_50 <- ncvar_get(nc, "u_vint_50m")
+  uv_100 <- ncvar_get(nc, "u_vint_100m")
+  iso26 <- ncvar_get(nc, "depth_iso26")
+  spice <- ncvar_get(nc, "spice_iso26")
+  v_undercurrent <- ncvar_get(nc, "v_cu")
+  vmax_undercurrent <- ncvar_get(nc, "vmax_cu")
+  year <- ncvar_get(nc, "years")
+  nc_close(nc)
+  
+    tows$year_month = paste(tows$year, tows$month, sep = "-")
+    
+    # Initialize result columns
+    tows$vgeo = 0
+    tows$uv50 = 0
+    tows$uv_100 = 0
+    tows$iso26 = 0
+    tows$spice = 0
+    tows$v_undercurrent = 0    
+    tows$vmax_undercurrent = 0
+
+    # Set up progress bar
+    pb <- txtProgressBar(min = 0,
+                         max = nrow(tows),
+                         char = "=",
+                         style = 3)
+    for (i in 1:nrow(tows)) {
+      # Cancel current iteration if year is out of range
+      if (tows$year[i] < min(time$year) | tows$year[i] > max(time$year))
+        next
+      target_lat = tows$lat[i]
+
+      # Get the best date match (ROMS output is monthly)
+      date_index <- which(tows$year_month[i] == time$year_month)
+      
+      # Find all ROMS lat/lons within 0.5 deg of the sampling point
+      nearby_lat_indices <- which(abs(lat - target_lat) <= min(abs(lat - target_lat) + 0.5))
+
+      # Find potential nearby points with valid latitude/longitudes
+      match_indices <- which(nearby_lat_indices == TRUE)
+      
+      # Calculate the best match (assumed to be the one with the closest latitude)
+      differences = lat[nearby_lat_indices[match_indices]] - target_lat
+      best_match = match_indices[which(abs(differences) == min(abs(differences)))]
+      
+      # Get the matching latitude
+      match_lat = lat[nearby_lat_indices[best_match]]
+      
+      # Get row/column info (necessary for accessing the matrices)
+      row = which(lat == match_lat, arr.ind = TRUE)[1]
+      column = which(lat == match_lat, arr.ind = TRUE)[2]
+      
+      # Extract sst, ssh, salinity, spiciness values
+      tows$vgeo = vgeo[row, column, date_index]
+      tows$uv50 = uv50[row, column, date_index]
+      tows$uv_100 = uv_100[row, column, date_index]
+      tows$iso26 = iso26[row, column, date_index]
+      tows$spice = spice[row, column, date_index]
+      tows$v_undercurrent = v_undercurrent[row, column, date_index]
+      tows$vmax_undercurrent = vmax_undercurrent[row, column, date_index]
+
+      setTxtProgressBar(pb, i)
+      }
+    close(pb)
+    return(tows)
+}
+
+test_anch <- add_roms(merge_anch)
+```
+
+
+```{r}
+nep <- tidync(here('data', 'nep_srf_1995-2020.nc'))
+nep_phys <- tidync(here('data','NEP_variables_AvgMarchMay_1995-2020.nc'))
+
+nep_test <- nep_phys %>%
+  hyper_tibble()
+
+nep_values <- nep_phys %>%
+  activate(latitude) %>%
+  hyper_tibble()
+
 nep_var <- nep %>% 
   hyper_tibble() 
 
@@ -363,6 +436,9 @@ nep_height <- nep %>%
   hyper_tibble()
 
 nep_hindcast <- merge(nep_var, nep_height, by = c("xi_rho", "eta_rho", "ocean_time"))
+
+
+lats <- ncvar_get(nep,"lat_rho")
 
 # Currently only one layer of s_rho, will need to extract top layer if this changes
 nep_hindcast$lon <- lons[cbind(nep_hindcast$xi_rho, nep_hindcast$eta_rho)]
@@ -384,7 +460,7 @@ hindcast_trim <- nep_hindcast %>%
          lon = case_when(lon >= 180 ~ lon - 360,
                          lon < 180 ~ lon)) %>%
   filter(between(month, 4, 8) & # must use between, no %in% for numeric
-           between(lat, 32.7, 47.6) &
+           between(lat, 32.7, 49) &
            between(lon, -125.4, -117.3))
 ```
 
