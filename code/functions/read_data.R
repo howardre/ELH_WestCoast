@@ -8,7 +8,7 @@ read_data <- function(file){
            large_catch1 = large + 1,
            year_f = as.factor(year),
            ssh_pos = year_ssh + abs(min(year_ssh)) + 10,
-           ssh_annual_scaled = (year_ssh - mean(year_ssh)) / sd(year_ssh),
+           ssh_annual_scaled = scale((year_ssh - mean(year_ssh)) / sd(year_ssh))[, 1],
            depth_scaled = scale(bottom_depth)[, 1],
            sss_scaled = scale(roms_salinity)[, 1],
            sst_scaled = scale(roms_temperature)[, 1],
