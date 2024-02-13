@@ -178,36 +178,34 @@ plot_variables <- function(model, data){
 # Data
 # May have to filter salinity and depth due to outliers?
 yoy_hake <- read_data('yoy_hake.Rdata') 
-yoy_anchovy <- read_data('yoy_anch.Rdata') %>% filter(survey == "RREAS" & year > 2013 & lat < 41.01) %>%
-  tidyr::drop_na(roms_temperature, roms_salinity, roms_ssh, bottom_depth, year, jday, lat, lon) %>%
-  filter(catch < 2500 &
-           year < 2020) %>%
-  mutate(catch1 = catch + 1,
-         small_catch1 = small + 1,
-         large_catch1 = large + 1,
-         year_f = as.factor(year),
-         ssh_pos = year_ssh + abs(min(year_ssh)) + 10,
-         ssh_annual_scaled = scale((year_ssh - mean(year_ssh)) / sd(year_ssh))[, 1],
-         depth_scaled = scale(bottom_depth)[, 1],
-         sss_scaled = scale(roms_salinity)[, 1],
-         sst_scaled = scale(roms_temperature)[, 1],
-         ssh_scaled = scale(ssh_anom)[, 1])
-yoy_anchovy <- yoy_anchovy[!(yoy_anchovy$small == 0 & yoy_anchovy$large == 0 & yoy_anchovy$catch > 0), ]
-yoy_anchovy <- add_utm_columns(yoy_anchovy, 
-                               utm_crs = 32610, # UTM 10
-                               ll_names = c("lon", "lat"))
-
-
+yoy_anchovy <- read_data('yoy_anch.Rdata') %>% filter(survey == "RREAS" & lat < 41.01) 
 yoy_widow <- filter(read_data('yoy_widw.Rdata'), catch < 2000) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
-yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2013)
-yoy_squid <- filter(read_data('yoy_squid.Rdata'), year > 2003) # no lengths before 2004
+yoy_sdab <- filter(read_data('yoy_dab.Rdata'))
+yoy_squid <- filter(read_data('yoy_squid.Rdata')) # no lengths before 2004
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
                            lon = c(-121.0, -121.0, -120.0))
 nlat = 40
 nlon = 60
+
+# Sandbox ----
+sdm_test <- sdmTMB(large ~ 0 + vgeo +
+                     s(bottom_depth, k = 5) +
+                     s(roms_sst, k = 5) +
+                     s(roms_sss, k = 5) +
+                     s(jday, k = 15),
+                   spatial_varying = ~ 0 + vgeo,
+                   data = yoy_hake,
+                   mesh = yoy_hake_mesh,
+                   spatial = "on",
+                   time = "year",
+                   family = tweedie(link = "log"),
+                   spatiotemporal = "ar1",
+                   control = sdmTMBcontrol(newton_loops = 1,
+                                           nlminb_loops = 2))
+sanity(sdm_test)
 
 # Pacific Hake ----
 # Make mesh object with matrices
