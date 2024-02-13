@@ -171,6 +171,69 @@ hindcast_match <- function(data, roms, ssh, a, b){
   data <- data[-c(a, b)] # remove extra columns before predicting
   return(data)
 }
+
+add_roms <- function(tows){
+  # Add ROMS hindcast
+  nc <- nc_open(here('data', 'nep_srf_1995-2020.nc'))
+  lat <- ncvar_get(nc, "lat_rho")
+  lon <- ncvar_get(nc, "lon_rho")
+  sst <- ncvar_get(nc, "temp")
+  ssh <- ncvar_get(nc, "zeta")
+  sss <- ncvar_get(nc, "salt")
+  time <- data.frame(date = as.Date(ncvar_get(nc, varid = "ocean_time") / 86400, origin = '1900-01-01')) %>%
+    mutate(., year = year(date), month = month(date)) %>%
+    mutate(., year_month = paste(year, month, sep = "-"))
+  nc_close(nc)
+  
+    tows$year_month = paste(tows$year, tows$month, sep = "-")
+    
+    # Initialize result columns
+    tows$roms_sst = 0
+    tows$roms_ssh1 = 0
+    tows$roms_sss = 0
+    
+    # Set up progress bar
+    pb <- txtProgressBar(min = 0,
+                         max = nrow(tows),
+                         char = "=",
+                         style = 3)
+    for (i in 1:nrow(tows)) {
+      # Cancel current iteration if year is out of range
+      if (tows$year[i] < min(time$year) | tows$year[i] > max(time$year))
+        next
+      target_lat = tows$lat[i]
+      target_lon = tows$lon[i]
+      
+      # Get the best date match (ROMS output is monthly)
+      date_index <- which(tows$year_month[i] == time$year_month)
+      
+      # Find all ROMS lat/lons within 0.5 deg of the sampling point
+      nearby_lat_indices <- which(abs(lat - target_lat) <= min(abs(lat - target_lat) + 0.5))
+      nearby_lon_indices <- which(abs(lon - target_lon) <= min(abs(lon - target_lon) + 0.5))
+      
+      # Find potential nearby points with valid latitude/longitudes
+      match_indices <- which(nearby_lat_indices %in% nearby_lon_indices == TRUE)
+      
+      # Calculate the best match (assumed to be the one with the closest latitude)
+      differences = lat[nearby_lat_indices[match_indices]] - target_lat
+      best_match = match_indices[which(abs(differences) == min(abs(differences)))]
+      
+      # Get the matching latitude
+      match_lat = lat[nearby_lat_indices[best_match]]
+      
+      # Get row/column info (necessary for accessing the matrices)
+      row = which(lat == match_lat, arr.ind = TRUE)[1]
+      column = which(lat == match_lat, arr.ind = TRUE)[2]
+      
+      # Extract sst, ssh, salinity
+      tows$roms_sst[i] = sst[row, column, date_index]
+      tows$roms_ssh1[i] = ssh[row, column, date_index]
+      tows$roms_sss[i] = sss[row, column, date_index]
+      setTxtProgressBar(pb, i)
+      }
+    close(pb)
+    return(tows)
+    }
 ```
 
 Data from emails
@@ -186,6 +249,7 @@ anch_catch <- clean_catch(anch_data_list, 1)
 anch_catch$numeric_date <- as.numeric(format(as.Date(anch_catch$haul_date, format = "%Y-%m-%d"),
                                            "%m%d%Y"))
 anch_catch$date <- as.Date(anch_catch$haul_date)
+anch_catch <- filter(anch_catch, year > 2013 & year < 2020)
 anch_sp <- clean_sp(anch_data_list, 2)
 anch_sp$numeric_date <- as.numeric(format(as.Date(anch_sp$haul_date, format = "%Y-%m-%d"),
                                            "%m%d%Y"))
@@ -235,48 +299,57 @@ col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station',
 hws_catch <- date_conversion(hake_short_widow_catch, new_names_catch)
 hake_catch <- hws_catch %>% 
   select(-yoy_shortbelly, -yoy_widow) %>%
-  rename(catch = yoy_pacific_hake)
+  rename(catch = yoy_pacific_hake) %>%
+  filter(year < 2020)
 sbly_catch <- hws_catch %>% 
   select(-yoy_pacific_hake, -yoy_widow) %>%
-  rename(catch = yoy_shortbelly)
+  rename(catch = yoy_shortbelly) %>%
+  filter(year < 2020)
 widow_catch <- hws_catch %>% 
   select(-yoy_shortbelly, -yoy_pacific_hake) %>%
-  rename(catch = yoy_widow)
+  rename(catch = yoy_widow) %>%
+  filter(year < 2020)
 dab_catch <- date_conversion(other_catch, other_names_catch)
+dab_catch <- dab_catch %>% 
+  dplyr::select(-c('shortbelly', 'hake', 'widow')) %>%
+  rename(catch = dab) %>%
+  filter(year > 2013 & year < 2020)
 squid_catch <- date_conversion(squid_catch, squid_names_catch)
 squid_catch <- squid_catch %>%
-  rename(catch = market_squid)
+  rename(catch = market_squid) %>%
+  filter(year > 2003 & year < 2020)
 squid_sp <- date_conversion(squid_sp, col_names_sp)
 hake_sp <- date_conversion(hake_sp_new, col_names_sp)
 widow_sp <- date_conversion(widow_sp_new, col_names_sp)
 sbly_sp <- date_conversion(sbly_sp_new, col_names_sp)
 dab_sp <- date_conversion(other_sp, other_names_sp)
 
-dab_catch <- dab_catch %>% 
-  dplyr::select(-c('shortbelly', 'hake', 'widow')) %>%
-  rename(catch = dab) %>%
-  filter(year > 2010)
-
 # Keep NA's because these are hauls with no catch at all
 # Have hauls with 0 measurements as well, but catches (so if num_measured > 1 but catch = 0 then remove)
 widow_sp <- filter(widow_sp, 
                    std_length > 16 & std_length < 65 | is.na(std_length), 
-                   num_measured > 0 | catch == 0)
+                   num_measured > 0 | catch == 0,
+                   year < 2020)
 sbly_sp <- filter(sbly_sp, 
                   std_length > 10 & std_length < 79 | is.na(std_length), 
-                  num_measured > 0 | catch == 0)
+                  num_measured > 0 | catch == 0,
+                  year < 2020)
 hake_sp <- filter(hake_sp, 
                   std_length > 14 & std_length < 82 | is.na(std_length), 
-                  num_measured > 0 | catch == 0)
+                  num_measured > 0 | catch == 0,
+                  year < 2020)
 squid_sp <- filter(squid_sp, 
                    std_length > 10 & std_length < 140 | is.na(std_length), 
-                   num_measured > 0 | catch == 0)
+                   num_measured > 0 | catch == 0,
+                   year > 2003 & year < 2020)
 dab_sp <- filter(dab_sp, species == 147, year > 2010, 
                  std_length > 15 & std_length < 56 | is.na(std_length), 
-                 num_measured > 0 | catch == 0)
+                 num_measured > 0 | catch == 0,
+                 year < 2020)
 anch_sp <- filter(anch_sp, 
                   std_length > 20 & std_length < 86 | is.na(std_length), 
-                  num_measured > 0 | catch == 0)
+                  num_measured > 0 | catch == 0,
+                  year > 2013 & year < 2020)
 
 rm(list = c('anch_data_list', 'other_catch', 
             'other_data_list', 'other_sp',
@@ -355,78 +428,15 @@ merge_squid <- merge_lengths(squid_catch, haul_data, squid_subset)
 ```
 
 ```{r}
-# add_roms <- function(tows){
-#   # Add ROMS hindcast
-#   nc <- nc_open(here('data', 'NEP_variables_AvgMarchMay_1995-2020.nc'))
-#   lat <- ncvar_get(nc, "latitude")
-#   vgeo <- ncvar_get(nc, "vgeo") # surface geostrophic v-component avg from coast to 50 km offshore
-#   uv_50 <- ncvar_get(nc, "u_vint_50m")
-#   uv_100 <- ncvar_get(nc, "u_vint_100m")
-#   iso26 <- ncvar_get(nc, "depth_iso26")
-#   spice <- ncvar_get(nc, "spice_iso26")
-#   v_undercurrent <- ncvar_get(nc, "v_cu")
-#   vmax_undercurrent <- ncvar_get(nc, "vmax_cu")
-#   year <- ncvar_get(nc, "years")
-#   nc_close(nc)
-#   
-#     tows$year_month = paste(tows$year, tows$month, sep = "-")
-#     
-#     # Initialize result columns
-#     tows$vgeo = 0
-#     tows$uv50 = 0
-#     tows$uv_100 = 0
-#     tows$iso26 = 0
-#     tows$spice = 0
-#     tows$v_undercurrent = 0    
-#     tows$vmax_undercurrent = 0
-# 
-#     # Set up progress bar
-#     pb <- txtProgressBar(min = 0,
-#                          max = nrow(tows),
-#                          char = "=",
-#                          style = 3)
-#     for (i in 1:nrow(tows)) {
-#       # Cancel current iteration if year is out of range
-#       if (tows$year[i] < min(time$year) | tows$year[i] > max(time$year))
-#         next
-#       target_lat = tows$lat[i]
-# 
-#       # Get the best date match (ROMS output is monthly)
-#       date_index <- which(tows$year_month[i] == time$year_month)
-#       
-#       # Find all ROMS lat/lons within 0.5 deg of the sampling point
-#       nearby_lat_indices <- which(abs(lat - target_lat) <= min(abs(lat - target_lat) + 0.5))
-# 
-#       # Find potential nearby points with valid latitude/longitudes
-#       match_indices <- which(nearby_lat_indices == TRUE)
-#       
-#       # Calculate the best match (assumed to be the one with the closest latitude)
-#       differences = lat[nearby_lat_indices[match_indices]] - target_lat
-#       best_match = match_indices[which(abs(differences) == min(abs(differences)))]
-#       
-#       # Get the matching latitude
-#       match_lat = lat[nearby_lat_indices[best_match]]
-#       
-#       # Get row/column info (necessary for accessing the matrices)
-#       row = which(lat == match_lat, arr.ind = TRUE)[1]
-#       column = which(lat == match_lat, arr.ind = TRUE)[2]
-#       
-#       # Extract sst, ssh, salinity, spiciness values
-#       tows$vgeo = vgeo[row, column, date_index]
-#       tows$uv50 = uv50[row, column, date_index]
-#       tows$uv_100 = uv_100[row, column, date_index]
-#       tows$iso26 = iso26[row, column, date_index]
-#       tows$spice = spice[row, column, date_index]
-#       tows$v_undercurrent = v_undercurrent[row, column, date_index]
-#       tows$vmax_undercurrent = vmax_undercurrent[row, column, date_index]
-# 
-#       setTxtProgressBar(pb, i)
-#       }
-#     close(pb)
-#     return(tows)
-# }
+yoy_anch <- add_roms(merge_anch)
+yoy_widw <- add_roms(merge_widw)
+yoy_sbly <- add_roms(merge_sbly)
+yoy_dab <- add_roms(merge_dab)
+yoy_hake <- add_roms(merge_hake)
+yoy_squid <- add_roms(merge_squid)
+```
 
-
+```{r}
 add_roms <- function(tows){
   # Add ROMS hindcast
   nc <- nc_open(here('data', 'nep_srf_1995-2020.nc'))
@@ -489,8 +499,17 @@ add_roms <- function(tows){
     close(pb)
     return(tows)
     }
+```
 
-test_anch <- add_roms(merge_anch)
+
+```{r}
+# Save final dataframes
+saveRDS(yoy_anch, file = "../data/yoy_anch.Rdata")
+saveRDS(yoy_widw, file = "../data/yoy_widw.Rdata")
+saveRDS(yoy_sbly, file = "../data/yoy_sbly.Rdata")
+saveRDS(yoy_dab, file = "../data/yoy_dab.Rdata")
+saveRDS(yoy_hake, file = "../data/yoy_hake.Rdata")
+saveRDS(yoy_squid, file = "../data/yoy_squid.Rdata")
 ```
 
 
@@ -649,23 +668,6 @@ saveRDS(ssh_anom, file = "../data/ssh_data.Rdata")
 hindcast_anom <- readRDS("../data/hindcast_means.Rdata")
 nep_avgs <- readRDS("../data/hindcast_lat_vars.Rdata")
 ssh_anom <- readRDS("../data/ssh_data.Rdata")
-
-
-
-test <- merge_anch
-years <- unique(merge_anch$year)
-for(i in years){
-  test[, c(25, 26)] <- as.data.frame(RANN::nn2(hindcast_anom[, c('lat', 'lon')][i],
-                                           test[, c('lat', 'lon')][i],
-                                           k = 1))
-}
-  
-  
-test[, c(25, 26)] <- as.data.frame(RANN::nn2(hindcast_anom[, c('lat', 'lon')],
-                                           test[, c('lat', 'lon')],
-                                           k = 1))
-data$roms_temperature <- as.data.frame(roms)[c(data$nn.idx), 5] # Match nearest temp
-data$roms_salinity <- as.data.frame(roms)[c(data$nn.idx), 4]
 
 # No ROMS past 2018 right now
 yoy_anch <- hindcast_match(merge_anch, hindcast_anom, ssh_anom, 25, 26)
