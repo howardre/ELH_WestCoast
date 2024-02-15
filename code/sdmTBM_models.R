@@ -178,7 +178,7 @@ plot_variables <- function(model, data){
 # Data
 # May have to filter salinity and depth due to outliers?
 yoy_hake <- read_data('yoy_hake.Rdata') 
-yoy_anchovy <- read_data('yoy_anch.Rdata') %>% filter(survey == "RREAS" & lat < 41.01) 
+yoy_anchovy <- read_data('yoy_anch.Rdata')
 yoy_widow <- filter(read_data('yoy_widw.Rdata'), catch < 2000) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'))
@@ -192,13 +192,13 @@ nlon = 60
 
 # Sandbox ----
 sdm_test <- sdmTMB(large ~ 0 + vgeo +
-                     s(bottom_depth, k = 5) +
-                     s(roms_sst, k = 5) +
-                     s(roms_sss, k = 5) +
-                     s(jday, k = 15),
+                     s(depth_scaled) +
+                     s(sst_scaled) +
+                     s(sss_scaled) +
+                     s(jday),
                    spatial_varying = ~ 0 + vgeo,
-                   data = yoy_hake,
-                   mesh = yoy_hake_mesh,
+                   data = yoy_anchovy,
+                   mesh = yoy_anchovy_mesh,
                    spatial = "on",
                    time = "year",
                    family = tweedie(link = "log"),
