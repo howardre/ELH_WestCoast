@@ -1,16 +1,17 @@
 read_data <- function(file){
   yoy <- readRDS(here('data', file)) %>% 
-    tidyr::drop_na(roms_sst, roms_sss, roms_ssh, bottom_depth, year, jday, lat, lon) %>%
+    tidyr::drop_na(sst, sss, bottom_depth, year, jday, latitude, longitude) %>%
     filter(catch < 2500 &
              year < 2020 & year > 1994) %>%
     mutate(catch1 = catch + 1,
            small_catch1 = small + 1,
            large_catch1 = large + 1,
+           year = scale(year)[, 1],
            year_f = as.factor(year),
            depth_scaled = scale(bottom_depth)[, 1],
-           sss_scaled = scale(roms_sss)[, 1],
-           sst_scaled = scale(roms_sst)[, 1],
-           ssh_scaled = scale(roms_ssh)[, 1],
+           sss_scaled = scale(sss)[, 1],
+           sst_scaled = scale(sst)[, 1],
+           jday_scaled = scale(jday)[, 1],
            vgeo = scale(vgeo)[, 1], 
            v_cu = scale(v_cu)[, 1], 
            vmax_cu = scale(vmax_cu)[, 1],
@@ -21,6 +22,6 @@ read_data <- function(file){
   yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
   yoy_utm <- add_utm_columns(yoy, 
                              utm_crs = 32610, # UTM 10
-                             ll_names = c("lon", "lat")) # add UTM coordinates
+                             ll_names = c("longitude", "latitude")) # add UTM coordinates
   return(yoy_utm)
 }
