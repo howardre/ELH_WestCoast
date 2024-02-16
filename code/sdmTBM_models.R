@@ -191,18 +191,21 @@ nlat = 40
 nlon = 60
 
 # Sandbox ----
-sdm_test <- sdmTMB(large ~ 0 + vgeo +
-                     s(depth_scaled) +
-                     s(sst_scaled) +
-                     s(sss_scaled) +
-                     s(jday),
-                   spatial_varying = ~ 0 + vgeo,
+the_mesh <- make_mesh(yoy_anchovy, 
+                      xy_cols = c("X", "Y"),
+                      n_knots = 200,
+                      type = "cutoff_search",
+                      seed = 2024)
+sdm_test <- sdmTMB(large ~ 1 + v_cu +
+                     s(sst_scaled, k = 5) +
+                     s(sss_scaled, k = 5),
+                   spatial_varying = ~ 0 + v_cu,
                    data = yoy_anchovy,
-                   mesh = yoy_anchovy_mesh,
+                   mesh = the_mesh,
                    spatial = "on",
                    time = "year",
-                   family = tweedie(link = "log"),
-                   spatiotemporal = "ar1",
+                   family = nbinom2(link = "log"),
+                   spatiotemporal = "iid",
                    control = sdmTMBcontrol(newton_loops = 1,
                                            nlminb_loops = 2))
 sanity(sdm_test)
