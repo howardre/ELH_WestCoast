@@ -1,7 +1,6 @@
 gam_select_small <- function(df){
   gam_v_cu <- gam(small ~ year_f +
                       s(longitude, latitude) +
-                      s(bottom_depth, k = 5) +
                       s(jday) +
                       s(sst, k = 5) +
                       s(sss, k = 5) +
@@ -11,7 +10,6 @@ gam_select_small <- function(df){
                     data = df)
   gam_vgeo <- gam(small ~ year_f +
                     s(longitude, latitude) +
-                    s(bottom_depth, k = 5) +
                     s(jday) +
                     s(sst, k = 5) +
                     s(sss, k = 5) +
@@ -21,7 +19,6 @@ gam_select_small <- function(df){
                   data = df)
   gam_vmax_cu <- gam(small ~ year_f +
                     s(longitude, latitude) +
-                    s(bottom_depth, k = 5) +
                     s(jday) +
                     s(sst, k = 5) +
                     s(sss, k = 5) +
@@ -31,7 +28,6 @@ gam_select_small <- function(df){
                   data = df)
   gam_uvint50m <- gam(small ~ year_f +
                     s(longitude, latitude) +
-                    s(bottom_depth, k = 5) +
                     s(jday) +
                     s(sst, k = 5) +
                     s(sss, k = 5) +
@@ -41,7 +37,6 @@ gam_select_small <- function(df){
                   data = df)
   gam_uvint100m <- gam(small ~ year_f +
                     s(longitude, latitude) +
-                    s(bottom_depth, k = 5) +
                     s(jday) +
                     s(sst, k = 5) +
                     s(sss, k = 5) +
@@ -51,7 +46,6 @@ gam_select_small <- function(df){
                   data = df)
   gam_iso26 <- gam(small ~ year_f +
                     s(longitude, latitude) +
-                    s(bottom_depth, k = 5) +
                     s(jday) +
                     s(sst, k = 5) +
                     s(sss, k = 5) +
@@ -59,9 +53,8 @@ gam_select_small <- function(df){
                   family = tw(link = "log"),
                   method = "REML",
                   data = df)
-  gam_spice26 <- gam(small ~ year_f +
+  gam_spice <- gam(small ~ year_f +
                      s(longitude, latitude) +
-                     s(bottom_depth, k = 5) +
                      s(jday) +
                      s(sst, k = 5) +
                      s(sss, k = 5) +
@@ -78,7 +71,6 @@ gam_select_small <- function(df){
 gam_select_large <- function(df){
   gam_v_cu <- gam(large ~ year_f +
                     s(longitude, latitude) +
-                    s(bottom_depth, k = 5) +
                     s(jday) +
                     s(sst, k = 5) +
                     s(sss, k = 5) +
@@ -88,7 +80,6 @@ gam_select_large <- function(df){
                   data = df)
   gam_vgeo <- gam(large ~ year_f +
                     s(longitude, latitude) +
-                    s(bottom_depth, k = 5) +
                     s(jday) +
                     s(sst, k = 5) +
                     s(sss, k = 5) +
@@ -98,7 +89,6 @@ gam_select_large <- function(df){
                   data = df)
   gam_vmax_cu <- gam(large ~ year_f +
                        s(longitude, latitude) +
-                       s(bottom_depth, k = 5) +
                        s(jday) +
                        s(sst, k = 5) +
                        s(sss, k = 5) +
@@ -108,7 +98,6 @@ gam_select_large <- function(df){
                      data = df)
   gam_uvint50m <- gam(large ~ year_f +
                         s(longitude, latitude) +
-                        s(bottom_depth, k = 5) +
                         s(jday) +
                         s(sst, k = 5) +
                         s(sss, k = 5) +
@@ -118,7 +107,6 @@ gam_select_large <- function(df){
                       data = df)
   gam_uvint100m <- gam(large ~ year_f +
                          s(longitude, latitude) +
-                         s(bottom_depth, k = 5) +
                          s(jday) +
                          s(sst, k = 5) +
                          s(sss, k = 5) +
@@ -128,7 +116,6 @@ gam_select_large <- function(df){
                        data = df)
   gam_iso26 <- gam(large ~ year_f +
                      s(longitude, latitude) +
-                     s(bottom_depth, k = 5) +
                      s(jday) +
                      s(sst, k = 5) +
                      s(sss, k = 5) +
@@ -136,9 +123,8 @@ gam_select_large <- function(df){
                    family = tw(link = "log"),
                    method = "REML",
                    data = df)
-  gam_spice26 <- gam(large ~ year_f +
+  gam_spice <- gam(large ~ year_f +
                        s(longitude, latitude) +
-                       s(bottom_depth, k = 5) +
                        s(jday) +
                        s(sst, k = 5) +
                        s(sss, k = 5) +
