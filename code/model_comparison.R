@@ -19,12 +19,11 @@ library(ggthemes)
 source(here('code/functions', 'vis_gam_COLORS.R'))
 read_data <- function(file){
   yoy <- readRDS(here('data', file)) %>% 
-    tidyr::drop_na(temperature, salinity, ssh_nc, bottom_depth, year, jday, lat, lon) %>%
+    tidyr::drop_na(sst, sss, bottom_depth, year, jday, latitude, longitude) %>%
     filter(catch < 2500 &
-             year > 1992 &
-             year < 2015) %>%
-    mutate(year_f = as.factor(year),
-           ssh_pos = year_ssh + abs(min(year_ssh)) + 10)
+             year < 2020 & year > 1994) %>%
+    mutate(year_f = as.factor(year))
+  yoy <- yoy[!(yoy$small == 0 & yoy$large == 0 & yoy$catch > 0), ]
   return(yoy)
 }
 
@@ -52,36 +51,18 @@ plot_variable <- function(gam, covariate, bounds, variable, ylabel, yvalues){
 # Currently only have hindcast up to 2018, so data is filtered to this
 yoy_hake <- read_data('yoy_hake.Rdata') 
 yoy_anchovy <- read_data('yoy_anch.Rdata') 
-yoy_anchovy <- filter(yoy_anchovy, year > 2013 & jday < 164)
+yoy_anchovy <- filter(yoy_anchovy)
 yoy_widow <- read_data('yoy_widw.Rdata')
 yoy_widow <- filter(yoy_widow, catch < 2000) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata') 
 yoy_sdab <- read_data('yoy_dab.Rdata') 
 
 # Hake ----
-hake_small <- gam(small ~ year_f +
-                    s(lon, lat) +
-                    s(bottom_depth, k = 5) +
-                    s(jday) +
-                    s(temperature, k = 5) +
-                    s(salinity, k = 5) + 
-                    s(ssh_nc, k = 5),
-                  family = tw(link = "log"),
-                  method = "REML",
-                  data = yoy_hake)
-summary(hake_small)
+hake_small <- gam_select_small(yoy_hake)
+summary(hake_small[[2]])
 
-hake_large <- gam(large ~ year_f +
-                    s(lon, lat) +
-                    s(bottom_depth, k = 5) +
-                    s(jday) +
-                    s(temperature, k = 5) +
-                    s(salinity, k = 5) + 
-                    s(ssh_nc, k = 5),
-                  family = tw(link = "log"),
-                  method = "REML",
-                  data = yoy_hake)
-summary(hake_large)
+hake_large <- gam_select_large(yoy_hake)
+summary(hake_large[[2]])
 
 # Small model
 tiff(here('results/hindcast_output/yoy_hake',
