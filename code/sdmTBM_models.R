@@ -199,12 +199,12 @@ the_mesh <- make_mesh(yoy_anchovy,
 sdm_test <- sdmTMB(large ~ 1 + v_cu +
                      s(sst_scaled, k = 5) +
                      s(sss_scaled, k = 5),
-                   spatial_varying = ~ 0 + v_cu,
+                   spatial_varying = ~ 0 + vgeo,
                    data = yoy_anchovy,
                    mesh = the_mesh,
                    spatial = "on",
                    time = "year",
-                   family = nbinom2(link = "log"),
+                   family = tweedie(link = "log"),
                    spatiotemporal = "iid",
                    control = sdmTMBcontrol(newton_loops = 1,
                                            nlminb_loops = 2))
