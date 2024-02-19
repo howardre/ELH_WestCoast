@@ -8,7 +8,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                      spatial = "on",
                      time = "year",
                      family = tweedie(link = "log"),
-                     spatiotemporal = "ar1",
+                     spatiotemporal = "iid",
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
   sdm_vgeo <- sdmTMB(small ~ vgeo +
@@ -20,7 +20,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                      spatial = "on",
                      time = "year",
                      family = tweedie(link = "log"),
-                     spatiotemporal = "ar1",
+                     spatiotemporal = "iid",
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
   sdm_vmax_cu <- sdmTMB(small ~ vmax_cu +
@@ -32,7 +32,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                         spatial = "on",
                         time = "year",
                         family = tweedie(link = "log"),
-                        spatiotemporal = "ar1",
+                        spatiotemporal = "iid",
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
   sdm_uvint50m <- sdmTMB(small ~ u_vint_50m +
@@ -44,7 +44,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                          spatial = "on",
                          time = "year",
                          family = tweedie(link = "log"),
-                         spatiotemporal = "ar1",
+                         spatiotemporal = "iid",
                          control = sdmTMBcontrol(newton_loops = 1,
                                                  nlminb_loops = 2))
   sdm_uvint100m <- sdmTMB(small ~ u_vint_100m +
@@ -56,7 +56,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                           spatial = "on",
                           time = "year",
                           family = tweedie(link = "log"),
-                          spatiotemporal = "ar1",
+                          spatiotemporal = "iid",
                           control = sdmTMBcontrol(newton_loops = 1,
                                                   nlminb_loops = 2))
   sdm_iso26 <- sdmTMB(small ~ depth_iso26 +
@@ -68,7 +68,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                       spatial = "on",
                       time = "year",
                       family = tweedie(link = "log"),
-                      spatiotemporal = "ar1",
+                      spatiotemporal = "iid",
                       control = sdmTMBcontrol(newton_loops = 1,
                                               nlminb_loops = 2))
   sdm_spice <- sdmTMB(small ~ spice_iso26 +
@@ -80,7 +80,7 @@ sdmTMB_select_small <- function(df, fish_mesh){
                       spatial = "on",
                       time = "year",
                       family = tweedie(link = "log"),
-                      spatiotemporal = "ar1",
+                      spatiotemporal = "iid",
                       control = sdmTMBcontrol(newton_loops = 1,
                                               nlminb_loops = 2))
   sdm_list <- list(sdm_v_cu, sdm_vgeo, sdm_vmax_cu, sdm_uvint50m, sdm_uvint100m, sdm_iso26, sdm_spice)
@@ -99,7 +99,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                      spatial = "on",
                      time = "year",
                      family = tweedie(link = "log"),
-                     spatiotemporal = "ar1",
+                     spatiotemporal = "iid",
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
   sdm_vgeo <- sdmTMB(large ~ vgeo +
@@ -111,7 +111,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                      spatial = "on",
                      time = "year",
                      family = tweedie(link = "log"),
-                     spatiotemporal = "ar1",
+                     spatiotemporal = "iid",
                      control = sdmTMBcontrol(newton_loops = 1,
                                              nlminb_loops = 2))
   sdm_vmax_cu <- sdmTMB(large ~ vmax_cu +
@@ -124,7 +124,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                         time = "year",
                         family = tweedie(link = "log"),
                         priors = sdmTMBpriors(matern_s = pc_matern(range_gt = 75, sigma_lt = 5)),
-                        spatiotemporal = "ar1",
+                        spatiotemporal = "iid",
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
   sdm_uvint50m <- sdmTMB(large ~ u_vint_50m +
@@ -136,7 +136,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                          spatial = "on",
                          time = "year",
                          family = tweedie(link = "log"),
-                         spatiotemporal = "ar1",
+                         spatiotemporal = "iid",
                          control = sdmTMBcontrol(newton_loops = 1,
                                                  nlminb_loops = 2))
   sdm_uvint100m <- sdmTMB(large ~ u_vint_100m +
@@ -148,7 +148,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                          spatial = "on",
                          time = "year",
                          family = tweedie(link = "log"),
-                         spatiotemporal = "ar1",
+                         spatiotemporal = "iid",
                          control = sdmTMBcontrol(newton_loops = 1,
                                                  nlminb_loops = 2))
   sdm_iso26 <- sdmTMB(large ~ depth_iso26 +
@@ -160,7 +160,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                       spatial = "on",
                       time = "year",
                       family = tweedie(link = "log"),
-                      spatiotemporal = "ar1",
+                      spatiotemporal = "iid",
                       control = sdmTMBcontrol(newton_loops = 1,
                                               nlminb_loops = 2))
   sdm_spice <- sdmTMB(large ~ spice_iso26 +
@@ -172,7 +172,7 @@ sdmTMB_select_large <- function(df, fish_mesh){
                       spatial = "on",
                       time = "year",
                       family = tweedie(link = "log"),
-                      spatiotemporal = "ar1",
+                      spatiotemporal = "iid",
                       control = sdmTMBcontrol(newton_loops = 1,
                                               nlminb_loops = 2))
   sdm_list <- list(sdm_v_cu, sdm_vgeo, sdm_vmax_cu, sdm_uvint50m, sdm_uvint100m, sdm_iso26, sdm_spice)

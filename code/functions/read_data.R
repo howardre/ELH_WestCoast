@@ -2,7 +2,7 @@ read_data <- function(file){
   yoy <- readRDS(here('data', file)) %>% 
     tidyr::drop_na(sst, sss, bottom_depth, year, jday, latitude, longitude) %>%
     filter(catch < 2500 &
-             year < 2020 & year > 1994) %>%
+             year < 2020 & year > 2010) %>%
     mutate(catch1 = catch + 1,
            small_catch1 = small + 1,
            large_catch1 = large + 1,
