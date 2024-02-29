@@ -26,7 +26,8 @@ source(here('code/functions', 'distance_function.R'))
 source(here('code/functions', 'sdmTMB_grid.R'))
 source(here('code/functions', 'sdmTMB_map.R'))
 source(here('code/functions', 'read_data.R'))
-source(here('code/functions', 'sdmTMB_select.R'))
+source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal
+# spatiotemporal models do not seem to work with SV term
 
 # Functions
 # More info here: https://pbs-assess.github.io/sdmTMB/index.html
@@ -191,21 +192,19 @@ nlat = 40
 nlon = 60
 
 # Sandbox ----
-the_mesh <- make_mesh(yoy_anchovy, 
+the_mesh <- make_mesh(yoy_widow,
                       xy_cols = c("X", "Y"),
-                      n_knots = 200,
-                      type = "cutoff_search",
-                      seed = 2024)
-sdm_test <- sdmTMB(large ~ 1 + v_cu +
+                      cutoff = 20)
+sdm_test <- sdmTMB(large ~ vgeo +
                      s(sst_scaled, k = 5) +
                      s(sss_scaled, k = 5),
                    spatial_varying = ~ 0 + vgeo,
-                   data = yoy_anchovy,
+                   data = yoy_widow,
                    mesh = the_mesh,
-                   spatial = "on",
+                   spatial = "off",
                    time = "year",
                    family = tweedie(link = "log"),
-                   spatiotemporal = "iid",
+                   spatiotemporal = "ar1",
                    control = sdmTMBcontrol(newton_loops = 1,
                                            nlminb_loops = 2))
 sanity(sdm_test)
@@ -214,9 +213,7 @@ sanity(sdm_test)
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"),
-                           n_knots = 200,
-                           type = "cutoff_search",
-                           seed = 2024)
+                           cutoff = 15)
 plot(yoy_hake_mesh) 
 
 # Select models
@@ -347,23 +344,14 @@ hake_large_cv <- sdmTMB_cv(large ~ 0 +
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
                               xy_cols = c("X", "Y"),
-                              cutoff = 10)
+                              cutoff = 30)
 plot(yoy_anchovy_mesh) 
 
 # Select models
 anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_small[[2]]  # having issues using VC term for anchovy
+anchovy_model_small[[2]]  
 anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_large[[2]] # having issues using VC term for anchovy
-
-test <- sdmTMB(small ~ 0 + ssh_annual_scaled + s(sst_scaled),
-               data = yoy_anchovy,
-               mesh = yoy_anchovy_mesh,
-               spatial = "on",
-               spatial_varying = ~ 0 + ssh_annual_scaled,
-               family = tweedie(link = "log"),
-               spatiotemporal = "off")
-sanity(test)
+anchovy_model_large[[2]] 
 
 sanity(anchovy_model_small[[2]]) 
 tidy(anchovy_model_small[[2]], 
@@ -439,9 +427,7 @@ dev.off()
 # Make mesh object with matrices
 yoy_sdab_mesh <- make_mesh(yoy_sdab,
                            xy_cols = c("X", "Y"),
-                           n_knots = 200,
-                           type = "cutoff_search",
-                           seed =  2024)
+                           cutoff = 25)
 plot(yoy_sdab_mesh)
 
 # Select models
@@ -486,17 +472,15 @@ sdmTMB_map(yoy_sdab, sdab_pred_large)
 # Make mesh object with matrices
 yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
                               xy_cols = c("X", "Y"), 
-                              n_knots = 200,
-                              type = "cutoff_search",
-                              seed =  2024)
+                              cutoff = 15)
                                                                      
 plot(yoy_shortbelly_mesh)
 
 # Select models
 shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_model_small[[2]] # having issues using VC term for shortbelly
+shortbelly_model_small[[2]] 
 shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_model_large[[2]] # having issues using VC term for shortbelly
+shortbelly_model_large[[2]] 
 
 sanity(shortbelly_model_small[[2]]) 
 tidy(shortbelly_model_small[[2]], 
@@ -534,14 +518,12 @@ sdmTMB_map(yoy_shortbelly, shortbelly_pred_large)
 # Make mesh object with matrices
 yoy_widow_mesh <- make_mesh(yoy_widow,
                             xy_cols = c("X", "Y"),
-                            n_knots = 200,
-                            type = "cutoff_search",
-                            seed = 2024)
+                            cutoff = 20)
 plot(yoy_widow_mesh)
 
 # Select models
 widow_model_small <- sdmTMB_select_small(yoy_widow, yoy_widow_mesh) 
-widow_model_small[[2]] # having issues using VC term for widow
+widow_model_small[[2]]
 widow_model_large <- sdmTMB_select_large(yoy_widow, yoy_widow_mesh) 
 widow_model_large[[2]]
 
@@ -549,7 +531,7 @@ sanity(widow_model_small[[2]])
 tidy(widow_model_small[[2]], 
      effect = "ran_pars", 
      conf.int = TRUE)
-sanity(widow_model_large[[2]]) 
+sanity(widow_model_large[[2]]) # works with cutoff = 20, no jday
 tidy(widow_model_large[[2]],
      effect = "ran_pars", 
      conf.int = TRUE)
@@ -581,22 +563,20 @@ sdmTMB_map(yoy_widow, widow_pred_large)
 # Make mesh object with matrices
 yoy_squid_mesh <- make_mesh(yoy_squid,
                             xy_cols = c("X", "Y"),
-                            n_knots = 200,
-                            type = "cutoff_search",
-                            seed = 2024)
+                            cutoff = 20)
 plot(yoy_squid_mesh)
 
 # Select models
 squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
-squid_model_small[[2]] # having issues using VC term for squid
+squid_model_small[[2]] 
 squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
 squid_model_large[[2]]
 
-sanity(squid_model_small[[2]]) 
+sanity(squid_model_small[[2]]) # works with cutoff = 20, not jday
 tidy(squid_model_small[[2]], 
      effect = "ran_pars", 
      conf.int = TRUE)
-sanity(squid_model_large[[2]]) 
+sanity(squid_model_large[[2]]) # works with cutoff = 20, no jday
 tidy(squid_model_large[[2]],
      effect = "ran_pars", 
      conf.int = TRUE)
