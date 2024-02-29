@@ -6,7 +6,7 @@ read_data <- function(file){
     mutate(catch1 = catch + 1,
            small_catch1 = small + 1,
            large_catch1 = large + 1,
-           year = scale(year)[, 1],
+           year_scaled = scale(year)[, 1],
            year_f = as.factor(year),
            depth_scaled = scale(bottom_depth)[, 1],
            sss_scaled = scale(sss)[, 1],
