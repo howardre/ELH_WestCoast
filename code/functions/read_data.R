@@ -4,8 +4,8 @@ read_data <- function(file){
     filter(catch < 2500 &
              year < 2020 & year > 2010) %>%
     mutate(catch1 = catch + 1,
-           small_catch1 = small + 1,
-           large_catch1 = large + 1,
+           pres_small = ifelse(small > 0, 1, 0),
+           pres_large = ifelse(large > 0, 1, 0),
            year_scaled = scale(year)[, 1],
            year_f = as.factor(year),
            depth_scaled = scale(bottom_depth)[, 1],
