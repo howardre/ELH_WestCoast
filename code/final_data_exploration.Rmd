@@ -156,7 +156,7 @@ add_roms <- function(tows, roms){
 
   tow_df <- as.data.frame(tow_combined)
   tow_final <- tow_df %>%
-    select(-year_week.x, -year_week.y, -year.y, -lon.y, -lat.y, -geometry) %>%
+    dplyr::select(-year_week.x, -year_week.y, -year.y, -lon.y, -lat.y, -geometry) %>%
     rename(year = year.x,
            longitude = lon.x,
            latitude = lat.x)
@@ -190,9 +190,9 @@ match_avgs <- function(species, roms){
                  by.x = c("year", "small_grp"),
                  by.y = c("years", "small_grp"),
                  all.x = TRUE)
-  final <- select(small, -small_grp, -large_grp, -haul_no, -cruise, -ctd_index,
-                  -station, -station_bottom_depth, -strata, -area,
-                  -active, -numeric_date, -haul_date)
+  final <- dplyr::select(small, -small_grp, -large_grp, -haul_no, -cruise, -ctd_index,
+                         -station, -station_bottom_depth, -strata, -area,
+                         -active, -numeric_date, -haul_date)
   return(final)
 }
 ```
@@ -260,15 +260,15 @@ col_names_sp <- c('haul_no', 'year', 'month', 'jday', 'station',
 
 hws_catch <- date_conversion(hake_short_widow_catch, new_names_catch)
 hake_catch <- hws_catch %>% 
-  select(-yoy_shortbelly, -yoy_widow) %>%
+  dplyr::select(-yoy_shortbelly, -yoy_widow) %>%
   rename(catch = yoy_pacific_hake) %>%
   filter(year < 2020)
 sbly_catch <- hws_catch %>% 
-  select(-yoy_pacific_hake, -yoy_widow) %>%
+  dplyr::select(-yoy_pacific_hake, -yoy_widow) %>%
   rename(catch = yoy_shortbelly) %>%
   filter(year < 2020)
 widow_catch <- hws_catch %>% 
-  select(-yoy_shortbelly, -yoy_pacific_hake) %>%
+  dplyr::select(-yoy_shortbelly, -yoy_pacific_hake) %>%
   rename(catch = yoy_widow) %>%
   filter(year < 2020)
 dab_catch <- date_conversion(other_catch, other_names_catch)
@@ -328,7 +328,7 @@ rm(list = c('anch_data_list', 'other_catch',
 ```{r}
 # Consolidate lengths
 anch_subset <- size_calc(anch_sp, 35)
-widow_subset <- size_calc(widow_sp, 31) 
+widow_subset <- size_calc(widow_sp, 32) 
 sbly_subset <- size_calc(sbly_sp, 35)
 dab_subset <- size_calc(dab_sp, 25)
 hake_subset <- size_calc(hake_sp, 35)
