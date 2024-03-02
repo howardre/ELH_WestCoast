@@ -26,8 +26,8 @@ source(here('code/functions', 'distance_function.R'))
 source(here('code/functions', 'sdmTMB_grid.R'))
 source(here('code/functions', 'sdmTMB_map.R'))
 source(here('code/functions', 'read_data.R'))
-source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal
-# spatiotemporal models do not seem to work with SV term
+source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & spatial
+
 
 # Functions
 # More info here: https://pbs-assess.github.io/sdmTMB/index.html
@@ -58,35 +58,11 @@ individual_plot <- function(model, data, variable, xlab){
 } # use for individual variables
 
 plot_variables <- function(model, data){
-  depth <- visreg(model,
-                  data = data,
-                  xvar = "bottom_depth",
-                  plot = FALSE,
-                  cond = list(ssh_annual_scaled = 1)) # currently required with SVCs
-  depth_plot <- ggplot(depth$fit, aes(x = bottom_depth, y = visregFit)) +
-    geom_line(color = "black",
-              linewidth = 1,
-              show.legend = FALSE) +
-    geom_ribbon(aes(ymin = visregLwr, 
-                    ymax = visregUpr,
-                    fill = "coral2"),
-                alpha = 0.5,
-                show.legend = FALSE) +
-    labs(x = 'Depth (m)',
-         y = "Abundance Anomalies") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 38),
-          axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, 2, 2, 2, "cm")) 
-  
   temp <- visreg(model,
                  data = data,
-                 xvar = "roms_temperature",
-                 plot = FALSE,
-                 cond = list(ssh_annual_scaled = 1))
-  temp_plot <- ggplot(temp$fit, aes(x = roms_temperature, y = visregFit)) +
+                 xvar = "sst_scaled",
+                 plot = FALSE)
+  temp_plot <- ggplot(temp$fit, aes(x = sst_scaled, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
               show.legend = FALSE) +
@@ -106,10 +82,9 @@ plot_variables <- function(model, data){
   
   salt <- visreg(model,
                  data = data,
-                 xvar = "roms_salinity",
-                 plot = FALSE,
-                 cond = list(ssh_annual_scaled = 1))
-  salt_plot <- ggplot(salt$fit, aes(x = roms_salinity, y = visregFit)) +
+                 xvar = "sss_scaled",
+                 plot = FALSE)
+  salt_plot <- ggplot(salt$fit, aes(x = sss_scaled, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
               show.legend = FALSE) +
@@ -126,36 +101,11 @@ plot_variables <- function(model, data){
           axis.title = element_text(family = "serif", size = 42),
           axis.text.x = element_text(angle = 0, vjust = 0.7),
           plot.margin = margin(2, 2, 2, 2, "cm")) 
-  
-  # ssh <- visreg(model,
-  #               data = data,
-  #               xvar = "ssh_anom",
-  #               plot = FALSE,
-  #               cond = list(ssh_annual_scaled = 1))
-  # ssh_plot <- ggplot(ssh$fit, aes(x = ssh_anom, y = visregFit)) +
-  #   geom_line(color = "black",
-  #             linewidth = 1,
-  #             show.legend = FALSE) +
-  #   geom_ribbon(aes(ymin = visregLwr, 
-  #                   ymax = visregUpr,
-  #                   fill = "coral2"),
-  #               alpha = 0.5,
-  #               show.legend = FALSE) +
-  #   labs(x = 'Sea Surface Height',
-  #        y = "Abundance Anomalies") +
-  #   theme_classic() +
-  #   theme(axis.ticks = element_blank(),
-  #         axis.text = element_text(family = "serif", size = 38),
-  #         axis.title = element_text(family = "serif", size = 42),
-  #         axis.text.x = element_text(angle = 0, vjust = 0.7),
-  #         plot.margin = margin(2, 2, 2, 2, "cm")) 
-  
   doy <- visreg(model,
                 data = data,
-                xvar = "jday",
-                plot = FALSE,
-                cond = list(ssh_annual_scaled = 1))
-  doy_plot <- ggplot(doy$fit, aes(x = jday, y = visregFit)) +
+                xvar = "jday_scaled",
+                plot = FALSE)
+  doy_plot <- ggplot(doy$fit, aes(x = jday_scaled, y = visregFit)) +
     geom_line(color = "black",
               linewidth = 1,
               show.legend = FALSE) +
@@ -173,14 +123,14 @@ plot_variables <- function(model, data){
           axis.text.x = element_text(angle = 0, vjust = 0.7),
           plot.margin = margin(2, 2, 2, 2, "cm"))
   
-  ggarrange(depth_plot, temp_plot, salt_plot, doy_plot, ncol = 4, nrow = 1)
+  ggarrange(temp_plot, salt_plot, doy_plot, ncol = 3, nrow = 1)
 } # works only if all variables retained
 
 # Data
 # May have to filter salinity and depth due to outliers?
 yoy_hake <- read_data('yoy_hake.Rdata') 
 yoy_anchovy <- read_data('yoy_anch.Rdata')
-yoy_widow <- filter(read_data('yoy_widw.Rdata'), catch < 2000) # two large hauls in 2016 caused huge errors
+yoy_widow <- filter(read_data('yoy_widw.Rdata')) # two large hauls in 2016 caused huge errors
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'))
 yoy_squid <- filter(read_data('yoy_squid.Rdata')) # no lengths before 2004
@@ -195,9 +145,9 @@ nlon = 60
 the_mesh <- make_mesh(yoy_widow,
                       xy_cols = c("X", "Y"),
                       cutoff = 20)
-sdm_test <- sdmTMB(large ~ vgeo +
-                     s(sst_scaled, k = 5) +
-                     s(sss_scaled, k = 5),
+sdm_test <- sdmTMB(large ~  0 + sst_scaled +
+                     sss_scaled +
+                     vgeo,
                    spatial_varying = ~ 0 + vgeo,
                    data = yoy_widow,
                    mesh = the_mesh,
@@ -208,50 +158,46 @@ sdm_test <- sdmTMB(large ~ vgeo +
                    control = sdmTMBcontrol(newton_loops = 1,
                                            nlminb_loops = 2))
 sanity(sdm_test)
+tidy(sdm_test, 
+     conf.int = TRUE)
 
 # Pacific Hake ----
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"),
-                           cutoff = 15)
+                           cutoff = 18)
 plot(yoy_hake_mesh) 
 
 # Select models
 hake_model_small <- sdmTMB_select_small(yoy_hake, yoy_hake_mesh) # time elapsed: 1:20
-hake_model_small[[2]] # best model is full model
+hake_model_small[[2]] # spice_iso26
 hake_model_large <- sdmTMB_select_large(yoy_hake, yoy_hake_mesh) 
-hake_model_large[[2]]
+hake_model_large[[2]] # spice_iso26
 
 sanity(hake_model_small[[2]]) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model_small[[2]], # no std error reported when using log link
-     effect = "ran_pars", 
      conf.int = TRUE)
 sanity(hake_model_large[[2]]) 
 tidy(hake_model_large[[2]],
-     effect = "ran_pars", 
      conf.int = TRUE)
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_small_sdmtmb.jpg'),
      units = "in",
-     width = 50,
+     width = 38,
      height = 12,
      res = 200)
 plot_variables(hake_model_small[[2]], yoy_hake)
 dev.off()
 
-hake_large_depth <- individual_plot(hake_model_large[[2]], yoy_hake, "bottom_depth", "Depth (m)")
-hake_large_temp <- individual_plot(hake_model_large[[2]], yoy_hake, "roms_temperature", "Temperature (\u00B0C)")
-hake_large_jday <- individual_plot(hake_model_large[[2]], yoy_hake, "jday", "Day of Year")
-
 tiff(here('results/hindcast_output/yoy_hake',
           'hake_partial_dependence_large_sdmtmb.jpg'),
      units = "in",
-     width = 46,
+     width = 38,
      height = 12,
      res = 200)
-ggarrange(hake_large_depth, hake_large_temp, hake_large_jday, ncol = 3, nrow = 1)
+plot_variables(hake_model_large[[2]], yoy_hake)
 dev.off()
 
 # Predict and plot
@@ -344,22 +290,20 @@ hake_large_cv <- sdmTMB_cv(large ~ 0 +
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
                               xy_cols = c("X", "Y"),
-                              cutoff = 30)
+                              cutoff = 20)
 plot(yoy_anchovy_mesh) 
 
 # Select models
 anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_small[[2]]  
+anchovy_model_small[[2]] # spice_iso26
 anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_large[[2]] 
+anchovy_model_large[[2]] # none
 
 sanity(anchovy_model_small[[2]]) 
 tidy(anchovy_model_small[[2]], 
-     effect = "ran_pars", 
      conf.int = TRUE)
 sanity(anchovy_model_large[[2]]) 
 tidy(anchovy_model_large[[2]],
-     effect = "ran_pars", 
      conf.int = TRUE)
 
 # Plot covariates
@@ -427,14 +371,14 @@ dev.off()
 # Make mesh object with matrices
 yoy_sdab_mesh <- make_mesh(yoy_sdab,
                            xy_cols = c("X", "Y"),
-                           cutoff = 25)
+                           cutoff = 20)
 plot(yoy_sdab_mesh)
 
 # Select models
 sdab_model_small <- sdmTMB_select_small(yoy_sdab, yoy_sdab_mesh) 
-sdab_model_small[[2]] # having issues using VC term for sdab
+sdab_model_small[[2]] # u_vint_100m
 sdab_model_large <- sdmTMB_select_large(yoy_sdab, yoy_sdab_mesh) 
-sdab_model_large[[2]] # having issues using VC term for sdab
+sdab_model_large[[2]] # u_vint_50m
 
 sanity(sdab_model_small[[2]]) 
 tidy(sdab_model_small[[2]], 
@@ -472,13 +416,13 @@ sdmTMB_map(yoy_sdab, sdab_pred_large)
 # Make mesh object with matrices
 yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
                               xy_cols = c("X", "Y"), 
-                              cutoff = 15)
+                              cutoff = 18)
                                                                      
 plot(yoy_shortbelly_mesh)
 
 # Select models
 shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_model_small[[2]] 
+shortbelly_model_small[[2]] # spice_iso26
 shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
 shortbelly_model_large[[2]] 
 
@@ -492,8 +436,23 @@ tidy(shortbelly_model_large[[2]],
      conf.int = TRUE)
 
 # Plot covariates
-plot_variables(shortbelly_model_small, yoy_shortbelly)
-plot_variables(shortbelly_model_large, yoy_shortbelly)
+tiff(here('results/hindcast_output/yoy_shortbelly',
+          'shortbelly_partial_dependence_small_sdmtmb.jpg'),
+     units = "in",
+     width = 38,
+     height = 12,
+     res = 200)
+plot_variables(shortbelly_model_small[[2]], yoy_shortbelly)
+dev.off()
+
+tiff(here('results/hindcast_output/yoy_shortbelly',
+          'shortbelly_partial_dependence_large_sdmtmb.jpg'),
+     units = "in",
+     width = 38,
+     height = 12,
+     res = 200)
+plot_variables(shortbelly_model_large[[2]], yoy_shortbelly)
+dev.off()
 
 # Predict and plot
 nlat = 40
@@ -525,13 +484,13 @@ plot(yoy_widow_mesh)
 widow_model_small <- sdmTMB_select_small(yoy_widow, yoy_widow_mesh) 
 widow_model_small[[2]]
 widow_model_large <- sdmTMB_select_large(yoy_widow, yoy_widow_mesh) 
-widow_model_large[[2]]
+widow_model_large[[2]] # v_cu
 
 sanity(widow_model_small[[2]]) 
 tidy(widow_model_small[[2]], 
      effect = "ran_pars", 
      conf.int = TRUE)
-sanity(widow_model_large[[2]]) # works with cutoff = 20, no jday
+sanity(widow_model_large[[2]]) # works with cutoff = 20
 tidy(widow_model_large[[2]],
      effect = "ran_pars", 
      conf.int = TRUE)
@@ -572,11 +531,11 @@ squid_model_small[[2]]
 squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
 squid_model_large[[2]]
 
-sanity(squid_model_small[[2]]) # works with cutoff = 20, not jday
+sanity(squid_model_small[[2]]) 
 tidy(squid_model_small[[2]], 
      effect = "ran_pars", 
      conf.int = TRUE)
-sanity(squid_model_large[[2]]) # works with cutoff = 20, no jday
+sanity(squid_model_large[[2]]) 
 tidy(squid_model_large[[2]],
      effect = "ran_pars", 
      conf.int = TRUE)
