@@ -145,16 +145,18 @@ nlon = 60
 the_mesh <- make_mesh(yoy_widow,
                       xy_cols = c("X", "Y"),
                       cutoff = 20)
-sdm_test <- sdmTMB(large ~  0 + sst_scaled +
+sdm_test <- sdmTMB(large ~  0 + 
+                     jday_scaled +
+                     sst_scaled +
                      sss_scaled +
-                     vgeo,
-                   spatial_varying = ~ 0 + vgeo,
+                     spice_iso26,
+                   spatial_varying = ~ 0 + spice_iso26,
                    data = yoy_widow,
                    mesh = the_mesh,
                    spatial = "off",
                    time = "year",
                    family = tweedie(link = "log"),
-                   spatiotemporal = "ar1",
+                   spatiotemporal = "iid",
                    control = sdmTMBcontrol(newton_loops = 1,
                                            nlminb_loops = 2))
 sanity(sdm_test)
@@ -165,11 +167,11 @@ tidy(sdm_test,
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"),
-                           cutoff = 18)
+                           cutoff = 20)
 plot(yoy_hake_mesh) 
 
 # Select models
-hake_model_small <- sdmTMB_select_small(yoy_hake, yoy_hake_mesh) # time elapsed: 1:20
+hake_model_small <- sdmTMB_select_small(yoy_hake, yoy_hake_mesh) 
 hake_model_small[[2]] # spice_iso26
 hake_model_large <- sdmTMB_select_large(yoy_hake, yoy_hake_mesh) 
 hake_model_large[[2]] # spice_iso26
@@ -205,7 +207,10 @@ latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small[[2]])
+hake_pred_small$zeta_s_spice_iso26[hake_pred_small$dist > 50000] <- NA 
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large[[2]])
+hake_pred_large$zeta_s_spice_iso26[hake_pred_large$dist > 50000] <- NA 
+
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -231,8 +236,10 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude")
-sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ")
+sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude \u00B0N", 
+           hake_pred_small$zeta_s_spice_iso26, "Spice")
+sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ",
+           hake_pred_large$zeta_s_spice_iso26, "Spice")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'hake_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -243,16 +250,15 @@ dev.off()
 
 # Cross validation
 plan(multisession)
-clust <- as.numeric(as.factor(yoy_hake$year)) # year clusters, may not work with spatiotemporal "on"
-hake_small_cv <- sdmTMB_cv(small ~ 0 + 
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
-                             s(ssh_anom, k = 5) +
-                             s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+clust <- as.numeric(as.factor(unique(yoy_hake$year))) # year clusters, may not work with spatiotemporal "on"
+hake_small_cv <- sdmTMB_cv(small ~ 0 + spice_iso26 +
+                             jday_scaled +
+                             sst_scaled +
+                             sss_scaled,
+                           spatial_varying = ~ 0 + spice_iso26,
                            data = yoy_hake,
                            mesh = yoy_hake_mesh,
+                           spatial = "off",
                            time = "year",
                            family = tweedie(link = "log"),
                            spatiotemporal = "iid",
@@ -261,20 +267,15 @@ hake_small_cv <- sdmTMB_cv(small ~ 0 +
                            fold_ids = clust,
                            k_folds = length(unique(clust)))
 
-plot(hake_small_cv$fold_elpd) # higher values better
-hake_small_cv$elpd
-
 plot(hake_small_cv$fold_loglik) # higher values better
 hake_small_cv$sum_loglik
 
 clust <- kmeans(yoy_hake[, c("X", "Y")], k = 50)$cluster # spatial clustering
-hake_large_cv <- sdmTMB_cv(large ~ 0 + 
-                             s(bottom_depth, k = 5) +
-                             s(roms_temperature, k = 5) +
-                             s(roms_salinity, k = 5) +
-                             s(ssh_anom, k = 5) +
-                             s(jday, k = 15),
-                           spatial_varying = ~ 0 + ssh_annual_scaled,
+hake_large_cv <- sdmTMB_cv(large ~ 0 + spice_iso26 +
+                             jday_scaled +
+                             sst_scaled +
+                             sss_scaled,
+                           spatial_varying = ~ 0 + spice_iso26,
                            data = yoy_hake,
                            mesh = yoy_hake_mesh,
                            time = "year",
@@ -297,7 +298,7 @@ plot(yoy_anchovy_mesh)
 anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
 anchovy_model_small[[2]] # spice_iso26
 anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_large[[2]] # v_cu
+anchovy_model_large[[2]] # none
 
 sanity(anchovy_model_small[[2]]) 
 tidy(anchovy_model_small[[2]], 
@@ -416,7 +417,7 @@ sdmTMB_map(yoy_sdab, sdab_pred_large)
 # Make mesh object with matrices
 yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
                               xy_cols = c("X", "Y"), 
-                              cutoff = 18)
+                              cutoff = 20)
                                                                      
 plot(yoy_shortbelly_mesh)
 

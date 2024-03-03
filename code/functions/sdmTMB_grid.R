@@ -14,12 +14,17 @@ sdmTMB_grid <- function(df, model){
     spatial_grid$dist[k] <- min(dist)
   }
   spatial_grid$year <- 2014
-  spatial_grid$bottom_depth <- median(df$bottom_depth, na.rm = TRUE)
-  spatial_grid$roms_temperature <- median(df$roms_temperature, na.rm = TRUE)
-  spatial_grid$roms_salinity <- median(df$roms_salinity, na.rm = TRUE)
-  spatial_grid$ssh_anom <- median(df$ssh_anom, na.rm = TRUE)
-  spatial_grid$jday <- median(df$jday, na.rm = TRUE)
-  spatial_grid$ssh_annual_scaled <- median(df$ssh_annual_scaled, na.rm = TRUE)
+  spatial_grid$depth_scaled <- median(df$depth_scaled, na.rm = TRUE)
+  spatial_grid$sst_scaled <- median(df$sst_scaled, na.rm = TRUE)
+  spatial_grid$sss_scaled <- median(df$sss_scaled, na.rm = TRUE)
+  spatial_grid$jday_scaled <- median(df$jday_scaled, na.rm = TRUE)
+  spatial_grid$vgeo <- median(df$vgeo, na.rm = TRUE)
+  spatial_grid$u_vint_50m <- median(df$u_vint_50m, na.rm = TRUE)
+  spatial_grid$u_vint_100m <- median(df$u_vint_100m, na.rm = TRUE)
+  spatial_grid$depth_iso26 <- median(df$depth_iso26, na.rm = TRUE)
+  spatial_grid$spice_iso26 <- median(df$spice_iso26, na.rm = TRUE)
+  spatial_grid$v_cu <- median(df$v_cu, na.rm = TRUE)
+  spatial_grid$vmax_cu <- median(df$vmax_cu, na.rm = TRUE)
   spatial_grid <- add_utm_columns(spatial_grid, c("lon", "lat"), 
                                   utm_crs = 32610,)
   
@@ -27,6 +32,5 @@ sdmTMB_grid <- function(df, model){
                    newdata = spatial_grid, 
                    "link")
   preds$est[preds$dist > 50000] <- NA # may want to find a way to mask with a polygon
-  preds$zeta_s_ssh_annual_scaled[preds$dist > 50000] <- NA # may want to find a way to mask with a polygon
   return(preds)
 }

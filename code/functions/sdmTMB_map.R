@@ -70,22 +70,22 @@ sdmTMB_map <- function(df, preds, title, lat_label){
                                 line = 1))
 }
 
-sdmTMB_SVC <- function(df, preds, title, lat_label){
+sdmTMB_SVC <- function(df, preds, title, lat_label, var, variable){
 
   my_color = colorRampPalette(rev(brewer.pal(11, "RdBu")))
   color_levels = 100
-  max_absolute_value = max(abs(c(min(preds$zeta_s_ssh_annual_scaled, na.rm = T),
-                                 max(preds$zeta_s_ssh_annual_scaled, na.rm = T))))
+  max_absolute_value = max(abs(c(min(var, na.rm = T),
+                                 max(var, na.rm = T))))
   color_sequence = seq(-max_absolute_value, max_absolute_value, 
                        length.out = color_levels + 1)
-  n_in_class = hist(preds$zeta_s_ssh_annual_scaled, breaks = color_sequence, plot = F)$counts > 0
+  n_in_class = hist(var, breaks = color_sequence, plot = F)$counts > 0
   col_to_include = min(which(n_in_class == T)):max(which(n_in_class == T))
   breaks_to_include = min(which(n_in_class == T)):(max(which(n_in_class == T)) + 1)
   
   # Make map
   image(lond,
         latd,
-        t(matrix(preds$zeta_s_ssh_annual_scaled,
+        t(matrix(var,
                  nrow = length(latd),
                  ncol = length(lond),
                  byrow = T)),
@@ -98,7 +98,7 @@ sdmTMB_SVC <- function(df, preds, title, lat_label){
   par(new = TRUE)
   image(lond,
         latd,
-        t(matrix(preds$zeta_s_ssh_annual_scaled,
+        t(matrix(var,
                  nrow = length(latd),
                  ncol = length(lond),
                  byrow = T)),
@@ -132,9 +132,9 @@ sdmTMB_SVC <- function(df, preds, title, lat_label){
                               family = "serif"),
              legend.width = 0.8,
              legend.mar = 6,
-             zlim = c(min(preds$zeta_s_ssh_annual_scaled, na.rm = T), 
-                      max(preds$zeta_s_ssh_annual_scaled, na.rm = T)),
-             legend.args = list("Annual SSH",
+             zlim = c(min(var, na.rm = T), 
+                      max(var, na.rm = T)),
+             legend.args = list(variable,
                                 side = 2, 
                                 cex = 2.2,
                                 family = "serif",
