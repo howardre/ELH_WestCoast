@@ -297,7 +297,7 @@ plot(yoy_anchovy_mesh)
 anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
 anchovy_model_small[[2]] # spice_iso26
 anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_large[[2]] # none
+anchovy_model_large[[2]] # v_cu
 
 sanity(anchovy_model_small[[2]]) 
 tidy(anchovy_model_small[[2]], 
@@ -424,7 +424,7 @@ plot(yoy_shortbelly_mesh)
 shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
 shortbelly_model_small[[2]] # spice_iso26
 shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_model_large[[2]] 
+shortbelly_model_large[[2]] # spice_iso26
 
 sanity(shortbelly_model_small[[2]]) 
 tidy(shortbelly_model_small[[2]], 
@@ -527,9 +527,9 @@ plot(yoy_squid_mesh)
 
 # Select models
 squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
-squid_model_small[[2]] 
+squid_model_small[[2]] # spice_iso26
 squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
-squid_model_large[[2]]
+squid_model_large[[2]] # spice_iso26
 
 sanity(squid_model_small[[2]]) 
 tidy(squid_model_small[[2]], 
