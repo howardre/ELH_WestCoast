@@ -292,18 +292,11 @@ ggplot(hake_data,
 
 # Use 5-fold cross validation to calculate log likelihood
 # Tried LFO, LOYO, 10%, and 10-fold - none worked
-hake_model_small_cv <- sdmTMB_cv_small(yoy_hake, yoy_hake_mesh) # depth_iso26
+hake_model_small_cv <- sdmTMB_cv_small(yoy_hake, yoy_hake_mesh) 
 saveRDS(hake_model_small_cv, here('data', 'hake_models_small_cv'))
 
-hake_model_large_cv <- sdmTMB_cv_large(yoy_hake, yoy_hake_mesh) # vmax_cu
+hake_model_large_cv <- sdmTMB_cv_large(yoy_hake, yoy_hake_mesh) 
 saveRDS(hake_model_large_cv, here('data', 'hake_models_large_cv'))
-
-sanity(hake_model_small[[2]]) # sigma_z is the SD of the spatially varying coefficient field
-tidy(hake_model_small[[2]], # no std error reported when using log link
-     conf.int = TRUE)
-sanity(hake_model_large[[2]]) 
-tidy(hake_model_large[[2]],
-     conf.int = TRUE)
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_hake',
@@ -411,29 +404,51 @@ hake_large_cv <- sdmTMB_cv(large ~ 0 + spice_iso26 +
 
 # Northern Anchovy ----
 # Make mesh object with matrices
-yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
-                              xy_cols = c("X", "Y"),
-                              cutoff = 15)
+yoy_anchovy_mesh <- make_mesh(yoy_anchovy, 
+                           xy_cols = c("X", "Y"),
+                           cutoff = 15)
 plot(yoy_anchovy_mesh) 
 
 # Select models
+# Calculate deviance explained compared to null model
 anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_small_dev <- calc_dev_small(anchovy_model_small, yoy_anchovy_mesh, yoy_anchovy)
+anchovy_small_stat <- calc_stat_small(anchovy_model_small, yoy_anchovy_mesh, yoy_anchovy)
+saveRDS(anchovy_model_small, here('data', 'anchovy_models_small'))
+
 anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_large_dev <- calc_dev_large(anchovy_model_large, yoy_anchovy_mesh, yoy_anchovy)
+anchovy_large_stat <- calc_stat_large(anchovy_model_large, yoy_anchovy_mesh, yoy_anchovy)
+saveRDS(anchovy_model_large, here('data', 'anchovy_models_large'))
+
+# Get residuals
+anchovy_data <- anchovy_model_small$sdm_vgeo$data
+anchovy_data$small_resid <- residuals(anchovy_model_small$sdm_iso26)
+anchovy_data$large_resid <- residuals(anchovy_model_large$sdm_vmax_cu)
+
+# Normal QQ plots
+qqnorm(anchovy_data$small_resid)
+qqline(anchovy_data$small_resid)
+
+qqnorm(anchovy_data$large_resid)
+qqline(anchovy_data$large_resid)
+
+# Spatial residuals
+ggplot(hake_data, 
+       aes(X, Y, col = small_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+ggplot(hake_data, 
+       aes(X, Y, col = large_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
 
 anchovy_model_small_cv <- sdmTMB_cv_small(yoy_anchovy, yoy_anchovy_mesh) 
-saveRDS(anchovy_model_small_cv, here('data', 'anchovy_models_small'))
+saveRDS(anchovy_model_small_cv, here('data', 'anchovy_models_small_cv'))
 
 anchovy_model_large_cv <- sdmTMB_cv_large(yoy_anchovy, yoy_anchovy_mesh) 
-saveRDS(anchovy_model_large_cv, here('data', 'anchovy_models_large'))
-
-sanity(anchovy_model_small[[2]]) 
-tidy(anchovy_model_small[[2]], 
-     conf.int = TRUE)
-sanity(anchovy_model_large[[2]]) 
-tidy(anchovy_model_large[[2]],
-     conf.int = TRUE)
+saveRDS(anchovy_model_large_cv, here('data', 'anchovy_models_large_cv'))
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_anchovy',
@@ -498,31 +513,51 @@ dev.off()
 
 # Pacific Sanddab ----
 # Make mesh object with matrices
-yoy_sdab_mesh <- make_mesh(yoy_sdab,
+yoy_sdab_mesh <- make_mesh(yoy_sdab, 
                            xy_cols = c("X", "Y"),
                            cutoff = 15)
-plot(yoy_sdab_mesh)
+plot(yoy_sdab_mesh) 
 
 # Select models
+# Calculate deviance explained compared to null model
 sdab_model_small <- sdmTMB_select_small(yoy_sdab, yoy_sdab_mesh) 
-sdab_small_dev <- calc_dev_small(sdab_model_small, yoy_sdab_mesh, yoy_sdab)
+sdab_small_stat <- calc_stat_small(sdab_model_small, yoy_sdab_mesh, yoy_sdab)
+saveRDS(sdab_model_small, here('data', 'sdab_models_small'))
+
 sdab_model_large <- sdmTMB_select_large(yoy_sdab, yoy_sdab_mesh) 
-sdab_large_dev <- calc_dev_large(sdab_model_large, yoy_sdab_mesh, yoy_sdab)
+sdab_large_stat <- calc_stat_large(sdab_model_large, yoy_sdab_mesh, yoy_sdab)
+saveRDS(sdab_model_large, here('data', 'sdab_models_large'))
+
+# Get residuals
+sdab_data <- sdab_model_small$sdm_vgeo$data
+sdab_data$small_resid <- residuals(sdab_model_small$sdm_v_cu)
+sdab_data$large_resid <- residuals(sdab_model_large$sdm_spice)
+
+# Normal QQ plots
+qqnorm(sdab_data$small_resid)
+qqline(sdab_data$small_resid)
+
+qqnorm(sdab_data$large_resid)
+qqline(sdab_data$large_resid)
+
+# Spatial residuals
+ggplot(sdab_data, 
+       aes(X, Y, col = small_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+ggplot(sdab_data, 
+       aes(X, Y, col = large_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
 
 sdab_model_small_cv <- sdmTMB_cv_small(yoy_sdab, yoy_sdab_mesh) 
-saveRDS(sdab_model_small_cv, here('data', 'sdab_models_small'))
+saveRDS(sdab_model_small_cv, here('data', 'sdab_models_small_cv'))
 
 sdab_model_large_cv <- sdmTMB_cv_large(yoy_sdab, yoy_sdab_mesh) 
-saveRDS(sdab_model_large_cv, here('data', 'sdab_models_large'))
-
-sanity(sdab_model_small[[2]]) 
-tidy(sdab_model_small[[2]], 
-     effect = "ran_pars", 
-     conf.int = TRUE)
-sanity(sdab_model_large[[2]]) 
-tidy(sdab_model_large[[2]],
-     effect = "ran_pars", 
-     conf.int = TRUE)
+saveRDS(sdab_model_large_cv, here('data', 'sdab_models_large_cv'))
 
 # Plot covariates
 plot_variables(sdab_model_small, yoy_sdab)
@@ -549,32 +584,51 @@ sdmTMB_map(yoy_sdab, sdab_pred_large)
 
 # Shortbelly Rockfish ----
 # Make mesh object with matrices
-yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
-                              xy_cols = c("X", "Y"), 
-                              cutoff = 15)
-                                                                     
-plot(yoy_shortbelly_mesh)
+yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly, 
+                           xy_cols = c("X", "Y"),
+                           cutoff = 15)
+plot(yoy_shortbelly_mesh) 
 
 # Select models
+# Calculate deviance explained compared to null model
 shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_small_dev <- calc_dev_small(shortbelly_model_small, yoy_shortbelly_mesh, yoy_shortbelly)
+shortbelly_small_stat <- calc_stat_small(shortbelly_model_small, yoy_shortbelly_mesh, yoy_shortbelly)
+saveRDS(shortbelly_model_small, here('data', 'shortbelly_models_small'))
+
 shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_large_dev <- calc_dev_large(shortbelly_model_large, yoy_shortbelly_mesh, yoy_shortbelly)
+shortbelly_large_stat <- calc_stat_large(shortbelly_model_large, yoy_shortbelly_mesh, yoy_shortbelly)
+saveRDS(shortbelly_model_large, here('data', 'shortbelly_models_large'))
+
+# Get residuals
+shortbelly_data <- shortbelly_model_small$sdm_vgeo$data
+shortbelly_data$small_resid <- residuals(shortbelly_model_small$sdm_iso26)
+shortbelly_data$large_resid <- residuals(shortbelly_model_large$sdm_vgeo)
+
+# Normal QQ plots
+qqnorm(shortbelly_data$small_resid)
+qqline(shortbelly_data$small_resid)
+
+qqnorm(shortbelly_data$large_resid)
+qqline(shortbelly_data$large_resid)
+
+# Spatial residuals
+ggplot(shortbelly_data, 
+       aes(X, Y, col = small_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+ggplot(shortbelly_data, 
+       aes(X, Y, col = large_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
 
 shortbelly_model_small_cv <- sdmTMB_cv_small(yoy_shortbelly, yoy_shortbelly_mesh) 
-saveRDS(shortbelly_model_small_cv, here('data', 'shortbelly_models_small'))
+saveRDS(shortbelly_model_small_cv, here('data', 'shortbelly_models_small_cv'))
 
 shortbelly_model_large_cv <- sdmTMB_cv_large(yoy_shortbelly, yoy_shortbelly_mesh) 
-saveRDS(shortbelly_model_large_cv, here('data', 'shortbelly_models_large'))
-
-sanity(shortbelly_model_small[[2]]) 
-tidy(shortbelly_model_small[[2]], 
-     effect = "ran_pars", 
-     conf.int = TRUE)
-sanity(shortbelly_model_large[[2]]) 
-tidy(shortbelly_model_large[[2]],
-     effect = "ran_pars", 
-     conf.int = TRUE)
+saveRDS(shortbelly_model_large_cv, here('data', 'shortbelly_models_large_cv'))
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_shortbelly',
@@ -616,31 +670,51 @@ sdmTMB_map(yoy_shortbelly, shortbelly_pred_large)
 
 # Widow Rockfish ----
 # Make mesh object with matrices
-yoy_widow_mesh <- make_mesh(yoy_widow,
-                            xy_cols = c("X", "Y"),
-                            cutoff = 15)
-plot(yoy_widow_mesh)
+yoy_widow_mesh <- make_mesh(yoy_widow, 
+                           xy_cols = c("X", "Y"),
+                           cutoff = 15)
+plot(yoy_widow_mesh) 
 
 # Select models
+# Calculate deviance explained compared to null model
 widow_model_small <- sdmTMB_select_small(yoy_widow, yoy_widow_mesh) 
-widow_small_dev <- calc_dev_small(widow_model_small, yoy_widow_mesh, yoy_widow)
+widow_small_stat <- calc_stat_small(widow_model_small, yoy_widow_mesh, yoy_widow)
+saveRDS(widow_model_small, here('data', 'widow_models_small'))
+
 widow_model_large <- sdmTMB_select_large(yoy_widow, yoy_widow_mesh) 
-widow_large_dev <- calc_dev_large(widow_model_large, yoy_widow_mesh, yoy_widow)
+widow_large_stat <- calc_stat_large(widow_model_large, yoy_widow_mesh, yoy_widow)
+saveRDS(widow_model_large, here('data', 'widow_models_large'))
+
+# Get residuals
+widow_data <- widow_model_small$sdm_vgeo$data
+widow_data$small_resid <- residuals(widow_model_small$sdm_iso26)
+widow_data$large_resid <- residuals(widow_model_large$sdm_spice)
+
+# Normal QQ plots
+qqnorm(widow_data$small_resid)
+qqline(widow_data$small_resid)
+
+qqnorm(widow_data$large_resid)
+qqline(widow_data$large_resid)
+
+# Spatial residuals
+ggplot(widow_data, 
+       aes(X, Y, col = small_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+ggplot(widow_data, 
+       aes(X, Y, col = large_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
 
 widow_model_small_cv <- sdmTMB_cv_small(yoy_widow, yoy_widow_mesh) 
-saveRDS(widow_model_small_cv, here('data', 'widow_models_small'))
+saveRDS(widow_model_small_cv, here('data', 'widow_models_small_cv'))
 
 widow_model_large_cv <- sdmTMB_cv_large(yoy_widow, yoy_widow_mesh) 
-saveRDS(widow_model_large_cv, here('data', 'widow_models_large'))
-
-sanity(widow_model_small[[2]]) 
-tidy(widow_model_small[[2]], 
-     effect = "ran_pars", 
-     conf.int = TRUE)
-sanity(widow_model_large[[2]]) # works with cutoff = 20
-tidy(widow_model_large[[2]],
-     effect = "ran_pars", 
-     conf.int = TRUE)
+saveRDS(widow_model_large_cv, here('data', 'widow_models_large_cv'))
 
 # Plot covariates
 plot_variables(widow_model_small, yoy_widow)
@@ -667,28 +741,42 @@ sdmTMB_map(yoy_widow, widow_pred_large)
 
 # Market Squid ----
 # Make mesh object with matrices
-yoy_squid_mesh <- make_mesh(yoy_squid,
-                            xy_cols = c("X", "Y"),
-                            cutoff = 15)
-plot(yoy_squid_mesh)
+yoy_squid_mesh <- make_mesh(yoy_squid, 
+                           xy_cols = c("X", "Y"),
+                           cutoff = 15)
+plot(yoy_squid_mesh) 
 
 # Select models
+# Calculate deviance explained compared to null model
 squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
-squid_small_dev <- calc_dev_small(squid_model_small, yoy_squid_mesh, yoy_squid)
+squid_small_stat <- calc_stat_small(squid_model_small, yoy_squid_mesh, yoy_squid)
+saveRDS(squid_model_small, here('data', 'squid_models_small'))
+
 squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
-squid_large_dev <- calc_dev_large(squid_model_large, yoy_squid_mesh, yoy_squid)
+squid_large_stat <- calc_stat_large(squid_model_large, yoy_squid_mesh, yoy_squid)
+saveRDS(squid_model_large, here('data', 'squid_models_large'))
 
-squid_model_small_cv <- sdmTMB_cv_small(yoy_squid, yoy_squid_mesh) 
-saveRDS(squid_model_small_cv, here('data', 'squid_models_small'))
+# Get residuals
+squid_data <- squid_model_small$sdm_vgeo$data
+squid_data$small_resid <- residuals(squid_model_small$sdm_vgeo)
+squid_data$large_resid <- residuals(squid_model_large$sdm_iso26)
 
-squid_model_large_cv <- sdmTMB_cv_large(yoy_squid, yoy_squid_mesh) 
-saveRDS(squid_model_large_cv, here('data', 'squid_models_large'))
+# Normal QQ plots
+qqnorm(squid_data$small_resid)
+qqline(squid_data$small_resid)
 
-sanity(squid_model_small[[2]]) 
-tidy(squid_model_small[[2]], 
-     effect = "ran_pars", 
-     conf.int = TRUE)
-sanity(squid_model_large[[2]]) 
-tidy(squid_model_large[[2]],
-     effect = "ran_pars", 
-     conf.int = TRUE)
+qqnorm(squid_data$large_resid)
+qqline(squid_data$large_resid)
+
+# Spatial residuals
+ggplot(squid_data, 
+       aes(X, Y, col = small_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+ggplot(squid_data, 
+       aes(X, Y, col = large_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
