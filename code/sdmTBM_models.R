@@ -25,6 +25,7 @@ source(here('code/functions', 'vis_gam_COLORS.R'))
 source(here('code/functions', 'distance_function.R'))
 source(here('code/functions', 'sdmTMB_grid.R'))
 source(here('code/functions', 'sdmTMB_map.R'))
+source(here('code/functions', 'sdmTMB_select_cv.R'))
 source(here('code/functions', 'read_data.R'))
 source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & spatial
 
@@ -141,40 +142,161 @@ state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
 nlat = 40
 nlon = 60
 
+extra_years <- c(2020:2099)
+
+withJavaLogging = function(expr, silentSuccess=FALSE, stopIsFatal=TRUE) {
+  hasFailed = FALSE
+  messages = list()
+  warnings = list()
+  logger = function(obj) {
+    # Change behaviour based on type of message
+    level = sapply(class(obj), switch, debug="DEBUG", message="INFO", warning="WARN", caughtError = "ERROR",
+                   error=if (stopIsFatal) "FATAL" else "ERROR", "")
+    level = c(level[level != ""], "ERROR")[1]
+    simpleMessage = switch(level, DEBUG=,INFO=TRUE, FALSE)
+    quashable = switch(level, DEBUG=,INFO=,WARN=TRUE, FALSE)
+    
+    # Format message
+    time  = format(Sys.time(), "%Y-%m-%d %H:%M:%OS3")
+    txt   = conditionMessage(obj)
+    if (!simpleMessage) txt = paste(txt, "\n", sep="")
+    msg = paste(time, level, txt, sep=" ")
+    calls = sys.calls()
+    calls = calls[1:length(calls)-1]
+    trace = limitedLabels(c(calls, attr(obj, "calls")))
+    if (!simpleMessage && length(trace) > 0) {
+      trace = trace[length(trace):1]
+      msg = paste(msg, "  ", paste("at", trace, collapse="\n  "), "\n", sep="")
+    }
+    
+    # Output message
+    if (silentSuccess && !hasFailed && quashable) {
+      messages <<- append(messages, msg)
+      if (level == "WARN") warnings <<- append(warnings, msg)
+    } else {
+      if (silentSuccess && !hasFailed) {
+        cat(paste(messages, collapse=""))
+        hasFailed <<- TRUE
+      }
+      cat(msg)
+    }
+    
+    # Muffle any redundant output of the same message
+    optionalRestart = function(r) { res = findRestart(r); if (!is.null(res)) invokeRestart(res) }
+    optionalRestart("muffleMessage")
+    optionalRestart("muffleWarning")
+  }
+  vexpr = withCallingHandlers(withVisible(expr),
+                              debug=logger, message=logger, warning=logger, caughtError=logger, error=logger)
+  if (silentSuccess && !hasFailed) {
+    cat(paste(warnings, collapse=""))
+  }
+  if (vexpr$visible) vexpr$value else invisible(vexpr$value)
+}
+
 # Sandbox ----
-the_mesh <- make_mesh(yoy_widow,
+the_mesh <- make_mesh(yoy_hake,
                       xy_cols = c("X", "Y"),
-                      cutoff = 20)
-sdm_test <- sdmTMB(large ~  0 + 
-                     jday_scaled +
-                     sst_scaled +
-                     sss_scaled +
-                     spice_iso26,
-                   spatial_varying = ~ 0 + spice_iso26,
-                   data = yoy_widow,
+                      cutoff = 15)
+sdm_test <- sdmTMB(small ~  0 +
+                     s(jday_scaled, k = 3) +
+                     s(sst_scaled, k = 3) +
+                     s(sss_scaled, k = 3) +
+                     v_cu,
+                   spatial_varying = ~ 0 + v_cu,
+                   extra_time = extra_years,
+                   data = yoy_hake,
                    mesh = the_mesh,
-                   spatial = "off",
+                   spatial = "on",
                    time = "year",
                    family = tweedie(link = "log"),
-                   spatiotemporal = "iid",
+                   spatiotemporal = "off",
                    control = sdmTMBcontrol(newton_loops = 1,
                                            nlminb_loops = 2))
 sanity(sdm_test)
-tidy(sdm_test, 
+tidy(sdm_test,
      conf.int = TRUE)
+
+
+yoy_hake <- mutate(yoy_hake, fold = ifelse(year < 2013, 1, 2))
+
+
+cv_test <- try(sdmTMB_cv(small ~ 0 + v_cu +
+                            s(jday_scaled, k = 3) +
+                            s(sst_scaled, k = 3) +
+                            s(sss_scaled, k = 3),
+                          spatial_varying = ~ 0 + v_cu,
+                          data = yoy_hake,
+                          mesh = the_mesh,
+                          spatiotemporal = "off",
+                          family = tweedie(link = "log"),
+                          k_folds = 2,
+                          fold_ids = yoy_hake$fold,
+                          parallel = TRUE))
+  log_lik[[i]] <- sum(models[[i]]$data$cv_loglik[which(models[[i]]$data$year == test_years[i])])
+
+
+cv_test <- try(sdmTMB_cv(small ~ 0 + vmax_cu +
+                       s(jday_scaled, k = 3) +
+                       s(sst_scaled, k = 3) +
+                       s(sss_scaled, k = 3),
+                     spatial_varying = ~ 0 + vmax_cu,
+                     data = yoy_hake,
+                     mesh = the_mesh,
+                     spatiotemporal = "off",
+                     family = tweedie(link = "log"),
+                     k_folds = 5,
+                     parallel = TRUE))
 
 # Pacific Hake ----
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"),
-                           cutoff = 20)
+                           cutoff = 15)
 plot(yoy_hake_mesh) 
 
 # Select models
+# Calculate deviance explained compared to null model
 hake_model_small <- sdmTMB_select_small(yoy_hake, yoy_hake_mesh) 
-hake_model_small[[2]] # spice_iso26
+hake_small_stat <- calc_stat_small(hake_model_small, yoy_hake_mesh, yoy_hake)
+saveRDS(hake_model_small, here('data', 'hake_models_small'))
+
 hake_model_large <- sdmTMB_select_large(yoy_hake, yoy_hake_mesh) 
-hake_model_large[[2]] # spice_iso26
+hake_large_stat <- calc_stat_large(hake_model_large, yoy_hake_mesh, yoy_hake)
+saveRDS(hake_model_large, here('data', 'hake_models_large'))
+
+# Get residuals
+hake_data <- hake_model_small$sdm_vgeo$data
+hake_data$small_resid <- residuals(hake_model_small$sdm_vgeo)
+hake_data$large_resid <- residuals(hake_model_large$sdm_iso26)
+
+# Normal QQ plots
+qqnorm(hake_data$small_resid)
+qqline(hake_data$small_resid)
+
+qqnorm(hake_data$large_resid)
+qqline(hake_data$large_resid)
+
+# Spatial residuals
+ggplot(hake_data, 
+       aes(X, Y, col = small_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+ggplot(hake_data, 
+       aes(X, Y, col = large_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+# Use 5-fold cross validation to calculate log likelihood
+# Tried LFO, LOYO, 10%, and 10-fold - none worked
+hake_model_small_cv <- sdmTMB_cv_small(yoy_hake, yoy_hake_mesh) # depth_iso26
+saveRDS(hake_model_small_cv, here('data', 'hake_models_small_cv'))
+
+hake_model_large_cv <- sdmTMB_cv_large(yoy_hake, yoy_hake_mesh) # vmax_cu
+saveRDS(hake_model_large_cv, here('data', 'hake_models_large_cv'))
 
 sanity(hake_model_small[[2]]) # sigma_z is the SD of the spatially varying coefficient field
 tidy(hake_model_small[[2]], # no std error reported when using log link
@@ -207,7 +329,7 @@ latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small[[2]])
-hake_pred_small$zeta_s_spice_iso26[hake_pred_small$dist > 50000] <- NA 
+hake_pred_small$zeta_s_u_vint_100m[hake_pred_small$dist > 50000] <- NA 
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large[[2]])
 hake_pred_large$zeta_s_spice_iso26[hake_pred_large$dist > 50000] <- NA 
 
@@ -237,7 +359,7 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude \u00B0N", 
-           hake_pred_small$zeta_s_spice_iso26, "Spice")
+           hake_pred_small$zeta_s_u_vint_100m, "u (0-100m)")
 sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ",
            hake_pred_large$zeta_s_spice_iso26, "Spice")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
@@ -291,14 +413,20 @@ hake_large_cv <- sdmTMB_cv(large ~ 0 + spice_iso26 +
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy,
                               xy_cols = c("X", "Y"),
-                              cutoff = 20)
+                              cutoff = 15)
 plot(yoy_anchovy_mesh) 
 
 # Select models
 anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_small[[2]] # spice_iso26
+anchovy_small_dev <- calc_dev_small(anchovy_model_small, yoy_anchovy_mesh, yoy_anchovy)
 anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_model_large[[2]] # none
+anchovy_large_dev <- calc_dev_large(anchovy_model_large, yoy_anchovy_mesh, yoy_anchovy)
+
+anchovy_model_small_cv <- sdmTMB_cv_small(yoy_anchovy, yoy_anchovy_mesh) 
+saveRDS(anchovy_model_small_cv, here('data', 'anchovy_models_small'))
+
+anchovy_model_large_cv <- sdmTMB_cv_large(yoy_anchovy, yoy_anchovy_mesh) 
+saveRDS(anchovy_model_large_cv, here('data', 'anchovy_models_large'))
 
 sanity(anchovy_model_small[[2]]) 
 tidy(anchovy_model_small[[2]], 
@@ -372,14 +500,20 @@ dev.off()
 # Make mesh object with matrices
 yoy_sdab_mesh <- make_mesh(yoy_sdab,
                            xy_cols = c("X", "Y"),
-                           cutoff = 20)
+                           cutoff = 15)
 plot(yoy_sdab_mesh)
 
 # Select models
 sdab_model_small <- sdmTMB_select_small(yoy_sdab, yoy_sdab_mesh) 
-sdab_model_small[[2]] # u_vint_100m
+sdab_small_dev <- calc_dev_small(sdab_model_small, yoy_sdab_mesh, yoy_sdab)
 sdab_model_large <- sdmTMB_select_large(yoy_sdab, yoy_sdab_mesh) 
-sdab_model_large[[2]] # u_vint_50m
+sdab_large_dev <- calc_dev_large(sdab_model_large, yoy_sdab_mesh, yoy_sdab)
+
+sdab_model_small_cv <- sdmTMB_cv_small(yoy_sdab, yoy_sdab_mesh) 
+saveRDS(sdab_model_small_cv, here('data', 'sdab_models_small'))
+
+sdab_model_large_cv <- sdmTMB_cv_large(yoy_sdab, yoy_sdab_mesh) 
+saveRDS(sdab_model_large_cv, here('data', 'sdab_models_large'))
 
 sanity(sdab_model_small[[2]]) 
 tidy(sdab_model_small[[2]], 
@@ -417,15 +551,21 @@ sdmTMB_map(yoy_sdab, sdab_pred_large)
 # Make mesh object with matrices
 yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly,
                               xy_cols = c("X", "Y"), 
-                              cutoff = 20)
+                              cutoff = 15)
                                                                      
 plot(yoy_shortbelly_mesh)
 
 # Select models
 shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_model_small[[2]] # spice_iso26
+shortbelly_small_dev <- calc_dev_small(shortbelly_model_small, yoy_shortbelly_mesh, yoy_shortbelly)
 shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_model_large[[2]] # spice_iso26
+shortbelly_large_dev <- calc_dev_large(shortbelly_model_large, yoy_shortbelly_mesh, yoy_shortbelly)
+
+shortbelly_model_small_cv <- sdmTMB_cv_small(yoy_shortbelly, yoy_shortbelly_mesh) 
+saveRDS(shortbelly_model_small_cv, here('data', 'shortbelly_models_small'))
+
+shortbelly_model_large_cv <- sdmTMB_cv_large(yoy_shortbelly, yoy_shortbelly_mesh) 
+saveRDS(shortbelly_model_large_cv, here('data', 'shortbelly_models_large'))
 
 sanity(shortbelly_model_small[[2]]) 
 tidy(shortbelly_model_small[[2]], 
@@ -478,14 +618,20 @@ sdmTMB_map(yoy_shortbelly, shortbelly_pred_large)
 # Make mesh object with matrices
 yoy_widow_mesh <- make_mesh(yoy_widow,
                             xy_cols = c("X", "Y"),
-                            cutoff = 20)
+                            cutoff = 15)
 plot(yoy_widow_mesh)
 
 # Select models
 widow_model_small <- sdmTMB_select_small(yoy_widow, yoy_widow_mesh) 
-widow_model_small[[2]]
+widow_small_dev <- calc_dev_small(widow_model_small, yoy_widow_mesh, yoy_widow)
 widow_model_large <- sdmTMB_select_large(yoy_widow, yoy_widow_mesh) 
-widow_model_large[[2]] # v_cu
+widow_large_dev <- calc_dev_large(widow_model_large, yoy_widow_mesh, yoy_widow)
+
+widow_model_small_cv <- sdmTMB_cv_small(yoy_widow, yoy_widow_mesh) 
+saveRDS(widow_model_small_cv, here('data', 'widow_models_small'))
+
+widow_model_large_cv <- sdmTMB_cv_large(yoy_widow, yoy_widow_mesh) 
+saveRDS(widow_model_large_cv, here('data', 'widow_models_large'))
 
 sanity(widow_model_small[[2]]) 
 tidy(widow_model_small[[2]], 
@@ -523,14 +669,20 @@ sdmTMB_map(yoy_widow, widow_pred_large)
 # Make mesh object with matrices
 yoy_squid_mesh <- make_mesh(yoy_squid,
                             xy_cols = c("X", "Y"),
-                            cutoff = 20)
+                            cutoff = 15)
 plot(yoy_squid_mesh)
 
 # Select models
 squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
-squid_model_small[[2]] # spice_iso26
+squid_small_dev <- calc_dev_small(squid_model_small, yoy_squid_mesh, yoy_squid)
 squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
-squid_model_large[[2]] # spice_iso26
+squid_large_dev <- calc_dev_large(squid_model_large, yoy_squid_mesh, yoy_squid)
+
+squid_model_small_cv <- sdmTMB_cv_small(yoy_squid, yoy_squid_mesh) 
+saveRDS(squid_model_small_cv, here('data', 'squid_models_small'))
+
+squid_model_large_cv <- sdmTMB_cv_large(yoy_squid, yoy_squid_mesh) 
+saveRDS(squid_model_large_cv, here('data', 'squid_models_large'))
 
 sanity(squid_model_small[[2]]) 
 tidy(squid_model_small[[2]], 
