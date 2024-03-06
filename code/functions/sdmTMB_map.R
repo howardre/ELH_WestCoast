@@ -14,7 +14,7 @@ sdmTMB_map <- function(df, preds, title, lat_label){
   # Make map
   image(lond,
         latd,
-        t(matrix(preds$est,
+        t(matrix(exp(preds$est),
                  nrow = length(latd),
                  ncol = length(lond),
                  byrow = T)),
