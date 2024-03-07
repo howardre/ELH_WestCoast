@@ -34,7 +34,7 @@ sdmTMB_map <- function(df, preds, title, lat_label){
         col = my_color(n = color_levels)[col_to_include],
         main = title,
         ylab = lat_label,
-        xlab = "Longitude",
+        xlab = "Longitude \u00B0W",
         xlim = c(-126, -116),
         ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
         cex.lab = 3.1,
@@ -105,7 +105,7 @@ sdmTMB_SVC <- function(df, preds, title, lat_label, var, variable){
         col = my_color(n = color_levels)[col_to_include],
         main = title,
         ylab = lat_label,
-        xlab = "Longitude",
+        xlab = "Longitude \u00B0W",
         xlim = c(-126, -116),
         ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
         cex.lab = 3.1,
@@ -136,7 +136,7 @@ sdmTMB_SVC <- function(df, preds, title, lat_label, var, variable){
                       max(var, na.rm = T)),
              legend.args = list(variable,
                                 side = 2, 
-                                cex = 2.2,
+                                cex = 1.8,
                                 family = "serif",
                                 line = 1))
 }
