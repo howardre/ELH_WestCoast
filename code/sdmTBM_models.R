@@ -18,6 +18,7 @@ library(mapdata)
 library(fields)
 library(ggpubr)
 library(future)
+library(scales)
 
 # Load data and functions ----
 # Functions
@@ -321,6 +322,13 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_hake',
          res = 200)
 dev.off()
 
+# Niche overlap
+# Schoener's D seems to make the most sense (Carroll et al., 2019)
+hake_pred_small$large_scaled <- hake_pred_large$preds_scaled
+hake_pred_small$p_small <- hake_pred_small$preds_scaled / sum(hake_pred_small$preds_scaled, na.rm = T)
+hake_pred_small$p_large <- hake_pred_small$large_scaled / sum(hake_pred_small$large_scaled, na.rm = T)
+hake_schoener <- 1 - 0.5 * sum(abs(hake_pred_small$p_small - hake_pred_small$p_large), na.rm = TRUE)
+
 
 # Northern Anchovy ----
 # Make mesh object with matrices
@@ -414,12 +422,16 @@ latd = seq(min(yoy_anchovy$lat), max(yoy_anchovy$lat), length.out = nlat)
 lond = seq(min(yoy_anchovy$lon), max(yoy_anchovy$lon), length.out = nlon)
 
 anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_vgeo)
-anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large$sdm_uvint100m)
-
-anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_vgeo)
 anchovy_pred_small$zeta_s_vgeo[anchovy_pred_small$dist > 50000] <- NA 
 anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large$sdm_uvint100m)
 anchovy_pred_large$zeta_s_u_vint_100m[anchovy_pred_large$dist > 50000] <- NA 
+
+# Niche overlap
+# Schoener's D seems to make the most sense (Carroll et al., 2019)
+anchovy_pred_small$large_scaled <- anchovy_pred_large$preds_scaled
+anchovy_pred_small$p_small <- anchovy_pred_small$preds_scaled / sum(anchovy_pred_small$preds_scaled, na.rm = T)
+anchovy_pred_small$p_large <- anchovy_pred_small$large_scaled / sum(anchovy_pred_small$large_scaled, na.rm = T)
+anchovy_schoener <- 1 - 0.5 * sum(abs(anchovy_pred_small$p_small - anchovy_pred_small$p_large), na.rm = TRUE)
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -456,6 +468,7 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy',
          units = 'in', 
          res = 200)
 dev.off()
+
 
 # Pacific Sanddab ----
 # Make mesh object with matrices
@@ -549,12 +562,16 @@ latd = seq(min(yoy_sdab$lat), max(yoy_sdab$lat), length.out = nlat)
 lond = seq(min(yoy_sdab$lon), max(yoy_sdab$lon), length.out = nlon)
 
 sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint50m)
-sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_uvint100m)
-
-sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint50m)
 sdab_pred_small$zeta_s_u_vint_50m[sdab_pred_small$dist > 50000] <- NA 
 sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_uvint100m)
 sdab_pred_large$zeta_s_u_vint_100m[sdab_pred_large$dist > 50000] <- NA 
+
+# Niche overlap
+# Schoener's D seems to make the most sense (Carroll et al., 2019)
+sdab_pred_small$large_scaled <- sdab_pred_large$preds_scaled
+sdab_pred_small$p_small <- sdab_pred_small$preds_scaled / sum(sdab_pred_small$preds_scaled, na.rm = T)
+sdab_pred_small$p_large <- sdab_pred_small$large_scaled / sum(sdab_pred_small$large_scaled, na.rm = T)
+sdab_schoener <- 1 - 0.5 * sum(abs(sdab_pred_small$p_small - sdab_pred_small$p_large), na.rm = TRUE)
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -685,12 +702,16 @@ latd = seq(min(yoy_shortbelly$lat), max(yoy_shortbelly$lat), length.out = nlat)
 lond = seq(min(yoy_shortbelly$lon), max(yoy_shortbelly$lon), length.out = nlon)
 
 shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small$sdm_iso26)
-shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large$sdm_vgeo)
-
-shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small$sdm_iso26)
 shortbelly_pred_small$zeta_s_depth_iso26[shortbelly_pred_small$dist > 50000] <- NA 
 shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large$sdm_vgeo)
 shortbelly_pred_large$zeta_s_vgeo[shortbelly_pred_large$dist > 50000] <- NA 
+
+# Niche overlap
+# Schoener's D seems to make the most sense (Carroll et al., 2019)
+shortbelly_pred_small$large_scaled <- shortbelly_pred_large$preds_scaled
+shortbelly_pred_small$p_small <- shortbelly_pred_small$preds_scaled / sum(shortbelly_pred_small$preds_scaled, na.rm = T)
+shortbelly_pred_small$p_large <- shortbelly_pred_small$large_scaled / sum(shortbelly_pred_small$large_scaled, na.rm = T)
+shortbelly_schoener <- 1 - 0.5 * sum(abs(shortbelly_pred_small$p_small - shortbelly_pred_small$p_large), na.rm = TRUE)
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -821,12 +842,16 @@ latd = seq(min(yoy_widow$lat), max(yoy_widow$lat), length.out = nlat)
 lond = seq(min(yoy_widow$lon), max(yoy_widow$lon), length.out = nlon)
 
 widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small$sdm_iso26)
-widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large$sdm_spice)
-
-widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small$sdm_iso26)
 widow_pred_small$zeta_s_depth_iso26[widow_pred_small$dist > 50000] <- NA 
 widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large$sdm_spice)
 widow_pred_large$zeta_s_spice_iso26[widow_pred_large$dist > 50000] <- NA 
+
+# Niche overlap
+# Schoener's D seems to make the most sense (Carroll et al., 2019)
+widow_pred_small$large_scaled <- widow_pred_large$preds_scaled
+widow_pred_small$p_small <- widow_pred_small$preds_scaled / sum(widow_pred_small$preds_scaled, na.rm = T)
+widow_pred_small$p_large <- widow_pred_small$large_scaled / sum(widow_pred_small$large_scaled, na.rm = T)
+widow_schoener <- 1 - 0.5 * sum(abs(widow_pred_small$p_small - widow_pred_small$p_large), na.rm = TRUE)
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -957,12 +982,16 @@ latd = seq(min(yoy_squid$lat), max(yoy_squid$lat), length.out = nlat)
 lond = seq(min(yoy_squid$lon), max(yoy_squid$lon), length.out = nlon)
 
 squid_pred_small <- sdmTMB_grid(yoy_squid, squid_model_small$sdm_iso26)
-squid_pred_large <- sdmTMB_grid(yoy_squid, squid_model_large$sdm_spice)
-
-squid_pred_small <- sdmTMB_grid(yoy_squid, squid_model_small$sdm_iso26)
 squid_pred_small$zeta_s_depth_iso26[squid_pred_small$dist > 50000] <- NA 
 squid_pred_large <- sdmTMB_grid(yoy_squid, squid_model_large$sdm_spice)
 squid_pred_large$zeta_s_spice_iso26[squid_pred_large$dist > 50000] <- NA 
+
+# Niche overlap
+# Schoener's D seems to make the most sense (Carroll et al., 2019)
+squid_pred_small$large_scaled <- squid_pred_large$preds_scaled
+squid_pred_small$p_small <- squid_pred_small$preds_scaled / sum(squid_pred_small$preds_scaled, na.rm = T)
+squid_pred_small$p_large <- squid_pred_small$large_scaled / sum(squid_pred_small$large_scaled, na.rm = T)
+squid_schoener <- 1 - 0.5 * sum(abs(squid_pred_small$p_small - squid_pred_small$p_large), na.rm = TRUE)
 
 # Overall predictions
 windows(height = 15, width = 18)
