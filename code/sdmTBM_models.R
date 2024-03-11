@@ -142,9 +142,9 @@ state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lon = c(-121.0, -121.0, -120.0))
 nlat = 40
 nlon = 60
-
 extra_years <- c(2020:2099)
-
+nsim <- 500
+bubble_color <- colorRampPalette(c(sequential_hcl(15, palette = "Viridis")))
 
 # # Sandbox ----
 # the_mesh <- make_mesh(yoy_hake,
@@ -281,10 +281,16 @@ latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_vgeo)
-hake_pred_small$zeta_s_vgeo[hake_pred_small$dist > 50000] <- NA 
+hake_pred_small$zeta_s_vgeo[hake_pred_small$dist > 60000] <- NA 
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26)
-hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 50000] <- NA 
+hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
 
+# Niche overlap
+# Schoener's D seems to make the most sense (Carroll et al., 2019)
+hake_pred_small$large_scaled <- hake_pred_large$preds_scaled
+hake_pred_small$p_small <- hake_pred_small$preds_scaled / sum(hake_pred_small$preds_scaled, na.rm = T)
+hake_pred_small$p_large <- hake_pred_small$large_scaled / sum(hake_pred_small$large_scaled, na.rm = T)
+hake_schoener <- 1 - 0.5 * sum(abs(hake_pred_small$p_small - hake_pred_small$p_large), na.rm = TRUE)
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -303,7 +309,7 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_hake',
          res = 200)
 dev.off()
 
-# SVC maps
+# Spatial maps
 windows(height = 15, width = 18)
 par(mfrow = c(1, 2),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
@@ -313,7 +319,7 @@ par(mfrow = c(1, 2),
 sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude \u00B0N", 
            hake_pred_small$zeta_s_vgeo, "Geostrophic Current")
 sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ",
-           hake_pred_large$zeta_s_depth_iso26, "26 Isopycnal Depth")
+           hake_pred_large$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'hake_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -322,13 +328,157 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_hake',
          res = 200)
 dev.off()
 
-# Niche overlap
-# Schoener's D seems to make the most sense (Carroll et al., 2019)
-hake_pred_small$large_scaled <- hake_pred_large$preds_scaled
-hake_pred_small$p_small <- hake_pred_small$preds_scaled / sum(hake_pred_small$preds_scaled, na.rm = T)
-hake_pred_small$p_large <- hake_pred_small$large_scaled / sum(hake_pred_small$large_scaled, na.rm = T)
-hake_schoener <- 1 - 0.5 * sum(abs(hake_pred_small$p_small - hake_pred_small$p_large), na.rm = TRUE)
+# SVC terms
+# Create predictions for original data
+yoy_hake_pred_small <- predict(hake_model_small$sdm_vgeo, newdata = yoy_hake)
+yoy_hake_pred_large <- predict(hake_model_large$sdm_iso26, newdata = yoy_hake)
+colnames(yoy_hake_pred_small)[which(names(yoy_hake_pred_small) == "est")] <- "est_small"
+colnames(yoy_hake_pred_large)[which(names(yoy_hake_pred_large) == "est")] <- "est_large"
+yoy_hake_preds <- merge(yoy_hake_pred_small,
+                        yoy_hake_pred_large[, c("jday", "latitude", "longitude", "year", "est_large")],
+                        by = c("jday", "latitude", "longitude", "year"),
+                        all.x = TRUE)
 
+# Small
+hake_small_tidy <- tidy(hake_model_small$sdm_vgeo, conf.int = TRUE)
+hake_small_zeta_sim <- predict(hake_model_small$sdm_vgeo, 
+                               nsim = nsim,
+                               sims_var = "zeta_s")
+hake_small_sims <- spread_sims(hake_model_small$sdm_vgeo,
+                               nsim = nsim)
+hake_small_beta <- hake_small_sims$vgeo
+hake_small_combined <- hake_small_beta + t(hake_small_zeta_sim)
+
+# Large
+hake_large_tidy <- tidy(hake_model_large$sdm_iso26, conf.int = TRUE)
+hake_large_zeta_sim <- predict(hake_model_large$sdm_iso26, 
+                               nsim = nsim,
+                               sims_var = "zeta_s")
+hake_large_sims <- spread_sims(hake_model_large$sdm_iso26,
+                               nsim = nsim)
+hake_large_beta <- hake_large_sims$depth_iso26
+hake_large_combined <- hake_large_beta + t(hake_large_zeta_sim)
+
+yoy_hake_preds$small_zeta_sim <- apply(t(hake_small_zeta_sim), 2, median)
+yoy_hake_preds$small_vgeo_sim <- apply(hake_small_combined, 2, median)
+yoy_hake_preds$small_vgeo_lwr <- apply(hake_small_combined, 2, quantile, probs = 0.10)
+yoy_hake_preds$small_vgeo_upr <- apply(hake_small_combined, 2, quantile, probs = 0.90)
+yoy_hake_preds$large_zeta_sim <- apply(t(hake_large_zeta_sim), 2, median)
+yoy_hake_preds$large_iso26_sim <- apply(hake_large_combined, 2, median)
+yoy_hake_preds$large_iso26_lwr <- apply(hake_large_combined, 2, quantile, probs = 0.10)
+yoy_hake_preds$large_iso26_upr <- apply(hake_large_combined, 2, quantile, probs = 0.90)
+
+small_hake_effect <- hake_small_tidy[hake_small_tidy$term == "vgeo", 2]
+large_hake_effect <- hake_large_tidy[hake_large_tidy$term == "depth_iso26", 2]
+
+yoy_hake_mean <- yoy_hake_preds %>%
+  group_by(station) %>%
+  summarise(year = max(year),
+            latitude = mean(latitude),
+            longitude = mean(longitude),
+            median_est_count_small = median(est_small),
+            median_est_count_large = median(est_large),
+            small_effect = as.numeric(hake_small_tidy[hake_small_tidy$term == "vgeo", 2]) + 
+              hake_small_zeta_sim$zeta_s_vgeo,
+            small_vgeo_sim = median(small_vgeo_sim),
+            small_vgeo_lwr = median(small_vgeo_lwr),
+            small_vgeo_upr = median(small_vgeo_upr),
+            large_effect = as.numeric(hake_large_tidy[hake_large_tidy$term == "depth_iso26", 2]) + 
+              mean(hake_large_zeta_sim$zeta_s_vgeo),
+            large_iso26_sim = median(large_iso26_sim),
+            large_iso26_lwr = median(large_iso26_lwr),
+            large_iso26_upr = median(large_iso26_upr))
+
+hake_small_cut_pts <- seq(0, max(yoy_hake_mean$small_effect), by = 0.3)
+hake_small_cuts <- with(yoy_hake_mean, cut(small_effect + abs(small_effect) + 0.02, 
+                                            hake_small_cut_pts))
+hake_large_cut_pts <- seq(0, max(yoy_hake_mean$large_effect), by = 0.3)
+hake_large_cuts <- with(yoy_hake_mean, cut(large_effect + abs(large_effect) + 0.08, 
+                                            hake_large_cut_pts))
+
+
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+image(lond,
+      latd,
+      t(matrix(hake_pred_small$est,
+               nrow = length(latd),
+               ncol = length(lond),
+               byrow = T)),
+      xlim = c(-126, -116),
+      ylim = range(yoy_hake_mean$latitude, na.rm = TRUE) + c(-.4, .5),
+      axes = FALSE,
+      xlab = "",
+      ylab = "")
+rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "mintcream")
+par(new = TRUE)
+symbols(yoy_hake_mean$longitude,
+        yoy_hake_mean$latitude,
+        circle = yoy_hake_mean$median_est_count_small + 
+          abs(min(yoy_hake_mean$median_est_count_small)) + 0.01,
+        inches = 0.2,
+        add = T,
+        fg = bubble_color(10)[hake_small_cuts],
+        bg = alpha(bubble_color(10)[hake_small_cuts], 0.6))  
+maps::map("state",
+          boundary = FALSE,
+          fill = TRUE,
+          col = "wheat4",
+          add = TRUE)
+text(x = state_labels$lon, 
+     y = state_labels$lat,
+     state_labels$name, 
+     pos = 1,
+     col = "black",
+     cex = 2.6,
+     family = "serif")
+
+image(lond,
+      latd,
+      t(matrix(hake_pred_large$est,
+               nrow = length(latd),
+               ncol = length(lond),
+               byrow = T)),
+      xlim = c(-126, -116),
+      ylim = range(yoy_hake_mean$latitude, na.rm = TRUE) + c(-.4, .5),
+      axes = FALSE,
+      xlab = "",
+      ylab = "")
+rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "mintcream")
+par(new = TRUE)
+symbols(yoy_hake_mean$longitude,
+        yoy_hake_mean$latitude,
+        circle = yoy_hake_mean$median_est_count_large + 
+          abs(min(yoy_hake_mean$median_est_count_large)) + 0.01,
+        inches = 0.2,
+        add = T,
+        fg = bubble_color(10)[hake_large_cuts],
+        bg = alpha(bubble_color(10)[hake_large_cuts], 0.6))  
+maps::map("state",
+          boundary = FALSE,
+          fill = TRUE,
+          col = "wheat4",
+          add = TRUE)
+text(x = state_labels$lon, 
+     y = state_labels$lat,
+     state_labels$name, 
+     pos = 1,
+     col = "black",
+     cex = 2.6,
+     family = "serif")
+
+dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
+                    'hake_SVC_sdmtmb.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+  
 
 # Northern Anchovy ----
 # Make mesh object with matrices
@@ -422,9 +572,9 @@ latd = seq(min(yoy_anchovy$lat), max(yoy_anchovy$lat), length.out = nlat)
 lond = seq(min(yoy_anchovy$lon), max(yoy_anchovy$lon), length.out = nlon)
 
 anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_vgeo)
-anchovy_pred_small$zeta_s_vgeo[anchovy_pred_small$dist > 50000] <- NA 
+anchovy_pred_small$zeta_s_vgeo[anchovy_pred_small$dist > 60000] <- NA 
 anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large$sdm_uvint100m)
-anchovy_pred_large$zeta_s_u_vint_100m[anchovy_pred_large$dist > 50000] <- NA 
+anchovy_pred_large$zeta_s_u_vint_100m[anchovy_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
 # Schoener's D seems to make the most sense (Carroll et al., 2019)
@@ -738,7 +888,7 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_shortbelly, shortbelly_pred_small, "Small (11-35 mm)", "Latitude \u00B0N", 
-           shortbelly_pred_small$zeta_s_depth_iso26, "26 Isopycnal Depth")
+           shortbelly_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
 sdmTMB_SVC(yoy_shortbelly, shortbelly_pred_large, "Large (36-78 mm)", " ",
            shortbelly_pred_large$zeta_s_vgeo, "Geostrophic Current")
 dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
@@ -878,7 +1028,7 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_widow, widow_pred_small, "Small (17-32 mm)", "Latitude \u00B0N", 
-           widow_pred_small$zeta_s_depth_iso26, "26 Isopycnal Depth")
+           widow_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
 sdmTMB_SVC(yoy_widow, widow_pred_large, "Large (33-64 mm)", " ",
            widow_pred_large$zeta_s_spice_iso26, "Spiciness")
 dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
@@ -1018,7 +1168,7 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_squid, squid_pred_small, "Small (11-70 mm)", "Latitude \u00B0N", 
-           squid_pred_small$zeta_s_depth_iso26, "26 Isopycnal Depth")
+           squid_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
 sdmTMB_SVC(yoy_squid, squid_pred_large, "Large (71-139 mm)", " ",
            squid_pred_large$zeta_s_spice_iso26, "Spiciness")
 dev.copy(jpeg, here('results/hindcast_output/yoy_squid', 
