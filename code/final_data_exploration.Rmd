@@ -127,7 +127,7 @@ plot_variables <- function(data){
 # Filter out needed pre-recruit species
 species_filter <- function(data, species){
   data %>%
-    select(c('cruise', 'date', 'year', 'month',
+    select(c('cruise', 'station', 'date', 'year', 'month',
              'day', 'tow_depth', 'latitude', 
              'longitude', 'surface_temp', 
              'species', 'numeric_date')) %>%
@@ -191,7 +191,7 @@ match_avgs <- function(species, roms){
                  by.y = c("years", "small_grp"),
                  all.x = TRUE)
   final <- dplyr::select(small, -small_grp, -large_grp, -haul_no, -cruise, -ctd_index,
-                         -station, -station_bottom_depth, -strata, -area,
+                         -station_bottom_depth, -strata, -area,
                          -active, -numeric_date, -haul_date)
   return(final)
 }
@@ -423,11 +423,11 @@ roms_squid <- add_roms(merge_squid, nep_final)
 nep_avgs <- readRDS("../data/nep_avgs.Rdata")
 
 yoy_anch <- match_avgs(roms_anch, nep_avgs)
-yoy_anch <- select(yoy_anch, -latdd, -londd, -name)
+yoy_anch <- dplyr::select(yoy_anch, -latdd, -londd, -name)
 yoy_widw <- match_avgs(roms_widw, nep_avgs)
 yoy_sbly <- match_avgs(roms_sbly, nep_avgs)
 yoy_dab <- match_avgs(roms_dab, nep_avgs)
-yoy_dab <- select(yoy_dab, -latdd, -londd, -name)
+yoy_dab <- dplyr::select(yoy_dab, -latdd, -londd, -name)
 yoy_hake <- match_avgs(roms_hake, nep_avgs)
 yoy_squid <- match_avgs(roms_squid, nep_avgs)
 ```
