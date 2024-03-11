@@ -31,7 +31,7 @@ sdmTMB_grid <- function(df, model){
   preds <- predict(model, 
                    newdata = spatial_grid, 
                    "link")
-  preds$est[preds$dist > 50000] <- NA # may want to find a way to mask with a polygon
+  preds$est[preds$dist > 60000] <- NA # may want to find a way to mask with a polygon
   preds$preds_scaled <- rescale(exp(preds$est))
   return(preds)
 }
