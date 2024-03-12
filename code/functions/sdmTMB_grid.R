@@ -26,7 +26,7 @@ sdmTMB_grid <- function(df, model){
   spatial_grid$v_cu <- median(df$v_cu, na.rm = TRUE)
   spatial_grid$vmax_cu <- median(df$vmax_cu, na.rm = TRUE)
   spatial_grid <- add_utm_columns(spatial_grid, c("lon", "lat"), 
-                                  utm_crs = 32610,)
+                                  utm_crs = 32610)
   
   preds <- predict(model, 
                    newdata = spatial_grid, 

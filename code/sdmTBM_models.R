@@ -142,7 +142,7 @@ state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lon = c(-121.0, -121.0, -120.0))
 nlat = 40
 nlon = 60
-extra_years <- c(2020:2099)
+extra_years <- c(2020:2100)
 nsim <- 500
 bubble_color <- colorRampPalette(c(sequential_hcl(15, palette = "Viridis")))
 
