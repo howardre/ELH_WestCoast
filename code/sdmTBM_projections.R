@@ -25,17 +25,12 @@ library(tidync)
 source(here('code/functions', 'vis_gam_COLORS.R'))
 source(here('code/functions', 'read_data.R'))
 source(here('code/functions', 'distance_function.R'))
+source(here('code/functions', 'projection_functions.R'))
+source(here('code/functions', 'map_project.R'))
 
 # Data
 roms_ss <- readRDS(here('data', 'nep_ipsl.Rdata'))
 roms_means <- readRDS(here('data', 'nep_ipsl_means.Rdata'))
-
-yoy_hake <- read_data('yoy_hake.Rdata') 
-yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42)
-yoy_widow <- read_data('yoy_widw.Rdata') 
-yoy_shortbelly <- read_data('yoy_sbly.Rdata')
-yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36)
-yoy_squid <- read_data('yoy_squid.Rdata')
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
@@ -43,83 +38,247 @@ state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
 
 extra_years <- c(2020:2100)
 
-# Sandbox ----
-data <- read_data('yoy_hake.Rdata') 
+### Pacific Hake ---------------------------------------------------------------------------------------------------------------------------------
+yoy_hake <- read_data('yoy_hake.Rdata') 
+hake_mesh <- make_mesh(data, 
+                       xy_cols = c("X", "Y"),
+                       cutoff = 15)
 
-# Create spatiotemporal prediction grid
-nlat = 40
-nlon = 60
-latd = seq(min(data$latitude), max(data$latitude), length.out = nlat)
-lond = seq(min(data$longitude), max(data$longitude), length.out = nlon)
+set.seed(1993)
+hake_small <- sdmTMB(small ~ 0 + vgeo +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + vgeo,
+                        extra_time = extra_years,
+                        data = yoy_hake,
+                        mesh = hake_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
+set.seed(1993)
+hake_large <- sdmTMB(large ~ 0 + depth_iso26 +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + depth_iso26,
+                        extra_time = extra_years,
+                        data = yoy_hake,
+                        mesh = hake_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
 
-grid_extent <- expand.grid(lond, latd)
-names(grid_extent) <- c('lon', 'lat')
-grid_extent$dist <- NA # calculate distance from nearest station
-for (k in 1:nrow(grid_extent)) {
-  dist <-  distance_function(grid_extent$lat[k],
-                             grid_extent$lon[k],
-                             data$latitude,
-                             data$longitude)
-  grid_extent$dist[k] <- min(dist)
-}
+#### IPSL
+##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
+hake_ipsl1 <- sdm_cells(yoy_hake, hake_small, hake_large,
+                        roms_means, roms_ss, 2020:2040)
+saveRDS(hake_ipsl1, file = here("data", "hake_ipsl1.rds"))
 
-grid_extent$year <- 2025
-grid_extent$week <- 20
-grid_extent$year_week <- paste(grid_extent$year, grid_extent$week, sep = "-")
-grid_extent$jday_scaled <- median(data$jday_scaled, na.rm = TRUE)
-grid_extent <- add_utm_columns(grid_extent, c("lon", "lat"), 
-                               utm_crs = 32610)
-# Create fish and roms sf objects
-grid_sf <- grid_extent %>%
-  st_as_sf(coords = c("lon", "lat"), 
-           remove = FALSE) %>%
-  st_set_crs(32610)
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(hake_ipsl1[[1]], "Small Hake (15-35 mm)", "Latitude \u00B0N")
+map_project(hake_ipsl1[[2]], "Large (36-81 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_hake', 
+                    'hake_ipsl_plot1.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
 
-ssroms_sf <- roms_ss %>%
-  st_as_sf(coords = c("lon", "lat"),
-           remove = FALSE) %>%
-  st_set_crs(32610)
+# Northern Anchovy ----
+yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42)
+anchovy_mesh <- make_mesh(data,
+                          xy_cols = c("X", "Y"),
+                          cutoff = 15)
 
-# Match SST and SSS roms to prediction grid
-grid_combined <- do.call("rbind",
-                        lapply(split(grid_sf, 1:nrow(grid_sf)), function(x) {
-                          st_join(x, ssroms_sf[ssroms_sf$year_week == unique(x$year_week),],
-                                  join = st_nearest_feature)
-                        }))
+set.seed(1993)
+anchovy_small <- sdmTMB(small ~ 0 + vgeo +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + vgeo,
+                        extra_time = extra_years,
+                        data = yoy_anchovy,
+                        mesh = anchovy_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
+set.seed(1993)
+anchovy_large <- sdmTMB(large ~ 0 + u_vint_100m +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + u_vint_100m,
+                        extra_time = extra_years,
+                        data = yoy_anchovy,
+                        mesh = anchovy_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
 
-grid_df <- as.data.frame(grid_combined)
-grid_final <- grid_df %>%
-  dplyr::select(-year_week.x, -year_week.y, -year.y, -lon.y, -lat.y, -geometry) %>%
-  rename(year = year.x,
-         longitude = lon.x,
-         latitude = lat.x)
+# Pacific Sanddab ----
+yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36)
+sdab_mesh <- make_mesh(data,
+                       xy_cols = c("X", "Y"),
+                       cutoff = 15)
 
-# Create latitude bins for different variables
-roms_means$large_grp <- findInterval(roms_means$latitude,
-                               c(32, 35, 38, 41, 44, 47))
-roms_means$small_grp <- findInterval(roms_means$latitude,
-                               c(32, 34, 36, 38, 40, 42, 44, 48))
-grid_final$large_grp <- findInterval(grid_final$latitude,
-                                  c(32, 35, 38, 41, 44, 47))
-grid_final$small_grp <- findInterval(grid_final$latitude,
-                                  c(32, 34, 36, 38, 40, 42, 44, 48))
-nep_large <- roms_means %>% 
-  group_by(years, large_grp) %>%
-  summarize(across(c(vgeo, v_cu, vmax_cu), mean)) 
-nep_small <- roms_means %>%
-  group_by(years, small_grp) %>%
-  summarize(across(c(u_vint_50m, u_vint_100m, depth_iso26, spice_iso26), mean))
+set.seed(1993)
+sdab_small <- sdmTMB(small ~ 0 + u_vint_50m +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + u_vint_50m,
+                        extra_time = extra_years,
+                        data = yoy_sdab,
+                        mesh = sdab_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
+set.seed(1993)
+sdab_large <- sdmTMB(large ~ 0 + u_vint_100m +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + u_vint_100m,
+                        extra_time = extra_years,
+                        data = yoy_sdab,
+                        mesh = sdab_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
 
-large <- merge(grid_final,
-               nep_large,
-               by.x = c("year", "large_grp"),
-               by.y = c("years", "large_grp"),
-               all.x = TRUE)
-small <- merge(large,
-               nep_small,
-               by.x = c("year", "small_grp"),
-               by.y = c("years", "small_grp"),
-               all.x = TRUE)
+# Widow Rockfish ----
+yoy_widow <- read_data('yoy_widw.Rdata') 
+widow_mesh <- make_mesh(data,
+                          xy_cols = c("X", "Y"),
+                          cutoff = 15)
 
-final <- dplyr::select(small, -small_grp, -large_grp)
+set.seed(1993)
+widow_small <- sdmTMB(small ~ 0 + depth_iso26 +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + depth_iso26,
+                        extra_time = extra_years,
+                        data = yoy_widow,
+                        mesh = widow_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
+set.seed(1993)
+widow_large <- sdmTMB(large ~ 0 + spice_iso26 +
+                          s(jday_scaled, k = 3) +
+                          s(sst_scaled, k = 3) +
+                          s(sss_scaled, k = 3),
+                        spatial_varying = ~ 0 + spice_iso26,
+                        extra_time = extra_years,
+                        data = yoy_widow,
+                        mesh = widow_mesh,
+                        spatial = "on",
+                        time = "year",
+                        family = tweedie(link = "log"),
+                        spatiotemporal = "off",
+                        control = sdmTMBcontrol(newton_loops = 1,
+                                                nlminb_loops = 2))
 
+# Shortbelly Rockfish ----
+yoy_shortbelly <- read_data('yoy_sbly.Rdata')
+shortbelly_mesh <- make_mesh(data,
+                        xy_cols = c("X", "Y"),
+                        cutoff = 15)
+
+set.seed(1993)
+shortbelly_small <- sdmTMB(small ~ 0 + depth_iso26 +
+                        s(jday_scaled, k = 3) +
+                        s(sst_scaled, k = 3) +
+                        s(sss_scaled, k = 3),
+                      spatial_varying = ~ 0 + depth_iso26,
+                      extra_time = extra_years,
+                      data = yoy_shortbelly,
+                      mesh = shortbelly_mesh,
+                      spatial = "on",
+                      time = "year",
+                      family = tweedie(link = "log"),
+                      spatiotemporal = "off",
+                      control = sdmTMBcontrol(newton_loops = 1,
+                                              nlminb_loops = 2))
+set.seed(1993)
+shortbelly_large <- sdmTMB(large ~ 0 + vgeo +
+                        s(jday_scaled, k = 3) +
+                        s(sst_scaled, k = 3) +
+                        s(sss_scaled, k = 3),
+                      spatial_varying = ~ 0 + vgeo,
+                      extra_time = extra_years,
+                      data = yoy_shortbelly,
+                      mesh = shortbelly_mesh,
+                      spatial = "on",
+                      time = "year",
+                      family = tweedie(link = "log"),
+                      spatiotemporal = "off",
+                      control = sdmTMBcontrol(newton_loops = 1,
+                                              nlminb_loops = 2))
+
+# Market Squid ----
+yoy_squid <- read_data('yoy_squid.Rdata')
+squid_mesh <- make_mesh(data,
+                        xy_cols = c("X", "Y"),
+                        cutoff = 15)
+
+set.seed(1993)
+squid_small <- sdmTMB(small ~ 0 + depth_iso26 +
+                        s(jday_scaled, k = 3) +
+                        s(sst_scaled, k = 3) +
+                        s(sss_scaled, k = 3),
+                      spatial_varying = ~ 0 + depth_iso26,
+                      extra_time = extra_years,
+                      data = yoy_squid,
+                      mesh = squid_mesh,
+                      spatial = "on",
+                      time = "year",
+                      family = tweedie(link = "log"),
+                      spatiotemporal = "off",
+                      control = sdmTMBcontrol(newton_loops = 1,
+                                              nlminb_loops = 2))
+set.seed(1993)
+squid_large <- sdmTMB(large ~ 0 + spice_iso26 +
+                        s(jday_scaled, k = 3) +
+                        s(sst_scaled, k = 3) +
+                        s(sss_scaled, k = 3),
+                      spatial_varying = ~ 0 + spice_iso26,
+                      extra_time = extra_years,
+                      data = yoy_squid,
+                      mesh = squid_mesh,
+                      spatial = "on",
+                      time = "year",
+                      family = tweedie(link = "log"),
+                      spatiotemporal = "off",
+                      control = sdmTMBcontrol(newton_loops = 1,
+                                              nlminb_loops = 2))
