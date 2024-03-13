@@ -88,15 +88,66 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-map_project(hake_ipsl1[[1]], "Small Hake (15-35 mm)", "Latitude \u00B0N")
+map_project(hake_ipsl1[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
 map_project(hake_ipsl1[[2]], "Large (36-81 mm)", "")
+mtext("Pacific Hake 2020-2040", 
+      side = 2, 
+      line = 50, 
+      outer = TRUE, 
+      cex = 7,
+      at = 0.89)
 dev.copy(jpeg, here('results/forecast_output/yoy_hake', 
-                    'hake_ipsl_plot1.jpg'), 
+                    'hake_ipsl1_plot.jpg'), 
          height = 15, 
          width = 16, 
          units = 'in', 
          res = 200)
 dev.off()
+
+##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
+hake_ipsl2 <- sdm_cells(yoy_hake, hake_small, hake_large,
+                        roms_means, roms_ss, 2050:2070)
+saveRDS(hake_ipsl2, file = here("data", "hake_ipsl2.rds"))
+
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(hake_ipsl2[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
+map_project(hake_ipsl2[[2]], "Large (36-81 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_hake', 
+                    'hake_ipsl2_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
+hake_ipsl3 <- sdm_cells(yoy_hake, hake_small, hake_large,
+                        roms_means, roms_ss, 2080:2100)
+saveRDS(hake_ipsl3, file = here("data", "hake_ipsl3.rds"))
+
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(hake_ipsl3[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
+map_project(hake_ipsl3[[2]], "Large (36-81 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_hake', 
+                    'hake_ipsl3_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
 
 # Northern Anchovy ----
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42)
