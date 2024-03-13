@@ -1,9 +1,9 @@
 # Function to make projection maps
-grid_predict <- function(grid, title){
+grid_predict <- function(grid, title, latitude_label){
   nlat = 40
   nlon = 60
-  latd = seq(min(grid[[1]]$lat), max(grid[[1]]$lat), length.out = nlat)
-  lond = seq(min(grid[[1]]$lon), max(grid[[1]]$lon), length.out = nlon)
+  latd = seq(min(grid$lat), max(grid$lat), length.out = nlat)
+  lond = seq(min(grid$lon), max(grid$lon), length.out = nlon)
   my_color = colorRampPalette(rev(c("#FFFFCC", "#FBF2A8", "#F9E585",
                                     "#F5D363", "#EFBA55", "#EAA352",
                                     "#E68C51", "#E0754F", "#D75C4D",
@@ -11,12 +11,12 @@ grid_predict <- function(grid, title){
                                     "#542D20", "#352311", "#191900")))
   image(lond,
         latd,
-        t(matrix(grid[[1]]$pred_scaled,
+        t(matrix(grid$pred_scaled,
                  nrow = length(latd),
                  ncol = length(lond),
                  byrow = T)),
         xlim = c(-126, -116),
-        ylim = range(grid[[1]]$lat, na.rm = TRUE) + c(-.4, .5),
+        ylim = range(grid$lat, na.rm = TRUE) + c(-.4, .5),
         axes = FALSE,
         xlab = "",
         ylab = "")
@@ -24,17 +24,17 @@ grid_predict <- function(grid, title){
   par(new = TRUE)
   image(lond,
         latd,
-        t(matrix(grid[[1]]$pred_scaled,
+        t(matrix(grid$pred_scaled,
                  nrow = length(latd),
                  ncol = length(lond),
                  byrow = T)),
         col = my_color(100), 
-        ylab = "Latitude",
+        ylab = latitude_label,
         xlab = "Longitude",
         xlim = c(-126, -116),
-        ylim = range(grid[[1]]$lat, na.rm = TRUE) + c(-.4, .5),
-        zlim = c(min(grid[[1]]$pred_scaled, na.rm = T), 
-                 max(grid[[1]]$pred_scaled, na.rm = T)),
+        ylim = range(grid$lat, na.rm = TRUE) + c(-.4, .5),
+        zlim = c(min(grid$pred_scaled, na.rm = T), 
+                 max(grid$pred_scaled, na.rm = T)),
         main = title,
         cex.main = 1.2,
         cex.lab = 1.1,
@@ -51,8 +51,8 @@ grid_predict <- function(grid, title){
              axis.args = list(cex.axis = 0.8),
              legend.width = 0.5,
              legend.mar = 6,
-             zlim = c(min(grid[[1]]$pred_scaled, na.rm = T), 
-                      max(grid[[1]]$pred_scaled, na.rm = T)),
+             zlim = c(min(grid$pred_scaled, na.rm = T), 
+                      max(grid$pred_scaled, na.rm = T)),
              legend.args = list("Scaled \n Abundance",
                                 side = 2, cex = 1))
 }
