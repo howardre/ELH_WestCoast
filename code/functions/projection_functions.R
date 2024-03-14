@@ -36,6 +36,8 @@ sdm_project <- function(data, the_year, formula_small, formula_large,
              remove = FALSE) %>%
     st_set_crs(32610)
   
+  ssroms_sf <- filter(ssroms_sf, year == the_year)
+  
   # Match SST and SSS roms to prediction grid
   grid_combined <- do.call("rbind",
                            lapply(split(grid_sf, 1:nrow(grid_sf)), function(x) {
