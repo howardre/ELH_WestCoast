@@ -1,5 +1,5 @@
 # Function to make projection maps
-grid_predict <- function(grid, title, latitude_label){
+map_project <- function(grid, title, latitude_label){
   nlat = 40
   nlon = 60
   latd = seq(min(grid$lat), max(grid$lat), length.out = nlat)
@@ -30,15 +30,15 @@ grid_predict <- function(grid, title, latitude_label){
                  byrow = T)),
         col = my_color(100), 
         ylab = latitude_label,
-        xlab = "Longitude",
+        xlab = "Longitude \u00B0W",
         xlim = c(-126, -116),
         ylim = range(grid$lat, na.rm = TRUE) + c(-.4, .5),
         zlim = c(min(grid$pred_scaled, na.rm = T), 
                  max(grid$pred_scaled, na.rm = T)),
         main = title,
-        cex.main = 1.2,
-        cex.lab = 1.1,
-        cex.axis = 1.1)
+        cex.lab = 3.1,
+        cex.axis = 2.3,
+        cex.main = 3.4)
   maps::map("worldHires",
             fill = T,
             col = "wheat4",
@@ -46,13 +46,17 @@ grid_predict <- function(grid, title, latitude_label){
   image.plot(legend.only = T,
              col = my_color(100),
              legend.shrink = 0.2,
-             smallplot = c(.79, .82, .20, .37),
-             legend.cex = 0.8,
-             axis.args = list(cex.axis = 0.8),
-             legend.width = 0.5,
+             smallplot = c(.33, .38, .11, .24),
+             legend.cex = 1.5,
+             axis.args = list(cex.axis = 1.8,
+                              family = "serif"),
+             legend.width = 0.8,
              legend.mar = 6,
              zlim = c(min(grid$pred_scaled, na.rm = T), 
                       max(grid$pred_scaled, na.rm = T)),
              legend.args = list("Scaled \n Abundance",
-                                side = 2, cex = 1))
+                                side = 2, 
+                                cex = 2.2,
+                                family = "serif",
+                                line = 1))
 }
