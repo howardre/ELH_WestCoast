@@ -97,6 +97,7 @@ sdm_project <- function(data, the_year, formula_small, formula_large,
                         newdata = final)
   
   # Remove values outside of sample stations
+  pred_small$small_pred <- rescale(exp(pred_small$est))
   pred_small$est[pred_small$dist > 60000] <- NA
   pred_small$pred <- rescale(pred_small$est)
   pred_small$zeta_s_vgeo[pred_small$dist > 60000] <- NA
@@ -112,7 +113,7 @@ sdm_project <- function(data, the_year, formula_small, formula_large,
   pred_large$est_rf[pred_large$dist > 60000] <- NA
   
   # Calculate niche overlap
-  pred_small$large_pred <- pred_large$pred
+  pred_small$large_pred <- rescale(exp(pred_large$est))
   pred_small$p_small <- pred_small$pred / sum(pred_small$pred, na.rm = T)
   pred_small$p_large <- pred_small$large_pred / sum(pred_small$large_pred, na.rm = T)
   schoener <- 1 - 0.5 * sum(abs(pred_small$p_small - pred_small$p_large), na.rm = TRUE)
