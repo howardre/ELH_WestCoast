@@ -328,6 +328,20 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_hake',
          res = 200)
 dev.off()
 
+# Alternate SVC calculation
+zeta_s <- predict(hake_model_small$sdm_vgeo, 
+                  newdata = yoy_hake, 
+                  nsim = 200, 
+                  sims_var = 'zeta_s')
+sims <- spread_sims(hake_model_small$sdm_vgeo, nsim = 200)
+combined <- sims$vgeo + t(zeta_s)
+yoy_hake$vgeo_effect <- apply(combined, 2, median)
+yoy_hake$vgeo_effect_lwr <- apply(combined, 2, quantile, probs = 0.1)
+yoy_hake$vgeo_effect_upr <- apply(combined, 2, quantile, probs = 0.9)
+
+ggplot(yoy_hake, aes(X, Y)) + 
+  geom_point(aes(color = vgeo_effect_upr)) +
+  scale_color_viridis()
 
 # Northern Anchovy ----
 # Make mesh object with matrices
