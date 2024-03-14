@@ -166,11 +166,11 @@ add_roms <- function(tows, roms){
 match_avgs <- function(species, roms){
   # Create latitude bins for different variables
   roms$large_grp <- findInterval(roms$latitude,
-                                 c(32, 35, 38, 41, 44, 47))
+                                 c(32, 36, 40, 44, 48))
   roms$small_grp <- findInterval(roms$latitude,
                                  c(32, 34, 36, 38, 40, 42, 44, 48))
   species$large_grp <- findInterval(species$latitude,
-                                    c(32, 35, 38, 41, 44, 47))
+                                    c(32, 36, 40, 44, 48))
   species$small_grp <- findInterval(species$latitude,
                                     c(32, 34, 36, 38, 40, 42, 44, 48))
   nep_large <- roms %>% 
@@ -211,7 +211,7 @@ anch_catch <- clean_catch(anch_data_list, 1)
 anch_catch$numeric_date <- as.numeric(format(as.Date(anch_catch$haul_date, format = "%Y-%m-%d"),
                                            "%m%d%Y"))
 anch_catch$date <- as.Date(anch_catch$haul_date)
-anch_catch <- filter(anch_catch, year > 2013 & year < 2020)
+anch_catch <- filter(anch_catch, year > 2012 & year < 2020)
 anch_sp <- clean_sp(anch_data_list, 2)
 anch_sp$numeric_date <- as.numeric(format(as.Date(anch_sp$haul_date, format = "%Y-%m-%d"),
                                            "%m%d%Y"))
@@ -275,7 +275,7 @@ dab_catch <- date_conversion(other_catch, other_names_catch)
 dab_catch <- dab_catch %>% 
   dplyr::select(-c('shortbelly', 'hake', 'widow')) %>%
   rename(catch = dab) %>%
-  filter(year > 2013 & year < 2020)
+  filter(year > 2011 & year < 2020)
 squid_catch <- date_conversion(squid_catch, squid_names_catch)
 squid_catch <- squid_catch %>%
   rename(catch = market_squid) %>%
