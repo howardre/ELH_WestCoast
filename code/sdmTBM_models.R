@@ -33,32 +33,6 @@ source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & s
 
 # Functions
 # More info here: https://pbs-assess.github.io/sdmTMB/index.html
-individual_plot <- function(model, data, variable, xlab){
-  object <- visreg(model,
-                   data = data,
-                   xvar = variable,
-                   plot = FALSE,
-                   cond = list(ssh_annual_scaled = 1)) # currently required with SVCs
-  object_plot <- ggplot(object$fit, aes(x = !!sym(variable), y = visregFit)) + # !!sym() removes quotes
-    geom_line(color = "black",
-              linewidth = 1,
-              show.legend = FALSE) +
-    geom_ribbon(aes(ymin = visregLwr, 
-                    ymax = visregUpr,
-                    fill = "coral2"),
-                alpha = 0.5,
-                show.legend = FALSE) +
-    labs(x = xlab,
-         y = "Abundance Anomalies") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 38),
-          axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, 2, 2, 2, "cm")) 
-  return(object_plot)
-} # use for individual variables
-
 plot_variables <- function(model, data){
   temp <- visreg(model,
                  data = data,
@@ -131,10 +105,10 @@ plot_variables <- function(model, data){
 # Data
 # May have to filter salinity and depth due to outliers?
 yoy_hake <- read_data('yoy_hake.Rdata') 
-yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42)
+yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
 yoy_widow <- read_data('yoy_widw.Rdata') 
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
-yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36)
+yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36, year > 2012) # doesn't work otherwise
 yoy_squid <- read_data('yoy_squid.Rdata')
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
@@ -146,48 +120,6 @@ extra_years <- c(2020:2100)
 nsim <- 500
 bubble_color <- colorRampPalette(c(sequential_hcl(15, palette = "Viridis")))
 
-# # Sandbox ----
-# the_mesh <- make_mesh(yoy_hake,
-#                       xy_cols = c("X", "Y"),
-#                       cutoff = 15)
-# sdm_test <- sdmTMB(small ~  0 +
-#                      s(jday_scaled, k = 3) +
-#                      s(sst_scaled, k = 3) +
-#                      s(sss_scaled, k = 3) +
-#                      v_cu,
-#                    spatial_varying = ~ 0 + v_cu,
-#                    extra_time = extra_years,
-#                    data = yoy_hake,
-#                    mesh = the_mesh,
-#                    spatial = "on",
-#                    time = "year",
-#                    family = tweedie(link = "log"),
-#                    spatiotemporal = "off",
-#                    control = sdmTMBcontrol(newton_loops = 1,
-#                                            nlminb_loops = 2))
-# sanity(sdm_test)
-# tidy(sdm_test,
-#      conf.int = TRUE)
-# 
-# 
-# yoy_hake <- mutate(yoy_hake, fold = ifelse(year < 2013, 1, 2))
-# 
-# library(caret)
-# clust <- createFolds(factor(yoy_hake$small), k = 3, list = FALSE)
-# 
-# cv_test <- try(sdmTMB_cv(small ~ 0 + vgeo +
-#                        s(jday_scaled, k = 3) +
-#                        s(sst_scaled, k = 3) +
-#                        s(sss_scaled, k = 3),
-#                      spatial_varying = ~ 0 + vgeo,
-#                      data = yoy_hake,
-#                      mesh = the_mesh,
-#                      spatial = "off",
-#                      spatiotemporal = "off",
-#                      family = tweedie(link = "log"),
-#                      k_folds = length(unique(clust)),
-#                      fold_ids = clust,
-#                      parallel = TRUE))
 
 # Pacific Hake ----
 # Make mesh object with matrices
@@ -211,8 +143,8 @@ hake_model_small <- readRDS(here('data', 'hake_models_small'))
 hake_model_large <- readRDS(here('data', 'hake_models_large'))
 
 # Get residuals
-hake_data <- hake_model_small$sdm_vgeo$data
-hake_data$small_resid <- residuals(hake_model_small$sdm_vgeo)
+hake_data <- hake_model_small$sdm_iso26$data
+hake_data$small_resid <- residuals(hake_model_small$sdm_iso26)
 hake_data$large_resid <- residuals(hake_model_large$sdm_iso26)
 
 # Normal QQ plots
@@ -264,7 +196,7 @@ tiff(here('results/hindcast_output/yoy_hake',
      width = 38,
      height = 12,
      res = 200)
-plot_variables(hake_model_small$sdm_vgeo, hake_data)
+plot_variables(hake_model_small$sdm_iso26, hake_data)
 dev.off()
 
 tiff(here('results/hindcast_output/yoy_hake',
@@ -280,8 +212,8 @@ dev.off()
 latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
-hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_vgeo)
-hake_pred_small$zeta_s_vgeo[hake_pred_small$dist > 60000] <- NA 
+hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_iso26)
+hake_pred_small$zeta_s_depth_iso26[hake_pred_small$dist > 60000] <- NA 
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26)
 hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
 
@@ -291,6 +223,7 @@ hake_pred_small$large_scaled <- hake_pred_large$preds_scaled
 hake_pred_small$p_small <- hake_pred_small$preds_scaled / sum(hake_pred_small$preds_scaled, na.rm = T)
 hake_pred_small$p_large <- hake_pred_small$large_scaled / sum(hake_pred_small$large_scaled, na.rm = T)
 hake_schoener <- 1 - 0.5 * sum(abs(hake_pred_small$p_small - hake_pred_small$p_large), na.rm = TRUE)
+hake_schoener
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -317,9 +250,9 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude \u00B0N", 
-           hake_pred_small$zeta_s_vgeo, "Geostrophic Current")
+           hake_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
 sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ",
-           hake_pred_large$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
+           hake_pred_large$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
                     'hake_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -365,8 +298,8 @@ anchovy_model_small <- readRDS(here('data', 'anchovy_models_small'))
 anchovy_model_large <- readRDS(here('data', 'anchovy_models_large'))
 
 # Get residuals
-anchovy_data <- anchovy_model_small$sdm_vgeo$data
-anchovy_data$small_resid <- residuals(anchovy_model_small$sdm_vgeo)
+anchovy_data <- anchovy_model_small$sdm_uvint100m$data
+anchovy_data$small_resid <- residuals(anchovy_model_small$sdm_uvint100m)
 anchovy_data$large_resid <- residuals(anchovy_model_large$sdm_uvint100m)
 
 # Normal QQ plots
@@ -434,8 +367,8 @@ dev.off()
 latd = seq(min(yoy_anchovy$lat), max(yoy_anchovy$lat), length.out = nlat)
 lond = seq(min(yoy_anchovy$lon), max(yoy_anchovy$lon), length.out = nlon)
 
-anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_vgeo)
-anchovy_pred_small$zeta_s_vgeo[anchovy_pred_small$dist > 60000] <- NA 
+anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_uvint100m)
+anchovy_pred_small$zeta_s_u_vint_100m[anchovy_pred_small$dist > 60000] <- NA 
 anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large$sdm_uvint100m)
 anchovy_pred_large$zeta_s_u_vint_100m[anchovy_pred_large$dist > 60000] <- NA 
 
@@ -445,6 +378,7 @@ anchovy_pred_small$large_scaled <- anchovy_pred_large$preds_scaled
 anchovy_pred_small$p_small <- anchovy_pred_small$preds_scaled / sum(anchovy_pred_small$preds_scaled, na.rm = T)
 anchovy_pred_small$p_large <- anchovy_pred_small$large_scaled / sum(anchovy_pred_small$large_scaled, na.rm = T)
 anchovy_schoener <- 1 - 0.5 * sum(abs(anchovy_pred_small$p_small - anchovy_pred_small$p_large), na.rm = TRUE)
+anchovy_schoener
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -471,9 +405,9 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_anchovy, anchovy_pred_small, "Small (21-35 mm)", "Latitude \u00B0N", 
-           anchovy_pred_small$zeta_s_vgeo, "Geostrophic Current")
+           anchovy_pred_small$zeta_s_u_vint_100m, "Eastward u vertically \n integrated 0-100m Effect")
 sdmTMB_SVC(yoy_anchovy, anchovy_pred_large, "Large (36-85 mm)", " ",
-           anchovy_pred_large$zeta_s_u_vint_100m, "Eastward u vertically \n integrated 0-100 m")
+           anchovy_pred_large$zeta_s_u_vint_100m, "Eastward u vertically \n integrated 0-100m Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
                     'anchovy_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -505,9 +439,9 @@ sdab_model_small <- readRDS(here('data', 'sdab_models_small'))
 sdab_model_large <- readRDS(here('data', 'sdab_models_large'))
 
 # Get residuals
-sdab_data <- sdab_model_small$sdm_v_cu$data
+sdab_data <- sdab_model_small$sdm_uvint50m$data
 sdab_data$small_resid <- residuals(sdab_model_small$sdm_uvint50m)
-sdab_data$large_resid <- residuals(sdab_model_large$sdm_uvint100m)
+sdab_data$large_resid <- residuals(sdab_model_large$sdm_uvint50m)
 
 # Normal QQ plots
 windows(height = 8, width = 15)
@@ -575,9 +509,9 @@ latd = seq(min(yoy_sdab$lat), max(yoy_sdab$lat), length.out = nlat)
 lond = seq(min(yoy_sdab$lon), max(yoy_sdab$lon), length.out = nlon)
 
 sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint50m)
-sdab_pred_small$zeta_s_u_vint_50m[sdab_pred_small$dist > 50000] <- NA 
-sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_uvint100m)
-sdab_pred_large$zeta_s_u_vint_100m[sdab_pred_large$dist > 50000] <- NA 
+sdab_pred_small$zeta_s_u_vint_50m[sdab_pred_small$dist > 60000] <- NA 
+sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_uvint50m)
+sdab_pred_large$zeta_s_u_vint_50m[sdab_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
 # Schoener's D seems to make the most sense (Carroll et al., 2019)
@@ -585,6 +519,7 @@ sdab_pred_small$large_scaled <- sdab_pred_large$preds_scaled
 sdab_pred_small$p_small <- sdab_pred_small$preds_scaled / sum(sdab_pred_small$preds_scaled, na.rm = T)
 sdab_pred_small$p_large <- sdab_pred_small$large_scaled / sum(sdab_pred_small$large_scaled, na.rm = T)
 sdab_schoener <- 1 - 0.5 * sum(abs(sdab_pred_small$p_small - sdab_pred_small$p_large), na.rm = TRUE)
+sdab_schoener
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -593,8 +528,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_map(yoy_sdab, sdab_pred_small, "Small (16-25 mm)", "Latitude \u00B0N")
-sdmTMB_map(yoy_sdab, sdab_pred_large, "Large (26-55 mm)", " ")
+sdab_map(yoy_sdab, sdab_pred_small, "Small (16-25 mm)", "Latitude \u00B0N")
+sdab_map(yoy_sdab, sdab_pred_large, "Large (26-55 mm)", " ")
 dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
                     'sdab_distributions_sdmtmb.jpg'), 
          height = 15, 
@@ -610,10 +545,10 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_SVC(yoy_sdab, sdab_pred_small, "Small (16-25 mm)", "Latitude \u00B0N", 
-           sdab_pred_small$zeta_s_u_vint_50m, "Eastward u vertically \n integrated 0-50 m")
-sdmTMB_SVC(yoy_sdab, sdab_pred_large, "Large (26-55 mm)", " ",
-           sdab_pred_large$zeta_s_u_vint_100m, "Eastward u vertically \n integrated 0-100 m")
+sdab_SVC(yoy_sdab, sdab_pred_small, "Small (16-25 mm)", "Latitude \u00B0N", 
+         sdab_pred_small$zeta_s_u_vint_50m, "Eastward u Vertically \n Integrated 0-100m Effect")
+sdab_SVC(yoy_sdab, sdab_pred_large, "Large (26-55 mm)", " ",
+         sdab_pred_large$zeta_s_u_vint_50m, "Eastward u Vertically \n Integrated 0-50m Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
                     'sdab_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -626,8 +561,8 @@ dev.off()
 # Shortbelly Rockfish ----
 # Make mesh object with matrices
 yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly, 
-                           xy_cols = c("X", "Y"),
-                           cutoff = 15)
+                                 xy_cols = c("X", "Y"),
+                                 cutoff = 15)
 plot(yoy_shortbelly_mesh) 
 
 # Select models
@@ -715,9 +650,9 @@ latd = seq(min(yoy_shortbelly$lat), max(yoy_shortbelly$lat), length.out = nlat)
 lond = seq(min(yoy_shortbelly$lon), max(yoy_shortbelly$lon), length.out = nlon)
 
 shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small$sdm_iso26)
-shortbelly_pred_small$zeta_s_depth_iso26[shortbelly_pred_small$dist > 50000] <- NA 
+shortbelly_pred_small$zeta_s_depth_iso26[shortbelly_pred_small$dist > 60000] <- NA 
 shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large$sdm_vgeo)
-shortbelly_pred_large$zeta_s_vgeo[shortbelly_pred_large$dist > 50000] <- NA 
+shortbelly_pred_large$zeta_s_vgeo[shortbelly_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
 # Schoener's D seems to make the most sense (Carroll et al., 2019)
@@ -725,6 +660,7 @@ shortbelly_pred_small$large_scaled <- shortbelly_pred_large$preds_scaled
 shortbelly_pred_small$p_small <- shortbelly_pred_small$preds_scaled / sum(shortbelly_pred_small$preds_scaled, na.rm = T)
 shortbelly_pred_small$p_large <- shortbelly_pred_small$large_scaled / sum(shortbelly_pred_small$large_scaled, na.rm = T)
 shortbelly_schoener <- 1 - 0.5 * sum(abs(shortbelly_pred_small$p_small - shortbelly_pred_small$p_large), na.rm = TRUE)
+shortbelly_schoener
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -751,9 +687,9 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_shortbelly, shortbelly_pred_small, "Small (11-35 mm)", "Latitude \u00B0N", 
-           shortbelly_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
+           shortbelly_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
 sdmTMB_SVC(yoy_shortbelly, shortbelly_pred_large, "Large (36-78 mm)", " ",
-           shortbelly_pred_large$zeta_s_vgeo, "Geostrophic Current")
+           shortbelly_pred_large$zeta_s_vgeo, "Geostrophic Current \n Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
                     'shortbelly_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -785,8 +721,8 @@ widow_model_small <- readRDS(here('data', 'widow_models_small'))
 widow_model_large <- readRDS(here('data', 'widow_models_large'))
 
 # Get residuals
-widow_data <- widow_model_small$sdm_iso26$data
-widow_data$small_resid <- residuals(widow_model_small$sdm_iso26)
+widow_data <- widow_model_small$sdm_vmax_cu$data
+widow_data$small_resid <- residuals(widow_model_small$sdm_vmax_cu)
 widow_data$large_resid <- residuals(widow_model_large$sdm_spice)
 
 # Normal QQ plots
@@ -854,10 +790,10 @@ dev.off()
 latd = seq(min(yoy_widow$lat), max(yoy_widow$lat), length.out = nlat)
 lond = seq(min(yoy_widow$lon), max(yoy_widow$lon), length.out = nlon)
 
-widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small$sdm_iso26)
-widow_pred_small$zeta_s_depth_iso26[widow_pred_small$dist > 50000] <- NA 
+widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small$sdm_vmax_cu)
+widow_pred_small$zeta_s_vmax_cu[widow_pred_small$dist > 60000] <- NA 
 widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large$sdm_spice)
-widow_pred_large$zeta_s_spice_iso26[widow_pred_large$dist > 50000] <- NA 
+widow_pred_large$zeta_s_spice_iso26[widow_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
 # Schoener's D seems to make the most sense (Carroll et al., 2019)
@@ -865,6 +801,7 @@ widow_pred_small$large_scaled <- widow_pred_large$preds_scaled
 widow_pred_small$p_small <- widow_pred_small$preds_scaled / sum(widow_pred_small$preds_scaled, na.rm = T)
 widow_pred_small$p_large <- widow_pred_small$large_scaled / sum(widow_pred_small$large_scaled, na.rm = T)
 widow_schoener <- 1 - 0.5 * sum(abs(widow_pred_small$p_small - widow_pred_small$p_large), na.rm = TRUE)
+widow_schoener
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -891,9 +828,9 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_widow, widow_pred_small, "Small (17-32 mm)", "Latitude \u00B0N", 
-           widow_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
+           widow_pred_small$zeta_s_vmax_cu, "Max Velocity CA \n Undercurrent Effect ")
 sdmTMB_SVC(yoy_widow, widow_pred_large, "Large (33-64 mm)", " ",
-           widow_pred_large$zeta_s_spice_iso26, "Spiciness")
+           widow_pred_large$zeta_s_spice_iso26, "Spiciness Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
                     'widow_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -906,8 +843,8 @@ dev.off()
 # Market Squid ----
 # Make mesh object with matrices
 yoy_squid_mesh <- make_mesh(yoy_squid, 
-                           xy_cols = c("X", "Y"),
-                           cutoff = 15)
+                            xy_cols = c("X", "Y"),
+                            cutoff = 15)
 plot(yoy_squid_mesh) 
 
 # Select models
@@ -995,9 +932,9 @@ latd = seq(min(yoy_squid$lat), max(yoy_squid$lat), length.out = nlat)
 lond = seq(min(yoy_squid$lon), max(yoy_squid$lon), length.out = nlon)
 
 squid_pred_small <- sdmTMB_grid(yoy_squid, squid_model_small$sdm_iso26)
-squid_pred_small$zeta_s_depth_iso26[squid_pred_small$dist > 50000] <- NA 
+squid_pred_small$zeta_s_depth_iso26[squid_pred_small$dist > 60000] <- NA 
 squid_pred_large <- sdmTMB_grid(yoy_squid, squid_model_large$sdm_spice)
-squid_pred_large$zeta_s_spice_iso26[squid_pred_large$dist > 50000] <- NA 
+squid_pred_large$zeta_s_spice_iso26[squid_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
 # Schoener's D seems to make the most sense (Carroll et al., 2019)
@@ -1005,6 +942,7 @@ squid_pred_small$large_scaled <- squid_pred_large$preds_scaled
 squid_pred_small$p_small <- squid_pred_small$preds_scaled / sum(squid_pred_small$preds_scaled, na.rm = T)
 squid_pred_small$p_large <- squid_pred_small$large_scaled / sum(squid_pred_small$large_scaled, na.rm = T)
 squid_schoener <- 1 - 0.5 * sum(abs(squid_pred_small$p_small - squid_pred_small$p_large), na.rm = TRUE)
+squid_schoener
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -1031,9 +969,9 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_squid, squid_pred_small, "Small (11-70 mm)", "Latitude \u00B0N", 
-           squid_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth")
+           squid_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
 sdmTMB_SVC(yoy_squid, squid_pred_large, "Large (71-139 mm)", " ",
-           squid_pred_large$zeta_s_spice_iso26, "Spiciness")
+           squid_pred_large$zeta_s_spice_iso26, "Spiciness Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_squid', 
                     'squid_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -1041,3 +979,47 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_squid',
          units = 'in', 
          res = 200)
 dev.off()
+
+
+# # Sandbox ----
+# the_mesh <- make_mesh(yoy_hake,
+#                       xy_cols = c("X", "Y"),
+#                       cutoff = 15)
+# sdm_test <- sdmTMB(small ~  0 +
+#                      s(jday_scaled, k = 3) +
+#                      s(sst_scaled, k = 3) +
+#                      s(sss_scaled, k = 3) +
+#                      v_cu,
+#                    spatial_varying = ~ 0 + v_cu,
+#                    extra_time = extra_years,
+#                    data = yoy_hake,
+#                    mesh = the_mesh,
+#                    spatial = "on",
+#                    time = "year",
+#                    family = tweedie(link = "log"),
+#                    spatiotemporal = "off",
+#                    control = sdmTMBcontrol(newton_loops = 1,
+#                                            nlminb_loops = 2))
+# sanity(sdm_test)
+# tidy(sdm_test,
+#      conf.int = TRUE)
+# 
+# 
+# yoy_hake <- mutate(yoy_hake, fold = ifelse(year < 2013, 1, 2))
+# 
+# library(caret)
+# clust <- createFolds(factor(yoy_hake$small), k = 3, list = FALSE)
+# 
+# cv_test <- try(sdmTMB_cv(small ~ 0 + vgeo +
+#                        s(jday_scaled, k = 3) +
+#                        s(sst_scaled, k = 3) +
+#                        s(sss_scaled, k = 3),
+#                      spatial_varying = ~ 0 + vgeo,
+#                      data = yoy_hake,
+#                      mesh = the_mesh,
+#                      spatial = "off",
+#                      spatiotemporal = "off",
+#                      family = tweedie(link = "log"),
+#                      k_folds = length(unique(clust)),
+#                      fold_ids = clust,
+#                      parallel = TRUE))
