@@ -40,7 +40,7 @@ extra_years <- c(2020:2100)
 
 ### Pacific Hake ---------------------------------------------------------------------------------------------------------------------------------
 yoy_hake <- read_data('yoy_hake.Rdata') 
-hake_mesh <- make_mesh(data, 
+hake_mesh <- make_mesh(yoy_hake, 
                        xy_cols = c("X", "Y"),
                        cutoff = 15)
 
@@ -75,7 +75,7 @@ hake_large <- sdmTMB(large ~ 0 + depth_iso26 +
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
 
-#### IPSL
+#### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl1 <- sdm_cells(yoy_hake, hake_small, hake_large,
                         roms_means, roms_ss, 2020:2040)
@@ -90,12 +90,6 @@ par(mfrow = c(1, 2),
     family = "serif")
 map_project(hake_ipsl1[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
 map_project(hake_ipsl1[[2]], "Large (36-81 mm)", "")
-mtext("Pacific Hake 2020-2040", 
-      side = 2, 
-      line = 50, 
-      outer = TRUE, 
-      cex = 7,
-      at = 0.89)
 dev.copy(jpeg, here('results/forecast_output/yoy_hake', 
                     'hake_ipsl1_plot.jpg'), 
          height = 15, 
@@ -149,9 +143,9 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
 dev.off()
 
 
-# Northern Anchovy ----
+# Northern Anchovy --------------------------------------------------------------------------------------------------------------------------------
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42)
-anchovy_mesh <- make_mesh(data,
+anchovy_mesh <- make_mesh(yoy_anchovy,
                           xy_cols = c("X", "Y"),
                           cutoff = 15)
 
@@ -186,9 +180,9 @@ anchovy_large <- sdmTMB(large ~ 0 + u_vint_100m +
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
 
-# Pacific Sanddab ----
+# Pacific Sanddab ---------------------------------------------------------------------------------------------------------------------------------
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36)
-sdab_mesh <- make_mesh(data,
+sdab_mesh <- make_mesh(yoy_sdab,
                        xy_cols = c("X", "Y"),
                        cutoff = 15)
 
@@ -223,11 +217,11 @@ sdab_large <- sdmTMB(large ~ 0 + u_vint_100m +
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
 
-# Widow Rockfish ----
+# Widow Rockfish ---------------------------------------------------------------------------------------------------------------------------------
 yoy_widow <- read_data('yoy_widw.Rdata') 
-widow_mesh <- make_mesh(data,
-                          xy_cols = c("X", "Y"),
-                          cutoff = 15)
+widow_mesh <- make_mesh(yoy_widow,
+                        xy_cols = c("X", "Y"),
+                        cutoff = 15)
 
 set.seed(1993)
 widow_small <- sdmTMB(small ~ 0 + depth_iso26 +
@@ -260,46 +254,46 @@ widow_large <- sdmTMB(large ~ 0 + spice_iso26 +
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
 
-# Shortbelly Rockfish ----
+# Shortbelly Rockfish ---------------------------------------------------------------------------------------------------------------------------------
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
-shortbelly_mesh <- make_mesh(data,
-                        xy_cols = c("X", "Y"),
-                        cutoff = 15)
+shortbelly_mesh <- make_mesh(yoy_shortbelly,
+                             xy_cols = c("X", "Y"),
+                             cutoff = 15)
 
 set.seed(1993)
-shortbelly_small <- sdmTMB(small ~ 0 + depth_iso26 +
-                        s(jday_scaled, k = 3) +
-                        s(sst_scaled, k = 3) +
-                        s(sss_scaled, k = 3),
-                      spatial_varying = ~ 0 + depth_iso26,
-                      extra_time = extra_years,
-                      data = yoy_shortbelly,
-                      mesh = shortbelly_mesh,
-                      spatial = "on",
-                      time = "year",
-                      family = tweedie(link = "log"),
-                      spatiotemporal = "off",
-                      control = sdmTMBcontrol(newton_loops = 1,
-                                              nlminb_loops = 2))
+shortbelly_small <- sdmTMB(small ~ 0+depth_iso26 +
+                             s(jday_scaled, k = 3) +
+                             s(sst_scaled, k = 3) +
+                             s(sss_scaled, k = 3),
+                           spatial_varying = ~ 0 + depth_iso26,
+                           extra_time = extra_years,
+                           data = yoy_shortbelly,
+                           mesh = shortbelly_mesh,
+                           spatial = "on",
+                           time = "year",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "off",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
 set.seed(1993)
 shortbelly_large <- sdmTMB(large ~ 0 + vgeo +
-                        s(jday_scaled, k = 3) +
-                        s(sst_scaled, k = 3) +
-                        s(sss_scaled, k = 3),
-                      spatial_varying = ~ 0 + vgeo,
-                      extra_time = extra_years,
-                      data = yoy_shortbelly,
-                      mesh = shortbelly_mesh,
-                      spatial = "on",
-                      time = "year",
-                      family = tweedie(link = "log"),
-                      spatiotemporal = "off",
-                      control = sdmTMBcontrol(newton_loops = 1,
-                                              nlminb_loops = 2))
+                             s(jday_scaled, k = 3) +
+                             s(sst_scaled, k = 3) +
+                             s(sss_scaled, k = 3),
+                           spatial_varying = ~ 0 + vgeo,
+                           extra_time = extra_years,
+                           data = yoy_shortbelly,
+                           mesh = shortbelly_mesh,
+                           spatial = "on",
+                           time = "year",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "off",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
 
-# Market Squid ----
+# Market Squid ------------------------------------------------------------------------------------------------------------------------------------
 yoy_squid <- read_data('yoy_squid.Rdata')
-squid_mesh <- make_mesh(data,
+squid_mesh <- make_mesh(yoy_squid,
                         xy_cols = c("X", "Y"),
                         cutoff = 15)
 
