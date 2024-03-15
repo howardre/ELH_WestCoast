@@ -31,6 +31,8 @@ source(here('code/functions', 'map_project.R'))
 # Data
 roms_ss <- readRDS(here('data', 'nep_ipsl.Rdata'))
 roms_means <- readRDS(here('data', 'nep_ipsl_means.Rdata'))
+hindcast_ss <- readRDS(here('data', 'nep_final.Rdata'))
+hindcast_means <- readRDS(here('data', 'nep_avgs.Rdata'))
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
@@ -45,11 +47,11 @@ hake_mesh <- make_mesh(yoy_hake,
                        cutoff = 15)
 
 set.seed(1993)
-hake_small <- sdmTMB(small ~ 0 + vgeo +
+hake_small <- sdmTMB(small ~ 0 + depth_iso26 +
                           s(jday_scaled, k = 3) +
                           s(sst_scaled, k = 3) +
                           s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + vgeo,
+                        spatial_varying = ~ 0 + depth_iso26,
                         extra_time = extra_years,
                         data = yoy_hake,
                         mesh = hake_mesh,
@@ -75,6 +77,30 @@ hake_large <- sdmTMB(large ~ 0 + depth_iso26 +
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
 
+#### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
+hake_hindcast <- sdm_cells(yoy_hake, hake_small, hake_large,
+                           hindcast_means, hindcast_ss, 1995:2019)
+
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(hake_hindcast[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
+map_project(hake_hindcast[[2]], "Large (36-81 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_hake', 
+                    'hake_hindcast_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# Overlap
+mean(as.numeric(hake_hindcast[[3]]))
+
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl1 <- sdm_cells(yoy_hake, hake_small, hake_large,
@@ -98,6 +124,9 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
          res = 200)
 dev.off()
 
+# Overlap
+mean(as.numeric(hake_ipsl1[[3]]))
+
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl2 <- sdm_cells(yoy_hake, hake_small, hake_large,
                         roms_means, roms_ss, 2050:2070)
@@ -119,6 +148,9 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
          units = 'in', 
          res = 200)
 dev.off()
+
+# Overlap
+mean(as.numeric(hake_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl3 <- sdm_cells(yoy_hake, hake_small, hake_large,
@@ -142,19 +174,22 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
          res = 200)
 dev.off()
 
+# Overlap
+mean(as.numeric(hake_ipsl3[[3]]))
+
 
 # Northern Anchovy --------------------------------------------------------------------------------------------------------------------------------
-yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42)
+yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
 anchovy_mesh <- make_mesh(yoy_anchovy,
                           xy_cols = c("X", "Y"),
                           cutoff = 15)
 
 set.seed(1993)
-anchovy_small <- sdmTMB(small ~ 0 + vgeo +
+anchovy_small <- sdmTMB(small ~ 0 + u_vint_100m +
                           s(jday_scaled, k = 3) +
                           s(sst_scaled, k = 3) +
                           s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + vgeo,
+                        spatial_varying = ~ 0 + u_vint_100m,
                         extra_time = extra_years,
                         data = yoy_anchovy,
                         mesh = anchovy_mesh,
@@ -179,6 +214,107 @@ anchovy_large <- sdmTMB(large ~ 0 + u_vint_100m +
                         spatiotemporal = "off",
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
+
+#### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
+anchovy_hindcast <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
+                              hindcast_means, hindcast_ss, 2014:2019)
+
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(anchovy_hindcast[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
+map_project(anchovy_hindcast[[2]], "Large (36-85 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_anchovy', 
+                    'anchovy_hindcast_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# Overlap
+mean(as.numeric(anchovy_hindcast[[3]]))
+
+#### IPSL------------------------------------------------------------------------------------------------------------------------------------------
+##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
+anchovy_ipsl1 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
+                        roms_means, roms_ss, 2020:2040)
+saveRDS(anchovy_ipsl1, file = here("data", "anchovy_ipsl1.rds"))
+
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(anchovy_ipsl1[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
+map_project(anchovy_ipsl1[[2]], "Large (36-85 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_anchovy', 
+                    'anchovy_ipsl1_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# Overlap
+mean(as.numeric(anchovy_ipsl1[[3]]))
+
+##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
+anchovy_ipsl2 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
+                        roms_means, roms_ss, 2050:2070)
+saveRDS(anchovy_ipsl2, file = here("data", "anchovy_ipsl2.rds"))
+
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(anchovy_ipsl2[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
+map_project(anchovy_ipsl2[[2]], "Large (36-85 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_anchovy', 
+                    'anchovy_ipsl2_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# Overlap
+mean(as.numeric(anchovy_ipsl2[[3]]))
+
+##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
+anchovy_ipsl3 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
+                        roms_means, roms_ss, 2080:2100)
+saveRDS(anchovy_ipsl3, file = here("data", "anchovy_ipsl3.rds"))
+
+# Plot
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+map_project(anchovy_ipsl3[[1]], "Small (15-35 mm)", "Latitude \u00B0N")
+map_project(anchovy_ipsl3[[2]], "Large (36-81 mm)", "")
+dev.copy(jpeg, here('results/forecast_output/yoy_anchovy', 
+                    'anchovy_ipsl3_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# Overlap
+mean(as.numeric(anchovy_ipsl3[[3]]))
+
 
 # Pacific Sanddab ---------------------------------------------------------------------------------------------------------------------------------
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36)
