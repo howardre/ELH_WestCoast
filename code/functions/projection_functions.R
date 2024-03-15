@@ -114,7 +114,7 @@ sdm_project <- function(data, the_year, formula_small, formula_large,
   
   # Calculate niche overlap
   pred_small$large_pred <- rescale(exp(pred_large$est))
-  pred_small$p_small <- pred_small$pred / sum(pred_small$pred, na.rm = T)
+  pred_small$p_small <- pred_small$small_pred / sum(pred_small$small_pred, na.rm = T)
   pred_small$p_large <- pred_small$large_pred / sum(pred_small$large_pred, na.rm = T)
   schoener <- 1 - 0.5 * sum(abs(pred_small$p_small - pred_small$p_large), na.rm = TRUE)
   
