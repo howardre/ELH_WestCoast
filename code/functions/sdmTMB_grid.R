@@ -13,7 +13,7 @@ sdmTMB_grid <- function(df, model){
                                df$lon)
     spatial_grid$dist[k] <- min(dist)
   }
-  spatial_grid$year <- 2014
+  spatial_grid$year <- 2013
   spatial_grid$depth_scaled <- median(df$depth_scaled, na.rm = TRUE)
   spatial_grid$sst_scaled <- median(df$sst_scaled, na.rm = TRUE)
   spatial_grid$sss_scaled <- median(df$sss_scaled, na.rm = TRUE)
