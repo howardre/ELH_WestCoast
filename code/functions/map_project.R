@@ -36,13 +36,21 @@ map_project <- function(grid, title, latitude_label){
         zlim = c(min(grid$pred_scaled, na.rm = T), 
                  max(grid$pred_scaled, na.rm = T)),
         main = title,
-        cex.lab = 3.1,
+        cex.lab = 2.9,
         cex.axis = 2.3,
-        cex.main = 3.4)
-  maps::map("worldHires",
-            fill = T,
+        cex.main = 3)
+  maps::map("state",
+            boundary = FALSE,
+            fill = TRUE,
             col = "wheat4",
-            add = T)
+            add = TRUE)
+  text(x = state_labels$lon, 
+       y = state_labels$lat,
+       state_labels$name, 
+       pos = 1,
+       col = "black",
+       cex = 2.6,
+       family = "serif")
   image.plot(legend.only = T,
              col = my_color(100),
              legend.shrink = 0.2,
