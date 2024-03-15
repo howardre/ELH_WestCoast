@@ -433,8 +433,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-map_project(sdab_hindcast[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-map_project(sdab_hindcast[[2]], "Large (26-55 mm)", "")
+sdab_map_project(sdab_hindcast[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+sdab_map_project(sdab_hindcast[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("Hindcast"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
@@ -463,8 +463,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-map_project(sdab_ipsl1[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-map_project(sdab_ipsl1[[2]], "Large (26-55 mm)", "")
+sdab_map_project(sdab_ipsl1[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+sdab_map_project(sdab_ipsl1[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("2020-2040"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
@@ -492,8 +492,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-map_project(sdab_ipsl2[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-map_project(sdab_ipsl2[[2]], "Large (26-55 mm)", "")
+sdab_map_project(sdab_ipsl2[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+sdab_map_project(sdab_ipsl2[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("2050-2070"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
@@ -521,8 +521,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-map_project(sdab_ipsl3[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-map_project(sdab_ipsl3[[2]], "Large (26-55 mm)", "")
+sdab_map_project(sdab_ipsl3[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+sdab_map_project(sdab_ipsl3[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("2080-2100"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
