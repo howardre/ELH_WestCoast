@@ -462,14 +462,12 @@ dev.off()
 
 # Overlap
 mean(as.numeric(sdab_ipsl3[[3]]))
-<<<<<<< HEAD
 
 # Remove objects
 rm(sdab_hindcast, sdab_ipsl1, sdab_ipsl2,
    sdab_ipsl3, yoy_sdab, sdab_mesh, sdab_large,
    sdab_small)
-=======
->>>>>>> d9a5ea490fddc154f4fbd7af6e55e5274449e9dd
+
 
 
 # Shortbelly Rockfish ---------------------------------------------------------------------------------------------------------------------------------
@@ -609,14 +607,11 @@ dev.off()
 # Overlap
 mean(as.numeric(shortbelly_ipsl3[[3]]))
 
-<<<<<<< HEAD
 # Remove objects
 rm(shortbelly_hindcast, shortbelly_ipsl1, shortbelly_ipsl2,
    shortbelly_ipsl3, yoy_shortbelly, shortbelly_mesh, shortbelly_large,
    shortbelly_small)
 
-=======
->>>>>>> d9a5ea490fddc154f4fbd7af6e55e5274449e9dd
 
 # Widow Rockfish ---------------------------------------------------------------------------------------------------------------------------------
 yoy_widow <- read_data('yoy_widw.Rdata') 
@@ -755,14 +750,11 @@ dev.off()
 # Overlap
 mean(as.numeric(widow_ipsl3[[3]]))
 
-<<<<<<< HEAD
 # Remove objects
 rm(widow_hindcast, widow_ipsl1, widow_ipsl2,
    widow_ipsl3, yoy_widow, widow_mesh, widow_large,
    widow_small)
 
-=======
->>>>>>> d9a5ea490fddc154f4fbd7af6e55e5274449e9dd
 
 # Market Squid ------------------------------------------------------------------------------------------------------------------------------------
 yoy_squid <- read_data('yoy_squid.Rdata')
@@ -900,11 +892,9 @@ dev.off()
 
 # Overlap
 mean(as.numeric(squid_ipsl3[[3]]))
-<<<<<<< HEAD
 
 # Remove objects
 rm(squid_hindcast, squid_ipsl1, squid_ipsl2,
    squid_ipsl3, yoy_squid, squid_mesh, squid_large,
    squid_small)
-=======
->>>>>>> d9a5ea490fddc154f4fbd7af6e55e5274449e9dd
+
