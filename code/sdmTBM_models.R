@@ -28,86 +28,15 @@ source(here('code/functions', 'sdmTMB_grid.R'))
 source(here('code/functions', 'sdmTMB_map.R'))
 source(here('code/functions', 'sdmTMB_select_cv.R'))
 source(here('code/functions', 'read_data.R'))
+source(here('code/functions', 'plot_variables.R'))
 source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & spatial
 
-
-# Functions
-# More info here: https://pbs-assess.github.io/sdmTMB/index.html
-plot_variables <- function(model, data){
-  temp <- visreg(model,
-                 data = data,
-                 xvar = "sst_scaled",
-                 plot = FALSE)
-  temp_plot <- ggplot(temp$fit, aes(x = sst_scaled, y = visregFit)) +
-    geom_line(color = "black",
-              linewidth = 1,
-              show.legend = FALSE) +
-    geom_ribbon(aes(ymin = visregLwr, 
-                    ymax = visregUpr,
-                    fill = "coral2"),
-                alpha = 0.5,
-                show.legend = FALSE) +
-    labs(x = 'Temperature (\u00B0C)',
-         y = "Abundance Anomalies") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 38),
-          axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, 2, 2, 2, "cm")) 
-  
-  salt <- visreg(model,
-                 data = data,
-                 xvar = "sss_scaled",
-                 plot = FALSE)
-  salt_plot <- ggplot(salt$fit, aes(x = sss_scaled, y = visregFit)) +
-    geom_line(color = "black",
-              linewidth = 1,
-              show.legend = FALSE) +
-    geom_ribbon(aes(ymin = visregLwr, 
-                    ymax = visregUpr,
-                    fill = "coral2"),
-                alpha = 0.5,
-                show.legend = FALSE) +
-    labs(x = 'Salinity',
-         y = "Abundance Anomalies") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 38),
-          axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, 2, 2, 2, "cm")) 
-  doy <- visreg(model,
-                data = data,
-                xvar = "jday_scaled",
-                plot = FALSE)
-  doy_plot <- ggplot(doy$fit, aes(x = jday_scaled, y = visregFit)) +
-    geom_line(color = "black",
-              linewidth = 1,
-              show.legend = FALSE) +
-    geom_ribbon(aes(ymin = visregLwr, 
-                    ymax = visregUpr,
-                    fill = "coral2"),
-                alpha = 0.5,
-                show.legend = FALSE) +
-    labs(x = 'Day of Year',
-         y = "Abundance Anomalies") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 38),
-          axis.title = element_text(family = "serif", size = 42),
-          axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, 2, 2, 2, "cm"))
-  
-  ggarrange(temp_plot, salt_plot, doy_plot, ncol = 3, nrow = 1)
-} # works only if all variables retained
-
 # Data
-# May have to filter salinity and depth due to outliers?
-yoy_hake <- read_data('yoy_hake.Rdata') 
+# Removing years with just the core area and no PWCC
+yoy_hake <- filter(read_data('yoy_hake.Rdata'), year > 2002) 
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
-yoy_widow <- read_data('yoy_widw.Rdata') 
-yoy_shortbelly <- read_data('yoy_sbly.Rdata')
+yoy_widow <- filter(read_data('yoy_widw.Rdata'), year > 2000)
+yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36, year > 2012) # doesn't work otherwise
 yoy_squid <- read_data('yoy_squid.Rdata')
 
@@ -125,7 +54,7 @@ bubble_color <- colorRampPalette(c(sequential_hcl(15, palette = "Viridis")))
 # Make mesh object with matrices
 yoy_hake_mesh <- make_mesh(yoy_hake, 
                            xy_cols = c("X", "Y"),
-                           cutoff = 15)
+                           cutoff = 18)
 plot(yoy_hake_mesh) 
 
 # Select models
@@ -144,7 +73,7 @@ hake_model_large <- readRDS(here('data', 'hake_models_large'))
 
 # Get residuals
 hake_data <- hake_model_small$sdm_iso26$data
-hake_data$small_resid <- residuals(hake_model_small$sdm_iso26)
+hake_data$small_resid <- residuals(hake_model_small$sdm_v_cu)
 hake_data$large_resid <- residuals(hake_model_large$sdm_iso26)
 
 # Normal QQ plots
