@@ -112,6 +112,41 @@ ggplot(hake_data,
 
 # Use 5-fold cross validation to calculate log likelihood
 # Tried LFO, LOYO, 10%, and 10-fold - none worked
+hake_train <- filter(yoy_hake, year < 2017)
+hake_test <- filter(yoy_hake, year >= 2017)
+hake_train_mesh <- make_mesh(hake_train, 
+                             xy_cols = c("X", "Y"),
+                             cutoff = 18)
+test_years <- c(2017:2019)
+hake_small_v_cu <- sdmTMB_cv(small ~ 0 + v_cu +
+                                s(jday_scaled, k = 3) +
+                                s(sst_scaled, k = 3) +
+                               s(sss_scaled, k = 3),
+                             spatial_varying = ~ 0 + v_cu,
+                             data = yoy_hake,
+                             mesh = yoy_hake_mesh,
+                             family = tweedie(link = "log"),
+                             lfo = TRUE,
+                             lfo_forecast = 2,
+                             lfo_validations = 1,
+                             time = "year")
+
+hake_small_v_cu$fold_loglik # fold log-likelihood
+hake_small_v_cu$sum_loglik # total log-likelihood
+
+
+# Get correlation coefficient
+hake_test_pred <- predict(hake_small_v_cu,
+                          newdata = hake_test,
+                          type = "response")
+small_sp <- cor.test(test$larvalcatchper10m2, 
+                     test$small_pred, 
+                     method = 'spearman',
+                     exact = FALSE)
+
+plot(yoy_hake_mesh) 
+
+
 hake_model_small_cv <- sdmTMB_cv_small(yoy_hake, yoy_hake_mesh) 
 saveRDS(hake_model_small_cv, here('data', 'hake_models_small_cv'))
 
