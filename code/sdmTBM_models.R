@@ -40,6 +40,19 @@ yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36, year > 2012) # doesn't work otherwise
 yoy_squid <- read_data('yoy_squid.Rdata')
 
+# Prep SVC terms
+nep_avgs <- readRDS(here('data', 'nep_avgs.Rdata'))
+nep_avgs$large_grp <- findInterval(nep_avgs$latitude,
+                                   c(32, 36, 40, 44, 48))
+nep_avgs$small_grp <- findInterval(nep_avgs$latitude,
+                                   c(32, 34, 36, 38, 40, 42, 44, 48))
+nep_large <- nep_avgs %>% 
+  group_by(years, large_grp) %>%
+  summarize(across(c(vgeo, v_cu, vmax_cu), mean)) 
+nep_small <- nep_avgs %>%
+  group_by(years, small_grp) %>%
+  summarize(across(c(u_vint_50m, u_vint_100m, depth_iso26, spice_iso26), mean))
+
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
                            lon = c(-121.0, -121.0, -120.0))
@@ -172,13 +185,15 @@ tiff(here('results/hindcast_output/yoy_hake',
 plot_variables(hake_model_large$sdm_iso26, hake_data)
 dev.off()
 
+
+
 # Predict and plot
 latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
-hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu)
+hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small)
 hake_pred_small$zeta_s_v_cu[hake_pred_small$dist > 60000] <- NA 
-hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26)
+hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26, nep_large, nep_small)
 hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
@@ -331,9 +346,9 @@ dev.off()
 latd = seq(min(yoy_anchovy$lat), max(yoy_anchovy$lat), length.out = nlat)
 lond = seq(min(yoy_anchovy$lon), max(yoy_anchovy$lon), length.out = nlon)
 
-anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_uvint100m)
+anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_uvint100m, nep_large, nep_small)
 anchovy_pred_small$zeta_s_u_vint_100m[anchovy_pred_small$dist > 60000] <- NA 
-anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large$sdm_uvint100m)
+anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large$sdm_uvint100m, nep_large, nep_small)
 anchovy_pred_large$zeta_s_u_vint_100m[anchovy_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
@@ -472,9 +487,9 @@ dev.off()
 latd = seq(min(yoy_sdab$lat), max(yoy_sdab$lat), length.out = nlat)
 lond = seq(min(yoy_sdab$lon), max(yoy_sdab$lon), length.out = nlon)
 
-sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint50m)
+sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint50m, nep_large, nep_small)
 sdab_pred_small$zeta_s_u_vint_50m[sdab_pred_small$dist > 60000] <- NA 
-sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_uvint50m)
+sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_uvint50m, nep_large, nep_small)
 sdab_pred_large$zeta_s_u_vint_50m[sdab_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
@@ -613,9 +628,9 @@ dev.off()
 latd = seq(min(yoy_shortbelly$lat), max(yoy_shortbelly$lat), length.out = nlat)
 lond = seq(min(yoy_shortbelly$lon), max(yoy_shortbelly$lon), length.out = nlon)
 
-shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small$sdm_iso26)
+shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small$sdm_iso26, nep_large, nep_small)
 shortbelly_pred_small$zeta_s_depth_iso26[shortbelly_pred_small$dist > 60000] <- NA 
-shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large$sdm_vgeo)
+shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large$sdm_vgeo, nep_large, nep_small)
 shortbelly_pred_large$zeta_s_vgeo[shortbelly_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
@@ -754,9 +769,9 @@ dev.off()
 latd = seq(min(yoy_widow$lat), max(yoy_widow$lat), length.out = nlat)
 lond = seq(min(yoy_widow$lon), max(yoy_widow$lon), length.out = nlon)
 
-widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small$sdm_vmax_cu)
+widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small$sdm_vmax_cu, nep_large, nep_small)
 widow_pred_small$zeta_s_vmax_cu[widow_pred_small$dist > 60000] <- NA 
-widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large$sdm_spice)
+widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large$sdm_spice, nep_large, nep_small)
 widow_pred_large$zeta_s_spice_iso26[widow_pred_large$dist > 60000] <- NA 
 
 # Niche overlap
@@ -895,9 +910,9 @@ dev.off()
 latd = seq(min(yoy_squid$latitude), max(yoy_squid$latitude), length.out = nlat)
 lond = seq(min(yoy_squid$longitude), max(yoy_squid$longitude), length.out = nlon)
 
-squid_pred_small <- sdmTMB_grid(yoy_squid, squid_model_small$sdm_iso26)
+squid_pred_small <- sdmTMB_grid(yoy_squid, squid_model_small$sdm_iso26, nep_large, nep_small)
 squid_pred_small$zeta_s_depth_iso26[squid_pred_small$dist > 50000] <- NA 
-squid_pred_large <- sdmTMB_grid(yoy_squid, squid_model_large$sdm_spice)
+squid_pred_large <- sdmTMB_grid(yoy_squid, squid_model_large$sdm_spice, nep_large, nep_small)
 squid_pred_large$zeta_s_spice_iso26[squid_pred_large$dist > 50000] <- NA 
 
 # Niche overlap
@@ -906,7 +921,7 @@ squid_pred_small$large_scaled <- squid_pred_large$preds_scaled
 squid_pred_small$p_small <- squid_pred_small$preds_scaled / sum(squid_pred_small$preds_scaled, na.rm = T)
 squid_pred_small$p_large <- squid_pred_small$large_scaled / sum(squid_pred_small$large_scaled, na.rm = T)
 squid_schoener <- 1 - 0.5 * sum(abs(squid_pred_small$p_small - squid_pred_small$p_large), na.rm = TRUE)
-squid_schoener # 0.35
+squid_schoener # 0.14
 
 # Overall predictions
 windows(height = 15, width = 18)

@@ -1,4 +1,4 @@
-sdmTMB_grid <- function(df, model){
+sdmTMB_grid <- function(df, model, roms_large, roms_small){
   nlat = 40
   nlon = 60
   latd = seq(min(df$latitude), max(df$latitude), length.out = nlat)
@@ -13,23 +13,33 @@ sdmTMB_grid <- function(df, model){
                                df$longitude)
     spatial_grid$dist[k] <- min(dist)
   }
-  spatial_grid$year <- 2020
+  spatial_grid$year <- 2017
   spatial_grid$depth_scaled <- median(df$depth_scaled, na.rm = TRUE)
   spatial_grid$sst_scaled <- median(df$sst_scaled, na.rm = TRUE)
   spatial_grid$sss_scaled <- median(df$sss_scaled, na.rm = TRUE)
   spatial_grid$jday_scaled <- median(df$jday_scaled, na.rm = TRUE)
-  spatial_grid$vgeo <- median(df$vgeo, na.rm = TRUE)
-  spatial_grid$u_vint_50m <- median(df$u_vint_50m, na.rm = TRUE)
-  spatial_grid$u_vint_100m <- median(df$u_vint_100m, na.rm = TRUE)
-  spatial_grid$depth_iso26 <- median(df$depth_iso26, na.rm = TRUE)
-  spatial_grid$spice_iso26 <- median(df$spice_iso26, na.rm = TRUE)
-  spatial_grid$v_cu <- median(df$v_cu, na.rm = TRUE)
-  spatial_grid$vmax_cu <- median(df$vmax_cu, na.rm = TRUE)
-  spatial_grid <- add_utm_columns(spatial_grid, c("longitude", "latitude"), 
+  spatial_grid$large_grp <- findInterval(spatial_grid$latitude,
+                                         c(32, 36, 40, 44, 48))
+  spatial_grid$small_grp <- findInterval(spatial_grid$latitude,
+                                         c(32, 34, 36, 38, 40, 42, 44, 48))
+  
+  large <- merge(spatial_grid,
+                 roms_large,
+                 by.x = c("year", "large_grp"),
+                 by.y = c("years", "large_grp"),
+                 all.x = TRUE)
+  small <- merge(large,
+                 roms_small,
+                 by.x = c("year", "small_grp"),
+                 by.y = c("years", "small_grp"),
+                 all.x = TRUE)
+  final <- dplyr::select(small, -small_grp, -large_grp)
+  
+  final <- add_utm_columns(final, c("longitude", "latitude"), 
                                   utm_crs = 32610)
   
   preds <- predict(model, 
-                   newdata = spatial_grid, 
+                   newdata = final, 
                    "link")
   preds$est[preds$dist > 50000] <- NA # may want to find a way to mask with a polygon
   preds$preds_scaled <- rescale(exp(preds$est))
