@@ -35,7 +35,7 @@ source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & s
 # Removing years with just the core area and no PWCC
 yoy_hake <- filter(read_data('yoy_hake.Rdata'), year > 2002) 
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
-yoy_widow <- filter(read_data('yoy_widw.Rdata'), year > 2000)
+yoy_widow <- filter(read_data('yoy_widw.Rdata'))
 yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36, year > 2012) # doesn't work otherwise
 yoy_squid <- read_data('yoy_squid.Rdata')
@@ -72,7 +72,7 @@ hake_model_small <- readRDS(here('data', 'hake_models_small'))
 hake_model_large <- readRDS(here('data', 'hake_models_large'))
 
 # Get residuals
-hake_data <- hake_model_small$sdm_iso26$data
+hake_data <- hake_model_small$sdm_v_cu$data
 hake_data$small_resid <- residuals(hake_model_small$sdm_v_cu)
 hake_data$large_resid <- residuals(hake_model_large$sdm_iso26)
 
@@ -176,8 +176,8 @@ dev.off()
 latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
 lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
 
-hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_iso26)
-hake_pred_small$zeta_s_depth_iso26[hake_pred_small$dist > 60000] <- NA 
+hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu)
+hake_pred_small$zeta_s_v_cu[hake_pred_small$dist > 60000] <- NA 
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26)
 hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
 
@@ -187,7 +187,7 @@ hake_pred_small$large_scaled <- hake_pred_large$preds_scaled
 hake_pred_small$p_small <- hake_pred_small$preds_scaled / sum(hake_pred_small$preds_scaled, na.rm = T)
 hake_pred_small$p_large <- hake_pred_small$large_scaled / sum(hake_pred_small$large_scaled, na.rm = T)
 hake_schoener <- 1 - 0.5 * sum(abs(hake_pred_small$p_small - hake_pred_small$p_large), na.rm = TRUE)
-hake_schoener
+hake_schoener # 0.61
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -214,7 +214,7 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude \u00B0N", 
-           hake_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
+           hake_pred_small$zeta_s_v_cu, "Mean Velocity \n CU Effect")
 sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ",
            hake_pred_large$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
@@ -526,7 +526,7 @@ dev.off()
 # Make mesh object with matrices
 yoy_shortbelly_mesh <- make_mesh(yoy_shortbelly, 
                                  xy_cols = c("X", "Y"),
-                                 cutoff = 15)
+                                 cutoff = 18)
 plot(yoy_shortbelly_mesh) 
 
 # Select models
@@ -665,9 +665,9 @@ dev.off()
 
 # Widow Rockfish ----
 # Make mesh object with matrices
-yoy_widow_mesh <- make_mesh(yoy_widow, 
-                           xy_cols = c("X", "Y"),
-                           cutoff = 15)
+yoy_widow_mesh <- make_mesh(yoy_widow,
+                            xy_cols = c("X", "Y"),
+                            cutoff = 18)
 plot(yoy_widow_mesh) 
 
 # Select models
@@ -765,7 +765,7 @@ widow_pred_small$large_scaled <- widow_pred_large$preds_scaled
 widow_pred_small$p_small <- widow_pred_small$preds_scaled / sum(widow_pred_small$preds_scaled, na.rm = T)
 widow_pred_small$p_large <- widow_pred_small$large_scaled / sum(widow_pred_small$large_scaled, na.rm = T)
 widow_schoener <- 1 - 0.5 * sum(abs(widow_pred_small$p_small - widow_pred_small$p_large), na.rm = TRUE)
-widow_schoener
+widow_schoener #0.28
 
 # Overall predictions
 windows(height = 15, width = 18)
@@ -808,16 +808,16 @@ dev.off()
 # Make mesh object with matrices
 yoy_squid_mesh <- make_mesh(yoy_squid, 
                             xy_cols = c("X", "Y"),
-                            cutoff = 15)
+                            cutoff = 18)
 plot(yoy_squid_mesh) 
 
 # Select models
 # Calculate deviance explained compared to null model
-squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
+squid_model_small <- sdmTMB_squid_small(yoy_squid, yoy_squid_mesh) 
 squid_small_stat <- calc_stat_small(squid_model_small, yoy_squid_mesh, yoy_squid)
 saveRDS(squid_model_small, here('data', 'squid_models_small'))
 
-squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
+squid_model_large <- sdmTMB_squid_large(yoy_squid, yoy_squid_mesh) 
 squid_large_stat <- calc_stat_large(squid_model_large, yoy_squid_mesh, yoy_squid)
 saveRDS(squid_model_large, here('data', 'squid_models_large'))
 
@@ -892,13 +892,13 @@ dev.off()
 
 
 # Predict and plot
-latd = seq(min(yoy_squid$lat), max(yoy_squid$lat), length.out = nlat)
-lond = seq(min(yoy_squid$lon), max(yoy_squid$lon), length.out = nlon)
+latd = seq(min(yoy_squid$latitude), max(yoy_squid$latitude), length.out = nlat)
+lond = seq(min(yoy_squid$longitude), max(yoy_squid$longitude), length.out = nlon)
 
 squid_pred_small <- sdmTMB_grid(yoy_squid, squid_model_small$sdm_iso26)
-squid_pred_small$zeta_s_depth_iso26[squid_pred_small$dist > 60000] <- NA 
+squid_pred_small$zeta_s_depth_iso26[squid_pred_small$dist > 50000] <- NA 
 squid_pred_large <- sdmTMB_grid(yoy_squid, squid_model_large$sdm_spice)
-squid_pred_large$zeta_s_spice_iso26[squid_pred_large$dist > 60000] <- NA 
+squid_pred_large$zeta_s_spice_iso26[squid_pred_large$dist > 50000] <- NA 
 
 # Niche overlap
 # Schoener's D seems to make the most sense (Carroll et al., 2019)
@@ -906,7 +906,7 @@ squid_pred_small$large_scaled <- squid_pred_large$preds_scaled
 squid_pred_small$p_small <- squid_pred_small$preds_scaled / sum(squid_pred_small$preds_scaled, na.rm = T)
 squid_pred_small$p_large <- squid_pred_small$large_scaled / sum(squid_pred_small$large_scaled, na.rm = T)
 squid_schoener <- 1 - 0.5 * sum(abs(squid_pred_small$p_small - squid_pred_small$p_large), na.rm = TRUE)
-squid_schoener
+squid_schoener # 0.35
 
 # Overall predictions
 windows(height = 15, width = 18)
