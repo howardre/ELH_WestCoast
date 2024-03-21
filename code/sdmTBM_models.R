@@ -185,41 +185,14 @@ tiff(here('results/hindcast_output/yoy_hake',
 plot_variables(hake_model_large$sdm_iso26, hake_data)
 dev.off()
 
-
-
 # Predict and plot
-latd = seq(min(yoy_hake$lat), max(yoy_hake$lat), length.out = nlat)
-lond = seq(min(yoy_hake$lon), max(yoy_hake$lon), length.out = nlon)
+latd = seq(min(yoy_hake$latitude), max(yoy_hake$latitude), length.out = nlat)
+lond = seq(min(yoy_hake$longitude), max(yoy_hake$longitude), length.out = nlon)
 
-hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small)
+hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small)
 hake_pred_small$zeta_s_v_cu[hake_pred_small$dist > 60000] <- NA 
 hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26, nep_large, nep_small)
 hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
-
-# Niche overlap
-# Schoener's D seems to make the most sense (Carroll et al., 2019)
-hake_pred_small$large_scaled <- hake_pred_large$preds_scaled
-hake_pred_small$p_small <- hake_pred_small$preds_scaled / sum(hake_pred_small$preds_scaled, na.rm = T)
-hake_pred_small$p_large <- hake_pred_small$large_scaled / sum(hake_pred_small$large_scaled, na.rm = T)
-hake_schoener <- 1 - 0.5 * sum(abs(hake_pred_small$p_small - hake_pred_small$p_large), na.rm = TRUE)
-hake_schoener # 0.61
-
-# Overall predictions
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_map(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude \u00B0N")
-sdmTMB_map(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ")
-dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
-                    'hake_distributions_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
 
 # SVC maps
 windows(height = 15, width = 18)
