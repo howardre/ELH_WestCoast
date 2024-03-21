@@ -46,14 +46,14 @@ base_dir <- getwd()
 yoy_hake <- read_data('yoy_hake.Rdata') 
 hake_mesh <- make_mesh(yoy_hake, 
                        xy_cols = c("X", "Y"),
-                       cutoff = 15)
+                       cutoff = 18)
 
 set.seed(1993)
-hake_small <- sdmTMB(small ~ 0 + depth_iso26 +
+hake_small <- sdmTMB(small ~ 0 + v_cu +
                           s(jday_scaled, k = 3) +
                           s(sst_scaled, k = 3) +
                           s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + depth_iso26,
+                        spatial_varying = ~ 0 + v_cu,
                         extra_time = extra_years,
                         data = yoy_hake,
                         mesh = hake_mesh,
@@ -556,7 +556,7 @@ rm(sdab_hindcast, sdab_ipsl1, sdab_ipsl2,
 yoy_shortbelly <- read_data('yoy_sbly.Rdata')
 shortbelly_mesh <- make_mesh(yoy_shortbelly,
                              xy_cols = c("X", "Y"),
-                             cutoff = 15)
+                             cutoff = 18)
 
 set.seed(1993)
 shortbelly_small <- sdmTMB(small ~ 0 + depth_iso26 +
@@ -726,7 +726,7 @@ rm(shortbelly_hindcast, shortbelly_ipsl1, shortbelly_ipsl2,
 yoy_widow <- read_data('yoy_widw.Rdata') 
 widow_mesh <- make_mesh(yoy_widow,
                         xy_cols = c("X", "Y"),
-                        cutoff = 15)
+                        cutoff = 18)
 
 set.seed(1993)
 widow_small <- sdmTMB(small ~ 0 + vmax_cu +
