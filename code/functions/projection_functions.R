@@ -2,7 +2,7 @@
 
 # Project for a specific year
 sdm_project <- function(data, the_year, formula_small, formula_large,
-                        roms_means, roms_ss){
+                        roms_means, roms_ss, svc1, svc2){
   nlat = 40
   nlon = 60
   latd = seq(min(data$latitude), max(data$latitude), length.out = nlat)
@@ -100,14 +100,14 @@ sdm_project <- function(data, the_year, formula_small, formula_large,
   pred_small$small_pred <- rescale(exp(pred_small$est))
   pred_small$est[pred_small$dist > 60000] <- NA
   pred_small$pred <- rescale(pred_small$est)
-  pred_small$zeta_s_vgeo[pred_small$dist > 60000] <- NA
+  pred_small[[svc1]][pred_small$dist > 60000] <- NA
   pred_small$omega_s[pred_small$dist > 60000] <- NA
   pred_small$est_non_rf[pred_small$dist > 60000] <- NA
   pred_small$est_rf[pred_small$dist > 60000] <- NA
   
   pred_large$est[pred_large$dist > 60000] <- NA
   pred_large$pred <- rescale(pred_large$est)
-  pred_large$zeta_s_vgeo[pred_large$dist > 60000] <- NA
+  pred_large[[svc2]][pred_large$dist > 60000] <- NA
   pred_large$omega_s[pred_large$dist > 60000] <- NA
   pred_large$est_non_rf[pred_large$dist > 60000] <- NA
   pred_large$est_rf[pred_large$dist > 60000] <- NA
@@ -127,11 +127,12 @@ sdm_project <- function(data, the_year, formula_small, formula_large,
 ## Loop through all the years
 sdm_loop <- function(data, formula_small, 
                      formula_large, roms_means, 
-                     roms_ss, range){
+                     roms_ss, range, svc1, svc2){
   grids <- list()
   for(j in range) {
     grid <- sdm_project(data, j, formula_small, 
-                        formula_large, roms_means, roms_ss)
+                        formula_large, roms_means, roms_ss,
+                        svc1, svc2)
     grids[[paste("year", j, sep = "")]] <- grid
   }
   return(grids)
@@ -141,19 +142,21 @@ sdm_loop <- function(data, formula_small,
 ## Predict averages for each cell
 sdm_cells <- function(data, formula_small, 
                       formula_large, roms_means, 
-                      roms_ss, range){
+                      roms_ss, range, svc1, svc2){
   preds <- sdm_loop(data, formula_small, 
                     formula_large, roms_means, 
-                    roms_ss, range)
+                    roms_ss, range, svc1, svc2)
   small_list <- lapply(preds, "[[", 1)
   large_list <- lapply(preds, "[[", 2)
   schoener <- lapply(preds, "[[", 3)
   small_df <- data.frame(lat = small_list[[1]]$latitude,
                          lon = small_list[[1]]$longitude,
-                         avg_pred = rowMeans(do.call(cbind, lapply(small_list, "[", "pred"))))
+                         avg_pred = rowMeans(do.call(cbind, lapply(small_list, "[", "pred"))),
+                         avg_zeta = rowMeans(do.call(cbind, lapply(small_list, "[", svc1))))
   large_df <- data.frame(lat = large_list[[1]]$latitude,
                          lon = large_list[[1]]$longitude,
-                         avg_pred = rowMeans(do.call(cbind, lapply(large_list, "[", "pred"))))
+                         avg_pred = rowMeans(do.call(cbind, lapply(large_list, "[", "pred"))),
+                         avg_zeta = rowMeans(do.call(cbind, lapply(large_list, "[", svc2))))
   small_df$pred_scaled <- rescale(small_df$avg_pred)
   large_df$pred_scaled <- rescale(large_df$avg_pred)
   final_list <- list(small_df, large_df, schoener)
