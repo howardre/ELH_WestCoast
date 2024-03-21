@@ -19,7 +19,7 @@ sdmTMB_map <- function(df, preds, title, lat_label){
                  ncol = length(lond),
                  byrow = T)),
         xlim = c(-126, -116),
-        ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
+        ylim = range(df$latitude, na.rm = TRUE) + c(-.4, .5),
         axes = FALSE,
         xlab = "",
         ylab = "")
@@ -36,7 +36,7 @@ sdmTMB_map <- function(df, preds, title, lat_label){
         ylab = lat_label,
         xlab = "Longitude \u00B0W",
         xlim = c(-126, -116),
-        ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
+        ylim = range(df$latitude, na.rm = TRUE) + c(-.4, .5),
         cex.lab = 3.1,
         cex.axis = 2.3,
         cex.main = 3.4)
@@ -90,7 +90,7 @@ sdmTMB_SVC <- function(df, preds, title, lat_label, var, variable){
                  ncol = length(lond),
                  byrow = T)),
         xlim = c(-126, -116),
-        ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
+        ylim = range(df$latitude, na.rm = TRUE) + c(-.4, .5),
         axes = FALSE,
         xlab = "",
         ylab = "")
@@ -163,7 +163,7 @@ sdab_map <- function(df, preds, title, lat_label){
                  ncol = length(lond),
                  byrow = T)),
         xlim = c(-128.5, -116),
-        ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
+        ylim = range(df$latitude, na.rm = TRUE) + c(-.4, .5),
         axes = FALSE,
         xlab = "",
         ylab = "")
@@ -180,7 +180,7 @@ sdab_map <- function(df, preds, title, lat_label){
         ylab = lat_label,
         xlab = "Longitude \u00B0W",
         xlim = c(-128.5, -116),
-        ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
+        ylim = range(df$latitude, na.rm = TRUE) + c(-.4, .5),
         cex.lab = 3.1,
         cex.axis = 2.3,
         cex.main = 3.4)
@@ -235,7 +235,7 @@ sdab_SVC <- function(df, preds, title, lat_label, var, variable){
                  ncol = length(lond),
                  byrow = T)),
         xlim = c(-128.5, -116),
-        ylim = range(df$lat, na.rm = TRUE) + c(-.4, 1),
+        ylim = range(df$latitude, na.rm = TRUE) + c(-.4, 1),
         axes = FALSE,
         xlab = "",
         ylab = "")
@@ -252,7 +252,7 @@ sdab_SVC <- function(df, preds, title, lat_label, var, variable){
         ylab = lat_label,
         xlab = "Longitude \u00B0W",
         xlim = c(-128.5, -116),
-        ylim = range(df$lat, na.rm = TRUE) + c(-.4, .5),
+        ylim = range(df$latitude, na.rm = TRUE) + c(-.4, .5),
         cex.lab = 3.1,
         cex.axis = 2.3,
         cex.main = 3.4)
