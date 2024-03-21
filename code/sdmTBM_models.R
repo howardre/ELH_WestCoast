@@ -24,8 +24,6 @@ library(scales)
 # Functions
 source(here('code/functions', 'vis_gam_COLORS.R'))
 source(here('code/functions', 'distance_function.R'))
-source(here('code/functions', 'sdmTMB_grid.R'))
-source(here('code/functions', 'sdmTMB_map.R'))
 source(here('code/functions', 'sdmTMB_select_cv.R'))
 source(here('code/functions', 'read_data.R'))
 source(here('code/functions', 'plot_variables.R'))
@@ -315,60 +313,6 @@ plot_variables(anchovy_model_large$sdm_uvint100m, anchovy_data)
 dev.off()
 
 
-# Predict and plot
-latd = seq(min(yoy_anchovy$lat), max(yoy_anchovy$lat), length.out = nlat)
-lond = seq(min(yoy_anchovy$lon), max(yoy_anchovy$lon), length.out = nlon)
-
-anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small$sdm_uvint100m, nep_large, nep_small)
-anchovy_pred_small$zeta_s_u_vint_100m[anchovy_pred_small$dist > 60000] <- NA 
-anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large$sdm_uvint100m, nep_large, nep_small)
-anchovy_pred_large$zeta_s_u_vint_100m[anchovy_pred_large$dist > 60000] <- NA 
-
-# Niche overlap
-# Schoener's D seems to make the most sense (Carroll et al., 2019)
-anchovy_pred_small$large_scaled <- anchovy_pred_large$preds_scaled
-anchovy_pred_small$p_small <- anchovy_pred_small$preds_scaled / sum(anchovy_pred_small$preds_scaled, na.rm = T)
-anchovy_pred_small$p_large <- anchovy_pred_small$large_scaled / sum(anchovy_pred_small$large_scaled, na.rm = T)
-anchovy_schoener <- 1 - 0.5 * sum(abs(anchovy_pred_small$p_small - anchovy_pred_small$p_large), na.rm = TRUE)
-anchovy_schoener
-
-# Overall predictions
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_map(yoy_anchovy, anchovy_pred_small, "Small (21-35 mm)", "Latitude \u00B0N")
-sdmTMB_map(yoy_anchovy, anchovy_pred_large, "Large (36-85 mm)", " ")
-dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
-                    'anchovy_distributions_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-# SVC maps
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_SVC(yoy_anchovy, anchovy_pred_small, "Small (21-35 mm)", "Latitude \u00B0N", 
-           anchovy_pred_small$zeta_s_u_vint_100m, "Eastward u vertically \n integrated 0-100m Effect")
-sdmTMB_SVC(yoy_anchovy, anchovy_pred_large, "Large (36-85 mm)", " ",
-           anchovy_pred_large$zeta_s_u_vint_100m, "Eastward u vertically \n integrated 0-100m Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
-                    'anchovy_SVC_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-
 # Pacific Sanddab ----
 # Make mesh object with matrices
 yoy_sdab_mesh <- make_mesh(yoy_sdab, 
@@ -453,60 +397,6 @@ tiff(here('results/hindcast_output/yoy_sanddab',
      height = 12,
      res = 200)
 plot_variables(sdab_model_large$sdm_uvint100m, sdab_data)
-dev.off()
-
-
-# Predict and plot
-latd = seq(min(yoy_sdab$lat), max(yoy_sdab$lat), length.out = nlat)
-lond = seq(min(yoy_sdab$lon), max(yoy_sdab$lon), length.out = nlon)
-
-sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint50m, nep_large, nep_small)
-sdab_pred_small$zeta_s_u_vint_50m[sdab_pred_small$dist > 60000] <- NA 
-sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_uvint50m, nep_large, nep_small)
-sdab_pred_large$zeta_s_u_vint_50m[sdab_pred_large$dist > 60000] <- NA 
-
-# Niche overlap
-# Schoener's D seems to make the most sense (Carroll et al., 2019)
-sdab_pred_small$large_scaled <- sdab_pred_large$preds_scaled
-sdab_pred_small$p_small <- sdab_pred_small$preds_scaled / sum(sdab_pred_small$preds_scaled, na.rm = T)
-sdab_pred_small$p_large <- sdab_pred_small$large_scaled / sum(sdab_pred_small$large_scaled, na.rm = T)
-sdab_schoener <- 1 - 0.5 * sum(abs(sdab_pred_small$p_small - sdab_pred_small$p_large), na.rm = TRUE)
-sdab_schoener
-
-# Overall predictions
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdab_map(yoy_sdab, sdab_pred_small, "Small (16-25 mm)", "Latitude \u00B0N")
-sdab_map(yoy_sdab, sdab_pred_large, "Large (26-55 mm)", " ")
-dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
-                    'sdab_distributions_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-# SVC maps
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdab_SVC(yoy_sdab, sdab_pred_small, "Small (16-25 mm)", "Latitude \u00B0N", 
-         sdab_pred_small$zeta_s_u_vint_50m, "Eastward u Vertically \n Integrated 0-100m Effect")
-sdab_SVC(yoy_sdab, sdab_pred_large, "Large (26-55 mm)", " ",
-         sdab_pred_large$zeta_s_u_vint_50m, "Eastward u Vertically \n Integrated 0-50m Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
-                    'sdab_SVC_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
 dev.off()
 
 
@@ -597,60 +487,6 @@ plot_variables(shortbelly_model_large$sdm_vgeo, shortbelly_data)
 dev.off()
 
 
-# Predict and plot
-latd = seq(min(yoy_shortbelly$lat), max(yoy_shortbelly$lat), length.out = nlat)
-lond = seq(min(yoy_shortbelly$lon), max(yoy_shortbelly$lon), length.out = nlon)
-
-shortbelly_pred_small <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_small$sdm_iso26, nep_large, nep_small)
-shortbelly_pred_small$zeta_s_depth_iso26[shortbelly_pred_small$dist > 60000] <- NA 
-shortbelly_pred_large <- sdmTMB_grid(yoy_shortbelly, shortbelly_model_large$sdm_vgeo, nep_large, nep_small)
-shortbelly_pred_large$zeta_s_vgeo[shortbelly_pred_large$dist > 60000] <- NA 
-
-# Niche overlap
-# Schoener's D seems to make the most sense (Carroll et al., 2019)
-shortbelly_pred_small$large_scaled <- shortbelly_pred_large$preds_scaled
-shortbelly_pred_small$p_small <- shortbelly_pred_small$preds_scaled / sum(shortbelly_pred_small$preds_scaled, na.rm = T)
-shortbelly_pred_small$p_large <- shortbelly_pred_small$large_scaled / sum(shortbelly_pred_small$large_scaled, na.rm = T)
-shortbelly_schoener <- 1 - 0.5 * sum(abs(shortbelly_pred_small$p_small - shortbelly_pred_small$p_large), na.rm = TRUE)
-shortbelly_schoener
-
-# Overall predictions
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_map(yoy_shortbelly, shortbelly_pred_small, "Small (11-35 mm)", "Latitude \u00B0N")
-sdmTMB_map(yoy_shortbelly, shortbelly_pred_large, "Large (36-78 mm)", " ")
-dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
-                    'shortbelly_distributions_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-# SVC maps
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_SVC(yoy_shortbelly, shortbelly_pred_small, "Small (11-35 mm)", "Latitude \u00B0N", 
-           shortbelly_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
-sdmTMB_SVC(yoy_shortbelly, shortbelly_pred_large, "Large (36-78 mm)", " ",
-           shortbelly_pred_large$zeta_s_vgeo, "Geostrophic Current \n Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
-                    'shortbelly_SVC_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-
 # Widow Rockfish ----
 # Make mesh object with matrices
 yoy_widow_mesh <- make_mesh(yoy_widow,
@@ -735,60 +571,6 @@ tiff(here('results/hindcast_output/yoy_widow',
      height = 12,
      res = 200)
 plot_variables(widow_model_large$sdm_spice, widow_data)
-dev.off()
-
-
-# Predict and plot
-latd = seq(min(yoy_widow$lat), max(yoy_widow$lat), length.out = nlat)
-lond = seq(min(yoy_widow$lon), max(yoy_widow$lon), length.out = nlon)
-
-widow_pred_small <- sdmTMB_grid(yoy_widow, widow_model_small$sdm_vmax_cu, nep_large, nep_small)
-widow_pred_small$zeta_s_vmax_cu[widow_pred_small$dist > 60000] <- NA 
-widow_pred_large <- sdmTMB_grid(yoy_widow, widow_model_large$sdm_spice, nep_large, nep_small)
-widow_pred_large$zeta_s_spice_iso26[widow_pred_large$dist > 60000] <- NA 
-
-# Niche overlap
-# Schoener's D seems to make the most sense (Carroll et al., 2019)
-widow_pred_small$large_scaled <- widow_pred_large$preds_scaled
-widow_pred_small$p_small <- widow_pred_small$preds_scaled / sum(widow_pred_small$preds_scaled, na.rm = T)
-widow_pred_small$p_large <- widow_pred_small$large_scaled / sum(widow_pred_small$large_scaled, na.rm = T)
-widow_schoener <- 1 - 0.5 * sum(abs(widow_pred_small$p_small - widow_pred_small$p_large), na.rm = TRUE)
-widow_schoener #0.28
-
-# Overall predictions
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_map(yoy_widow, widow_pred_small, "Small (17-32 mm)", "Latitude \u00B0N")
-sdmTMB_map(yoy_widow, widow_pred_large, "Large (33-64 mm)", " ")
-dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
-                    'widow_distributions_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-# SVC maps
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_SVC(yoy_widow, widow_pred_small, "Small (17-32 mm)", "Latitude \u00B0N", 
-           widow_pred_small$zeta_s_vmax_cu, "Max Velocity CA \n Undercurrent Effect ")
-sdmTMB_SVC(yoy_widow, widow_pred_large, "Large (33-64 mm)", " ",
-           widow_pred_large$zeta_s_spice_iso26, "Spiciness Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
-                    'widow_SVC_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
 dev.off()
 
 
@@ -877,61 +659,6 @@ tiff(here('results/hindcast_output/yoy_squid',
      res = 200)
 plot_variables(squid_model_large$sdm_spice, squid_data)
 dev.off()
-
-
-# Predict and plot
-latd = seq(min(yoy_squid$latitude), max(yoy_squid$latitude), length.out = nlat)
-lond = seq(min(yoy_squid$longitude), max(yoy_squid$longitude), length.out = nlon)
-
-squid_pred_small <- sdmTMB_grid(yoy_squid, squid_model_small$sdm_iso26, nep_large, nep_small)
-squid_pred_small$zeta_s_depth_iso26[squid_pred_small$dist > 50000] <- NA 
-squid_pred_large <- sdmTMB_grid(yoy_squid, squid_model_large$sdm_spice, nep_large, nep_small)
-squid_pred_large$zeta_s_spice_iso26[squid_pred_large$dist > 50000] <- NA 
-
-# Niche overlap
-# Schoener's D seems to make the most sense (Carroll et al., 2019)
-squid_pred_small$large_scaled <- squid_pred_large$preds_scaled
-squid_pred_small$p_small <- squid_pred_small$preds_scaled / sum(squid_pred_small$preds_scaled, na.rm = T)
-squid_pred_small$p_large <- squid_pred_small$large_scaled / sum(squid_pred_small$large_scaled, na.rm = T)
-squid_schoener <- 1 - 0.5 * sum(abs(squid_pred_small$p_small - squid_pred_small$p_large), na.rm = TRUE)
-squid_schoener # 0.14
-
-# Overall predictions
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_map(yoy_squid, squid_pred_small, "Small (11-70 mm)", "Latitude \u00B0N")
-sdmTMB_map(yoy_squid, squid_pred_large, "Large (71-139 mm)", " ")
-dev.copy(jpeg, here('results/hindcast_output/yoy_squid', 
-                    'squid_distributions_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-# SVC maps
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_SVC(yoy_squid, squid_pred_small, "Small (11-70 mm)", "Latitude \u00B0N", 
-           squid_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
-sdmTMB_SVC(yoy_squid, squid_pred_large, "Large (71-139 mm)", " ",
-           squid_pred_large$zeta_s_spice_iso26, "Spiciness Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_squid', 
-                    'squid_SVC_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
 
 # # Sandbox ----
 # the_mesh <- make_mesh(yoy_hake,
