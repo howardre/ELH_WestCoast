@@ -43,7 +43,7 @@ extra_years <- c(2020:2100)
 base_dir <- getwd()
 
 ### Pacific Hake ---------------------------------------------------------------------------------------------------------------------------------
-yoy_hake <- read_data('yoy_hake.Rdata') 
+yoy_hake <- filter(read_data('yoy_hake.Rdata'), year > 2002) 
 hake_mesh <- make_mesh(yoy_hake, 
                        xy_cols = c("X", "Y"),
                        cutoff = 18)
@@ -81,7 +81,8 @@ hake_large <- sdmTMB(large ~ 0 + depth_iso26 +
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 hake_hindcast <- sdm_cells(yoy_hake, hake_small, hake_large,
-                           hindcast_means, hindcast_ss, 1995:2019)
+                           hindcast_means, hindcast_ss, 2003:2019,
+                           "zeta_s_v_cu", "zeta_s_depth_iso26")
 saveRDS(hake_hindcast, file = here("data", "hake_hindcast.rds"))
 
 # hake_hindcast <- readRDS(here("data", "hake_hindcast.rds"))
@@ -105,8 +106,27 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
          res = 200)
 dev.off()
 
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+svc_hindcast(hake_hindcast[[1]], "Small (15-35 mm)", 
+             "Latitude \u00B0N", "Mean Velocity \n CU Effect")
+svc_hindcast(hake_hindcast[[2]], "Large (36-81 mm)", " ",
+             "26 kg/m\u00B3 Isopycnal \n Depth Effect")
+dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
+                    'hake_SVC_sdmtmb.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
 # Overlap
-mean(as.numeric(hake_hindcast[[3]]))
+mean(as.numeric(hake_hindcast[[3]])) # 0.52
 
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
