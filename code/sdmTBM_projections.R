@@ -271,7 +271,8 @@ anchovy_large <- sdmTMB(large ~ 0 + u_vint_100m +
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 anchovy_hindcast <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
-                              hindcast_means, hindcast_ss, 2014:2019)
+                              hindcast_means, hindcast_ss, 2014:2019,
+                              "zeta_s_u_vint100m", "zeta_s_u_vint100m")
 saveRDS(anchovy_hindcast, file = here("data", "anchovy_hindcast.rds"))
 
 # anchovy_hindcast <- readRDS(here("data", "anchovy_hindcast.rds"))
@@ -289,6 +290,25 @@ mtext(substitute(paste(bold("Hindcast"))),
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_anchovy', 
                     'anchovy_hindcast_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+svc_hindcast(anchovy_hindcast[[1]], "Small (15-35 mm)", 
+             "Latitude \u00B0N", "Eastward u vertically \n integrated 0-100m Effect")
+svc_hindcast(anchovy_hindcast[[2]], "Large (36-85 mm)", " ",
+             "Eastward u vertically \n integrated 0-100m Effect")
+dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
+                    'anchovy_SVC_sdmtmb.jpg'), 
          height = 15, 
          width = 16, 
          units = 'in', 
@@ -441,7 +461,8 @@ sdab_large <- sdmTMB(large ~ 0 + u_vint_50m +
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 sdab_hindcast <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
-                              hindcast_means, hindcast_ss, 2013:2019)
+                           hindcast_means, hindcast_ss, 2013:2019,
+                           "zeta_s_u_vint50m", "zeta_s_u_vint50m")
 saveRDS(sdab_hindcast, file = here("data", "sdab_hindcast.rds"))
 
 # sdab_hindcast <- readRDS(here("data", "sdab_hindcast.rds"))
@@ -459,6 +480,25 @@ mtext(substitute(paste(bold("Hindcast"))),
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
                     'sdab_hindcast_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+svc_hindcast(sdab_hindcast[[1]], "Small (16-25 mm)", 
+             "Latitude \u00B0N", "Eastward u vertically \n integrated 0-50m Effect")
+svc_hindcast(sdab_hindcast[[2]], "Large (26-55 mm)", " ",
+             "Eastward u vertically \n integrated 0-50m Effect")
+dev.copy(jpeg, here('results/hindcast_output/yoy_sdab', 
+                    'sanddab_SVC_sdmtmb.jpg'), 
          height = 15, 
          width = 16, 
          units = 'in', 
@@ -611,7 +651,8 @@ shortbelly_large <- sdmTMB(large ~ 0 + vgeo +
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 shortbelly_hindcast <- sdm_cells(yoy_shortbelly, shortbelly_small, shortbelly_large,
-                                 hindcast_means, hindcast_ss, 1995:2019)
+                                 hindcast_means, hindcast_ss, 2001:2019,
+                                 "zeta_s_depth_iso26", "zeta_s_vgeo")
 saveRDS(shortbelly_hindcast, file = here("data", "shortbelly_hindcast.rds"))
 
 # shortbelly_hindcast <- readRDS(here("data", "shortbelly_hindcast.rds"))
@@ -629,6 +670,25 @@ mtext(substitute(paste(bold("Hindcast"))),
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_shortbelly', 
                     'shortbelly_hindcast_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+svc_hindcast(shortbelly_hindcast[[1]], "Small (11-35 mm)", 
+             "Latitude \u00B0N", "26 kg/m\u00B3 Isopycnal \n Depth Effect")
+svc_hindcast(shortbelly_hindcast[[2]], "Large (36-78 mm)", " ",
+             "Geostrophic Current \n Effect")
+dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly', 
+                    'shortbelly_SVC_sdmtmb.jpg'), 
          height = 15, 
          width = 16, 
          units = 'in', 
@@ -781,7 +841,8 @@ widow_large <- sdmTMB(large ~ 0 + spice_iso26 +
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 widow_hindcast <- sdm_cells(yoy_widow, widow_small, widow_large,
-                           hindcast_means, hindcast_ss, 1995:2019)
+                           hindcast_means, hindcast_ss, 1995:2019,
+                           "zeta_s_vmax_cu", "zeta_s_spice_iso26")
 saveRDS(widow_hindcast, file = here("data", "widow_hindcast.rds"))
 
 # widow_hindcast <- readRDS(here("data", "widow_hindcast.rds"))
@@ -799,6 +860,25 @@ mtext(substitute(paste(bold("Hindcast"))),
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_widow', 
                     'widow_hindcast_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+svc_hindcast(widow_hindcast[[1]], "Small (17-32 mm)", 
+             "Latitude \u00B0N", "Max Velocity CA \n Undercurrent Effect")
+svc_hindcast(widow_hindcast[[2]], "Large (33-64 mm)", " ",
+             "Spiciness Effect")
+dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
+                    'widow_SVC_sdmtmb.jpg'), 
          height = 15, 
          width = 16, 
          units = 'in', 
@@ -951,7 +1031,8 @@ squid_large <- sdmTMB(large ~ 0 + spice_iso26 +
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 squid_hindcast <- sdm_cells(yoy_squid, squid_small, squid_large,
-                                 hindcast_means, hindcast_ss, 2004:2019)
+                            hindcast_means, hindcast_ss, 2004:2019,
+                            "zeta_s_depth_iso26", "zeta_s_spice_iso26")
 saveRDS(squid_hindcast, file = here("data", "squid_hindcast.rds"))
 
 # squid_hindcast <- readRDS(here("data", "squid_hindcast.rds"))
@@ -969,6 +1050,25 @@ mtext(substitute(paste(bold("Hindcast"))),
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_squid', 
                     'squid_hindcast_plot.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
+
+# SVC maps
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+svc_hindcast(squid_hindcast[[1]], "Small (11-70 mm)", 
+             "Latitude \u00B0N", "26 kg/m\u00B3 Isopycnal \n Depth Effect")
+svc_hindcast(squid_hindcast[[2]], "Large (71-139 mm)", " ",
+             "Spiciness Effect")
+dev.copy(jpeg, here('results/hindcast_output/yoy_squid', 
+                    'squid_SVC_sdmtmb.jpg'), 
          height = 15, 
          width = 16, 
          units = 'in', 
