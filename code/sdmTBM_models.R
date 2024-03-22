@@ -33,23 +33,10 @@ source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & s
 # Removing years with just the core area and no PWCC
 yoy_hake <- filter(read_data('yoy_hake.Rdata'), year > 2002) 
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
-yoy_widow <- filter(read_data('yoy_widw.Rdata'))
+yoy_widow <- filter(read_data('yoy_widw.Rdata'), year > 2000)
 yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
-yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36, year > 2012) # doesn't work otherwise
+yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2012) # doesn't work otherwise
 yoy_squid <- read_data('yoy_squid.Rdata')
-
-# Prep SVC terms
-nep_avgs <- readRDS(here('data', 'nep_avgs.Rdata'))
-nep_avgs$large_grp <- findInterval(nep_avgs$latitude,
-                                   c(32, 36, 40, 44, 48))
-nep_avgs$small_grp <- findInterval(nep_avgs$latitude,
-                                   c(32, 34, 36, 38, 40, 42, 44, 48))
-nep_large <- nep_avgs %>% 
-  group_by(years, large_grp) %>%
-  summarize(across(c(vgeo, v_cu, vmax_cu), mean)) 
-nep_small <- nep_avgs %>%
-  group_by(years, small_grp) %>%
-  summarize(across(c(u_vint_50m, u_vint_100m, depth_iso26, spice_iso26), mean))
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
@@ -81,6 +68,21 @@ saveRDS(hake_model_large, here('data', 'hake_models_large'))
 # Load models
 hake_model_small <- readRDS(here('data', 'hake_models_small'))
 hake_model_large <- readRDS(here('data', 'hake_models_large'))
+
+# Error checks
+hake_small_stat
+rownames(hake_small_stat)[which.max(hake_small_stat$log_likelihood)]
+sanity(hake_model_small$sdm_v_cu)
+tidy(hake_model_small$sdm_v_cu, 
+     conf.int = TRUE,
+     conf.level = 0.99) # 0.01
+
+hake_large_stat
+rownames(hake_large_stat)[which.max(hake_large_stat$log_likelihood)]
+sanity(hake_model_large$sdm_iso26)
+tidy(hake_model_large$sdm_iso26, 
+     conf.int = TRUE,
+     conf.level = 0.99) # 0.01
 
 # Get residuals
 hake_data <- hake_model_small$sdm_v_cu$data
@@ -229,8 +231,8 @@ ggplot(yoy_hake, aes(X, Y)) +
 # Northern Anchovy ----
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy, 
-                           xy_cols = c("X", "Y"),
-                           cutoff = 15)
+                              xy_cols = c("X", "Y"),
+                              cutoff = 18)
 plot(yoy_anchovy_mesh) 
 
 # Select models
@@ -246,6 +248,21 @@ saveRDS(anchovy_model_large, here('data', 'anchovy_models_large'))
 # Load models
 anchovy_model_small <- readRDS(here('data', 'anchovy_models_small'))
 anchovy_model_large <- readRDS(here('data', 'anchovy_models_large'))
+
+# Error checks
+anchovy_small_stat
+rownames(anchovy_small_stat)[which.max(anchovy_small_stat$log_likelihood)]
+sanity(anchovy_model_small$sdm_uvint100m)
+tidy(anchovy_model_small$sdm_uvint100m, 
+     conf.int = TRUE,
+     conf.level = 0.9) # no
+
+anchovy_large_stat
+rownames(anchovy_large_stat)[which.max(anchovy_large_stat$log_likelihood)]
+sanity(anchovy_model_large$sdm_uvint100m)
+tidy(anchovy_model_large$sdm_uvint100m, 
+     conf.int = TRUE,
+     conf.level = 0.9) # no
 
 # Get residuals
 anchovy_data <- anchovy_model_small$sdm_uvint100m$data
@@ -317,7 +334,7 @@ dev.off()
 # Make mesh object with matrices
 yoy_sdab_mesh <- make_mesh(yoy_sdab, 
                            xy_cols = c("X", "Y"),
-                           cutoff = 15)
+                           cutoff = 18)
 plot(yoy_sdab_mesh) 
 
 # Select models
@@ -334,10 +351,25 @@ saveRDS(sdab_model_large, here('data', 'sdab_models_large'))
 sdab_model_small <- readRDS(here('data', 'sdab_models_small'))
 sdab_model_large <- readRDS(here('data', 'sdab_models_large'))
 
+# Error checks
+sdab_small_stat
+rownames(sdab_small_stat)[which.max(sdab_small_stat$log_likelihood)]
+sanity(sdab_model_small$sdm_uvint100m)
+tidy(sdab_model_small$sdm_uvint100m, 
+     conf.int = TRUE,
+     conf.level = 0.95) # 0.05
+
+sdab_large_stat
+rownames(sdab_large_stat)[which.max(sdab_large_stat$log_likelihood)]
+sanity(sdab_model_large$sdm_spice)
+tidy(sdab_model_large$sdm_spice, 
+     conf.int = TRUE,
+     conf.level = 0.999) # 0.001
+
 # Get residuals
-sdab_data <- sdab_model_small$sdm_uvint50m$data
-sdab_data$small_resid <- residuals(sdab_model_small$sdm_uvint50m)
-sdab_data$large_resid <- residuals(sdab_model_large$sdm_uvint50m)
+sdab_data <- sdab_model_small$sdm_uvint100m$data
+sdab_data$small_resid <- residuals(sdab_model_small$sdm_uvint100m)
+sdab_data$large_resid <- residuals(sdab_model_large$sdm_spice)
 
 # Normal QQ plots
 windows(height = 8, width = 15)
@@ -420,6 +452,21 @@ saveRDS(shortbelly_model_large, here('data', 'shortbelly_models_large'))
 # Load models
 shortbelly_model_small <- readRDS(here('data', 'shortbelly_models_small'))
 shortbelly_model_large <- readRDS(here('data', 'shortbelly_models_large'))
+
+# Error checks
+shortbelly_small_stat
+rownames(shortbelly_small_stat)[which.max(shortbelly_small_stat$log_likelihood)]
+sanity(shortbelly_model_small$sdm_iso26)
+tidy(shortbelly_model_small$sdm_iso26, 
+     conf.int = TRUE,
+     conf.level = 0.90) # no
+
+shortbelly_large_stat
+rownames(shortbelly_large_stat)[which.max(shortbelly_large_stat$log_likelihood)]
+sanity(shortbelly_model_large$sdm_vgeo)
+tidy(shortbelly_model_large$sdm_vgeo, 
+     conf.int = TRUE,
+     conf.level = 0.90) # 0.001
 
 # Get residuals
 shortbelly_data <- shortbelly_model_small$sdm_iso26$data
@@ -508,6 +555,21 @@ saveRDS(widow_model_large, here('data', 'widow_models_large'))
 widow_model_small <- readRDS(here('data', 'widow_models_small'))
 widow_model_large <- readRDS(here('data', 'widow_models_large'))
 
+# Error checks
+widow_small_stat
+rownames(widow_small_stat)[which.max(widow_small_stat$log_likelihood)]
+sanity(widow_model_small$sdm_vmax_cu)
+tidy(widow_model_small$sdm_vmax_cu, 
+     conf.int = TRUE,
+     conf.level = 0.9) # no
+
+widow_large_stat
+rownames(widow_large_stat)[which.max(widow_large_stat$log_likelihood)]
+sanity(widow_model_large$sdm_spice)
+tidy(widow_model_large$sdm_spice, 
+     conf.int = TRUE,
+     conf.level = 0.9) # no
+
 # Get residuals
 widow_data <- widow_model_small$sdm_vmax_cu$data
 widow_data$small_resid <- residuals(widow_model_small$sdm_vmax_cu)
@@ -583,17 +645,32 @@ plot(yoy_squid_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-squid_model_small <- sdmTMB_squid_small(yoy_squid, yoy_squid_mesh) 
+squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
 squid_small_stat <- calc_stat_small(squid_model_small, yoy_squid_mesh, yoy_squid)
 saveRDS(squid_model_small, here('data', 'squid_models_small'))
 
-squid_model_large <- sdmTMB_squid_large(yoy_squid, yoy_squid_mesh) 
+squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
 squid_large_stat <- calc_stat_large(squid_model_large, yoy_squid_mesh, yoy_squid)
 saveRDS(squid_model_large, here('data', 'squid_models_large'))
 
 # Load models
 squid_model_small <- readRDS(here('data', 'squid_models_small'))
 squid_model_large <- readRDS(here('data', 'squid_models_large'))
+
+# Error checks
+squid_small_stat
+rownames(squid_small_stat)[which.max(squid_small_stat$log_likelihood)]
+sanity(squid_model_small$sdm_iso26)
+tidy(squid_model_small$sdm_iso26, 
+     conf.int = TRUE,
+     conf.level = 0.999) # 0.001
+
+squid_large_stat
+rownames(squid_large_stat)[which.max(squid_large_stat$log_likelihood)]
+sanity(squid_model_large$sdm_spice)
+tidy(squid_model_large$sdm_spice, 
+     conf.int = TRUE,
+     conf.level = 0.99) # 0.001
 
 # Get residuals
 squid_data <- squid_model_small$sdm_iso26$data
