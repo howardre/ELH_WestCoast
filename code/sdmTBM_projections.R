@@ -236,7 +236,7 @@ rm(hake_hindcast, hake_ipsl1, hake_ipsl2,
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
 anchovy_mesh <- make_mesh(yoy_anchovy,
                           xy_cols = c("X", "Y"),
-                          cutoff = 15)
+                          cutoff = 18)
 
 set.seed(1993)
 anchovy_small <- sdmTMB(small ~ 0 + u_vint_100m +
@@ -874,7 +874,7 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 svc_hindcast(widow_hindcast[[1]], "Small (17-32 mm)", 
-             "Latitude \u00B0N", "Max Velocity CA \n Undercurrent Effect")
+             "Latitude \u00B0N", "Mean Velocity CA \n Undercurrent Effect")
 svc_hindcast(widow_hindcast[[2]], "Large (33-64 mm)", " ",
              "Spiciness Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_widow', 
