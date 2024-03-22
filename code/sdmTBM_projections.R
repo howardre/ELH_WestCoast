@@ -423,17 +423,17 @@ rm(anchovy_hindcast, anchovy_ipsl1, anchovy_ipsl2,
 
 
 # Pacific Sanddab ---------------------------------------------------------------------------------------------------------------------------------
-yoy_sdab <- filter(read_data('yoy_dab.Rdata'), latitude > 36, year > 2012)
+yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2012)
 sdab_mesh <- make_mesh(yoy_sdab,
                        xy_cols = c("X", "Y"),
-                       cutoff = 15)
+                       cutoff = 18)
 
 set.seed(1993)
-sdab_small <- sdmTMB(small ~ 0 + u_vint_50m +
+sdab_small <- sdmTMB(small ~ 0 + u_vint_100m +
                           s(jday_scaled, k = 3) +
                           s(sst_scaled, k = 3) +
                           s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + u_vint_50m,
+                        spatial_varying = ~ 0 + u_vint_100m,
                         extra_time = extra_years,
                         data = yoy_sdab,
                         mesh = sdab_mesh,
@@ -444,11 +444,11 @@ sdab_small <- sdmTMB(small ~ 0 + u_vint_50m +
                         control = sdmTMBcontrol(newton_loops = 1,
                                                 nlminb_loops = 2))
 set.seed(1993)
-sdab_large <- sdmTMB(large ~ 0 + u_vint_50m +
+sdab_large <- sdmTMB(large ~ 0 + spice_iso26 +
                           s(jday_scaled, k = 3) +
                           s(sst_scaled, k = 3) +
                           s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + u_vint_50m,
+                        spatial_varying = ~ 0 + spice_iso26,
                         extra_time = extra_years,
                         data = yoy_sdab,
                         mesh = sdab_mesh,
@@ -613,7 +613,7 @@ rm(sdab_hindcast, sdab_ipsl1, sdab_ipsl2,
 
 
 # Shortbelly Rockfish ---------------------------------------------------------------------------------------------------------------------------------
-yoy_shortbelly <- read_data('yoy_sbly.Rdata')
+yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
 shortbelly_mesh <- make_mesh(yoy_shortbelly,
                              xy_cols = c("X", "Y"),
                              cutoff = 18)
@@ -803,7 +803,7 @@ rm(shortbelly_hindcast, shortbelly_ipsl1, shortbelly_ipsl2,
 
 
 # Widow Rockfish ---------------------------------------------------------------------------------------------------------------------------------
-yoy_widow <- read_data('yoy_widw.Rdata') 
+yoy_widow <- filter(read_data('yoy_widw.Rdata'), year > 2000) 
 widow_mesh <- make_mesh(yoy_widow,
                         xy_cols = c("X", "Y"),
                         cutoff = 18)
@@ -996,7 +996,7 @@ rm(widow_hindcast, widow_ipsl1, widow_ipsl2,
 yoy_squid <- read_data('yoy_squid.Rdata')
 squid_mesh <- make_mesh(yoy_squid,
                         xy_cols = c("X", "Y"),
-                        cutoff = 15)
+                        cutoff = 18)
 
 set.seed(1993)
 squid_small <- sdmTMB(small ~ 0 + depth_iso26 +
