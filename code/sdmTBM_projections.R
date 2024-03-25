@@ -44,40 +44,11 @@ base_dir <- getwd()
 
 ### Pacific Hake ---------------------------------------------------------------------------------------------------------------------------------
 yoy_hake <- filter(read_data('yoy_hake.Rdata'), year > 2002) 
-hake_mesh <- make_mesh(yoy_hake, 
-                       xy_cols = c("X", "Y"),
-                       cutoff = 18)
+hake_model_small <- readRDS(here('data', 'hake_models_small.Rdata'))
+hake_model_large <- readRDS(here('data', 'hake_models_large.Rdata'))
 
-set.seed(1993)
-hake_small <- sdmTMB(small ~ 0 + v_cu +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + v_cu,
-                        extra_time = extra_years,
-                        data = yoy_hake,
-                        mesh = hake_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
-set.seed(1993)
-hake_large <- sdmTMB(large ~ 0 + depth_iso26 +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + depth_iso26,
-                        extra_time = extra_years,
-                        data = yoy_hake,
-                        mesh = hake_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
+hake_small <- hake_model_small$sdm_v_cu
+hake_large <- hake_model_large$sdm_iso26
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 hake_hindcast <- sdm_cells(yoy_hake, hake_small, hake_large,
@@ -230,47 +201,19 @@ image_write(image = hake_img_animated,
 
 # Remove objects
 rm(hake_hindcast, hake_ipsl1, hake_ipsl2,
-   hake_ipsl3, yoy_hake, hake_mesh, hake_large,
-   hake_small, hake_dir_out, hake_imgs, hake_img_list,
+   hake_ipsl3, yoy_hake, hake_large, hake_small, 
+   hake_dir_out, hake_imgs, hake_img_list,
+   hake_model_large, hake_model_small,
    hake_img_joined, hake_img_animated)
 
 
 # Northern Anchovy --------------------------------------------------------------------------------------------------------------------------------
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
-anchovy_mesh <- make_mesh(yoy_anchovy,
-                          xy_cols = c("X", "Y"),
-                          cutoff = 18)
+anchovy_model_small <- readRDS(here('data', 'anchovy_models_small.Rdata'))
+anchovy_model_large <- readRDS(here('data', 'anchovy_models_large.Rdata'))
 
-set.seed(1993)
-anchovy_small <- sdmTMB(small ~ 0 + u_vint_100m +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + u_vint_100m,
-                        extra_time = extra_years,
-                        data = yoy_anchovy,
-                        mesh = anchovy_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
-set.seed(1993)
-anchovy_large <- sdmTMB(large ~ 0 + u_vint_100m +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + u_vint_100m,
-                        extra_time = extra_years,
-                        data = yoy_anchovy,
-                        mesh = anchovy_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
+anchovy_small <- anchovy_model_small$sdm_uvint100m
+anchovy_large <- anchovy_model_large$sdm_uvint100m
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 anchovy_hindcast <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
@@ -423,47 +366,19 @@ image_write(image = anchovy_img_animated,
 
 # Remove objects
 rm(anchovy_hindcast, anchovy_ipsl1, anchovy_ipsl2,
-   anchovy_ipsl3, yoy_anchovy, anchovy_mesh, anchovy_large,
-   anchovy_small, anchovy_dir_out, anchovy_imgs, anchovy_img_list,
+   anchovy_ipsl3, yoy_anchovy, anchovy_large, anchovy_small, 
+   anchovy_dir_out, anchovy_imgs, anchovy_img_list,
+   anchovy_model_small, anchovy_model_large,
    anchovy_img_joined, anchovy_img_animated)
 
 
 # Pacific Sanddab ---------------------------------------------------------------------------------------------------------------------------------
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2012)
-sdab_mesh <- make_mesh(yoy_sdab,
-                       xy_cols = c("X", "Y"),
-                       cutoff = 18)
+sdab_model_small <- readRDS(here('data', 'sdab_models_small.Rdata'))
+sdab_model_large <- readRDS(here('data', 'sdab_models_large.Rdata'))
 
-set.seed(1993)
-sdab_small <- sdmTMB(small ~ 0 + u_vint_100m +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + u_vint_100m,
-                        extra_time = extra_years,
-                        data = yoy_sdab,
-                        mesh = sdab_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
-set.seed(1993)
-sdab_large <- sdmTMB(large ~ 0 + spice_iso26 +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + spice_iso26,
-                        extra_time = extra_years,
-                        data = yoy_sdab,
-                        mesh = sdab_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
+sdab_small <- sdab_model_small$sdm_u_vint
+sdab_large <- sdab_model_large$sdm_iso26
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 sdab_hindcast <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
@@ -616,47 +531,19 @@ image_write(image = sdab_img_animated,
 
 # Remove objects
 rm(sdab_hindcast, sdab_ipsl1, sdab_ipsl2,
-   sdab_ipsl3, yoy_sdab, sdab_mesh, sdab_large,
-   sdab_small, sdab_dir_out, sdab_imgs, sdab_img_list,
+   sdab_ipsl3, yoy_sdab, sdab_large, sdab_small,
+   sdab_dir_out, sdab_imgs, sdab_img_list,
+   sdab_model_small, sdab_model_large,
    sdab_img_joined, sdab_img_animated)
 
 
 # Shortbelly Rockfish ---------------------------------------------------------------------------------------------------------------------------------
 yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
-shortbelly_mesh <- make_mesh(yoy_shortbelly,
-                             xy_cols = c("X", "Y"),
-                             cutoff = 18)
+shortbelly_model_small <- readRDS(here('data', 'shortbelly_models_small.Rdata'))
+shortbelly_model_large <- readRDS(here('data', 'shortbelly_models_large.Rdata'))
 
-set.seed(1993)
-shortbelly_small <- sdmTMB(small ~ 0 + depth_iso26 +
-                             s(jday_scaled, k = 3) +
-                             s(sst_scaled, k = 3) +
-                             s(sss_scaled, k = 3),
-                           spatial_varying = ~ 0 + depth_iso26,
-                           extra_time = extra_years,
-                           data = yoy_shortbelly,
-                           mesh = shortbelly_mesh,
-                           spatial = "on",
-                           time = "year",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "off",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
-set.seed(1993)
-shortbelly_large <- sdmTMB(large ~ 0 + vgeo +
-                             s(jday_scaled, k = 3) +
-                             s(sst_scaled, k = 3) +
-                             s(sss_scaled, k = 3),
-                           spatial_varying = ~ 0 + vgeo,
-                           extra_time = extra_years,
-                           data = yoy_shortbelly,
-                           mesh = shortbelly_mesh,
-                           spatial = "on",
-                           time = "year",
-                           family = tweedie(link = "log"),
-                           spatiotemporal = "off",
-                           control = sdmTMBcontrol(newton_loops = 1,
-                                                   nlminb_loops = 2))
+shortbelly_small <- shortbelly_model_small$sdm_iso26
+shortbelly_large <- shortbelly_model_large$sdm_vgeo
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 shortbelly_hindcast <- sdm_cells(yoy_shortbelly, shortbelly_small, shortbelly_large,
@@ -809,47 +696,19 @@ image_write(image = shortbelly_img_animated,
 
 # Remove objects
 rm(shortbelly_hindcast, shortbelly_ipsl1, shortbelly_ipsl2,
-   shortbelly_ipsl3, yoy_shortbelly, shortbelly_mesh, shortbelly_large,
-   shortbelly_small, shortbelly_dir_out, shortbelly_imgs, shortbelly_img_list,
+   shortbelly_ipsl3, yoy_shortbelly, shortbelly_large, shortbelly_small, 
+   shortbelly_dir_out, shortbelly_imgs, shortbelly_img_list,
+   shortbelly_model_small, shortbelly_model_large,
    shortbelly_img_joined, shortbelly_img_animated)
 
 
 # Widow Rockfish ---------------------------------------------------------------------------------------------------------------------------------
 yoy_widow <- filter(read_data('yoy_widw.Rdata'), year > 2000) 
-widow_mesh <- make_mesh(yoy_widow,
-                        xy_cols = c("X", "Y"),
-                        cutoff = 18)
+widow_model_small <- readRDS(here('data', 'widow_models_small.Rdata'))
+widow_model_large <- readRDS(here('data', 'widow_models_large.Rdata'))
 
-set.seed(1993)
-widow_small <- sdmTMB(small ~ 0 + vmax_cu +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + vmax_cu,
-                        extra_time = extra_years,
-                        data = yoy_widow,
-                        mesh = widow_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
-set.seed(1993)
-widow_large <- sdmTMB(large ~ 0 + spice_iso26 +
-                          s(jday_scaled, k = 3) +
-                          s(sst_scaled, k = 3) +
-                          s(sss_scaled, k = 3),
-                        spatial_varying = ~ 0 + spice_iso26,
-                        extra_time = extra_years,
-                        data = yoy_widow,
-                        mesh = widow_mesh,
-                        spatial = "on",
-                        time = "year",
-                        family = tweedie(link = "log"),
-                        spatiotemporal = "off",
-                        control = sdmTMBcontrol(newton_loops = 1,
-                                                nlminb_loops = 2))
+widow_small <- widow_model_small$sdm_vmax_cu
+widow_large <- widow_model_large$sdm_spice
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 widow_hindcast <- sdm_cells(yoy_widow, widow_small, widow_large,
@@ -1002,47 +861,19 @@ image_write(image = widow_img_animated,
 
 # Remove objects
 rm(widow_hindcast, widow_ipsl1, widow_ipsl2,
-   widow_ipsl3, yoy_widow, widow_mesh, widow_large,
-   widow_small, widow_dir_out, widow_imgs, widow_img_list,
+   widow_ipsl3, yoy_widow, widow_large, widow_small,
+   widow_dir_out, widow_imgs, widow_img_list,
+   widow_model_small, widow_model_large,
    widow_img_joined, widow_img_animated)
 
 
 # Market Squid ------------------------------------------------------------------------------------------------------------------------------------
 yoy_squid <- read_data('yoy_squid.Rdata')
-squid_mesh <- make_mesh(yoy_squid,
-                        xy_cols = c("X", "Y"),
-                        cutoff = 18)
+squid_model_small <- readRDS(here('data', 'squid_models_small.Rdata'))
+squid_model_large <- readRDS(here('data', 'squid_models_large.Rdata'))
 
-set.seed(1993)
-squid_small <- sdmTMB(small ~ 0 + depth_iso26 +
-                        s(jday_scaled, k = 3) +
-                        s(sst_scaled, k = 3) +
-                        s(sss_scaled, k = 3),
-                      spatial_varying = ~ 0 + depth_iso26,
-                      extra_time = extra_years,
-                      data = yoy_squid,
-                      mesh = squid_mesh,
-                      spatial = "on",
-                      time = "year",
-                      family = tweedie(link = "log"),
-                      spatiotemporal = "off",
-                      control = sdmTMBcontrol(newton_loops = 1,
-                                              nlminb_loops = 2))
-set.seed(1993)
-squid_large <- sdmTMB(large ~ 0 + spice_iso26 +
-                        s(jday_scaled, k = 3) +
-                        s(sst_scaled, k = 3) +
-                        s(sss_scaled, k = 3),
-                      spatial_varying = ~ 0 + spice_iso26,
-                      extra_time = extra_years,
-                      data = yoy_squid,
-                      mesh = squid_mesh,
-                      spatial = "on",
-                      time = "year",
-                      family = tweedie(link = "log"),
-                      spatiotemporal = "off",
-                      control = sdmTMBcontrol(newton_loops = 1,
-                                              nlminb_loops = 2))
+squid_small <- squid_model_small$sdm_iso26
+squid_large <- squid_model_large$sdm_spice
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 squid_hindcast <- sdm_cells(yoy_squid, squid_small, squid_large,
@@ -1195,6 +1026,7 @@ image_write(image = squid_img_animated,
 
 # Remove objects
 rm(squid_hindcast, squid_ipsl1, squid_ipsl2,
-   squid_ipsl3, yoy_squid, squid_mesh, squid_large,
-   squid_small, squid_dir_out, squid_imgs, squid_img_list,
+   squid_ipsl3, yoy_squid, squid_large, squid_small, 
+   squid_dir_out, squid_imgs, squid_img_list,
+   squid_model_small, squid_model_large,
    squid_img_joined, squid_img_animated)
