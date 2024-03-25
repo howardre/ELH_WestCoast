@@ -3,8 +3,8 @@
 # Project for a specific year
 sdm_project <- function(data, the_year, formula_small, formula_large,
                         roms_means, roms_ss, svc1, svc2){
-  nlat = 40
-  nlon = 60
+  nlat = 80
+  nlon = 120
   latd = seq(min(data$latitude), max(data$latitude), length.out = nlat)
   lond = seq(min(data$longitude), max(data$longitude), length.out = nlon)
   

@@ -126,12 +126,13 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_hake',
 dev.off()
 
 # Overlap
-mean(as.numeric(hake_hindcast[[3]])) # 0.52
+mean(as.numeric(hake_hindcast[[3]])) # 0.58
 
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl1 <- sdm_cells(yoy_hake, hake_small, hake_large,
-                        roms_means, roms_ss, 2020:2040)
+                        roms_means, roms_ss, 2020:2040,
+                        "zeta_s_v_cu", "zeta_s_depth_iso26")
 saveRDS(hake_ipsl1, file = here("data", "hake_ipsl1.rds"))
 
 # hake_ipsl1 <- readRDS(here("data", "hake_ipsl1.rds"))
@@ -160,7 +161,8 @@ mean(as.numeric(hake_ipsl1[[3]]))
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl2 <- sdm_cells(yoy_hake, hake_small, hake_large,
-                        roms_means, roms_ss, 2050:2070)
+                        roms_means, roms_ss, 2050:2070,
+                        "zeta_s_v_cu", "zeta_s_depth_iso26")
 saveRDS(hake_ipsl2, file = here("data", "hake_ipsl2.rds"))
 
 # hake_ipsl2 <- readRDS(here("data", "hake_ipsl2.rds"))
@@ -189,7 +191,8 @@ mean(as.numeric(hake_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl3 <- sdm_cells(yoy_hake, hake_small, hake_large,
-                        roms_means, roms_ss, 2080:2100)
+                        roms_means, roms_ss, 2080:2100,
+                        "zeta_s_v_cu", "zeta_s_depth_iso26")
 saveRDS(hake_ipsl3, file = here("data", "hake_ipsl3.rds"))
 
 # hake_ipsl3 <- readRDS(here("data", "hake_ipsl3.rds"))
@@ -321,7 +324,8 @@ mean(as.numeric(anchovy_hindcast[[3]]))
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl1 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
-                        roms_means, roms_ss, 2020:2040)
+                        roms_means, roms_ss, 2020:2040,
+                        "zeta_s_u_vint100m", "zeta_s_u_vint100m")
 saveRDS(anchovy_ipsl1, file = here("data", "anchovy_ipsl1.rds"))
 
 # anchovy_ipsl1 <- readRDS(here("data", "anchovy_ipsl1.rds"))
@@ -350,7 +354,8 @@ mean(as.numeric(anchovy_ipsl1[[3]]))
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl2 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
-                        roms_means, roms_ss, 2050:2070)
+                        roms_means, roms_ss, 2050:2070,
+                        "zeta_s_u_vint100m", "zeta_s_u_vint100m")
 saveRDS(anchovy_ipsl2, file = here("data", "anchovy_ipsl2.rds"))
 
 # anchovy_ipsl2 <- readRDS(here("data", "anchovy_ipsl2.rds"))
@@ -379,7 +384,8 @@ mean(as.numeric(anchovy_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl3 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
-                        roms_means, roms_ss, 2080:2100)
+                        roms_means, roms_ss, 2080:2100,
+                        "zeta_s_u_vint100m", "zeta_s_u_vint100m")
 saveRDS(anchovy_ipsl3, file = here("data", "anchovy_ipsl3.rds"))
 
 # anchovy_ipsl3 <- readRDS(here("data", "anchovy_ipsl3.rds"))
@@ -511,7 +517,8 @@ mean(as.numeric(sdab_hindcast[[3]]))
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl1 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
-                           roms_means, roms_ss, 2020:2040)
+                           roms_means, roms_ss, 2020:2040,
+                        "zeta_s_u_vint50m", "zeta_s_u_vint50m")
 saveRDS(sdab_ipsl1, file = here("data", "sdab_ipsl1.rds"))
 
 # sdab_ipsl1 <- readRDS(here("data", "sdab_ipsl1.rds"))
@@ -540,7 +547,8 @@ mean(as.numeric(sdab_ipsl1[[3]]))
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl2 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
-                           roms_means, roms_ss, 2050:2070)
+                           roms_means, roms_ss, 2050:2070,
+                        "zeta_s_u_vint50m", "zeta_s_u_vint50m")
 saveRDS(sdab_ipsl2, file = here("data", "sdab_ipsl2.rds"))
 
 # sdab_ipsl2 <- readRDS(here("data", "sdab_ipsl2.rds"))
@@ -569,7 +577,8 @@ mean(as.numeric(sdab_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl3 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
-                           roms_means, roms_ss, 2080:2100)
+                           roms_means, roms_ss, 2080:2100,
+                        "zeta_s_u_vint50m", "zeta_s_u_vint50m")
 saveRDS(sdab_ipsl3, file = here("data", "sdab_ipsl3.rds"))
 
 # sdab_ipsl3 <- readRDS(here("data", "sdab_ipsl3.rds"))
@@ -701,7 +710,8 @@ mean(as.numeric(shortbelly_hindcast[[3]]))
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 shortbelly_ipsl1 <- sdm_cells(yoy_shortbelly, shortbelly_small, shortbelly_large,
-                              roms_means, roms_ss, 2020:2040)
+                              roms_means, roms_ss, 2020:2040,
+                              "zeta_s_depth_iso26", "zeta_s_vgeo")
 saveRDS(shortbelly_ipsl1, file = here("data", "shortbelly_ipsl1.rds"))
 
 # shortbelly_ipsl1 <- readRDS(here("data", "shortbelly_ipsl1.rds"))
@@ -730,7 +740,8 @@ mean(as.numeric(shortbelly_ipsl1[[3]]))
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 shortbelly_ipsl2 <- sdm_cells(yoy_shortbelly, shortbelly_small, shortbelly_large,
-                              roms_means, roms_ss, 2050:2070)
+                              roms_means, roms_ss, 2050:2070,
+                              "zeta_s_depth_iso26", "zeta_s_vgeo")
 saveRDS(shortbelly_ipsl2, file = here("data", "shortbelly_ipsl2.rds"))
 
 # shortbelly_ipsl2 <- readRDS(here("data", "shortbelly_ipsl2.rds"))
@@ -759,7 +770,8 @@ mean(as.numeric(shortbelly_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 shortbelly_ipsl3 <- sdm_cells(yoy_shortbelly, shortbelly_small, shortbelly_large,
-                              roms_means, roms_ss, 2080:2100)
+                              roms_means, roms_ss, 2080:2100,
+                              "zeta_s_depth_iso26", "zeta_s_vgeo")
 saveRDS(shortbelly_ipsl3, file = here("data", "shortbelly_ipsl3.rds"))
 
 # shortbelly_ipsl3 <- readRDS(here("data", "shortbelly_ipsl3.rds"))
@@ -891,7 +903,8 @@ mean(as.numeric(widow_hindcast[[3]]))
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 widow_ipsl1 <- sdm_cells(yoy_widow, widow_small, widow_large,
-                        roms_means, roms_ss, 2020:2040)
+                        roms_means, roms_ss, 2020:2040,
+                        "zeta_s_vmax_cu", "zeta_s_spice_iso26")
 saveRDS(widow_ipsl1, file = here("data", "widow_ipsl1.rds"))
 
 # widow_ipsl1 <- readRDS(here("data", "widow_ipsl1.rds"))
@@ -920,7 +933,8 @@ mean(as.numeric(widow_ipsl1[[3]]))
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 widow_ipsl2 <- sdm_cells(yoy_widow, widow_small, widow_large,
-                        roms_means, roms_ss, 2050:2070)
+                        roms_means, roms_ss, 2050:2070,
+                        "zeta_s_vmax_cu", "zeta_s_spice_iso26")
 saveRDS(widow_ipsl2, file = here("data", "widow_ipsl2.rds"))
 
 # widow_ipsl2 <- readRDS(here("data", "widow_ipsl2.rds"))
@@ -949,7 +963,8 @@ mean(as.numeric(widow_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 widow_ipsl3 <- sdm_cells(yoy_widow, widow_small, widow_large,
-                        roms_means, roms_ss, 2080:2100)
+                        roms_means, roms_ss, 2080:2100,
+                        "zeta_s_vmax_cu", "zeta_s_spice_iso26")
 saveRDS(widow_ipsl3, file = here("data", "widow_ipsl3.rds"))
 
 # widow_ipsl3 <- readRDS(here("data", "widow_ipsl3.rds"))
@@ -1081,7 +1096,8 @@ mean(as.numeric(squid_hindcast[[3]]))
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 squid_ipsl1 <- sdm_cells(yoy_squid, squid_small, squid_large,
-                              roms_means, roms_ss, 2020:2040)
+                              roms_means, roms_ss, 2020:2040,
+                         "zeta_s_depth_iso26", "zeta_s_spice_iso26")
 saveRDS(squid_ipsl1, file = here("data", "squid_ipsl1.rds"))
 
 # squid_ipsl1 <- readRDS(here("data", "squid_ipsl1.rds"))
@@ -1110,7 +1126,8 @@ mean(as.numeric(squid_ipsl1[[3]]))
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 squid_ipsl2 <- sdm_cells(yoy_squid, squid_small, squid_large,
-                              roms_means, roms_ss, 2050:2070)
+                              roms_means, roms_ss, 2050:2070,
+                         "zeta_s_depth_iso26", "zeta_s_spice_iso26")
 saveRDS(squid_ipsl2, file = here("data", "squid_ipsl2.rds"))
 
 # squid_ipsl2 <- readRDS(here("data", "squid_ipsl2.rds"))
@@ -1139,7 +1156,8 @@ mean(as.numeric(squid_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 squid_ipsl3 <- sdm_cells(yoy_squid, squid_small, squid_large,
-                              roms_means, roms_ss, 2080:2100)
+                              roms_means, roms_ss, 2080:2100,
+                         "zeta_s_depth_iso26", "zeta_s_spice_iso26")
 saveRDS(squid_ipsl3, file = here("data", "squid_ipsl3.rds"))
 
 # squid_ipsl3 <- readRDS(here("data", "squid_ipsl3.rds"))
