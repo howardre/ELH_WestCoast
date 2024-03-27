@@ -334,7 +334,7 @@ dev.off()
 # Make mesh object with matrices
 yoy_sdab_mesh <- make_mesh(yoy_sdab, 
                            xy_cols = c("X", "Y"),
-                           cutoff = 18)
+                           cutoff = 16)
 plot(yoy_sdab_mesh) 
 
 # Select models
