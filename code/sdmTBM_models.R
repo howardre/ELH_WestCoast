@@ -45,8 +45,6 @@ nlat = 40
 nlon = 60
 extra_years <- c(2020:2100)
 nsim <- 500
-bubble_color <- colorRampPalette(c(sequential_hcl(15, palette = "Viridis")))
-
 
 # Pacific Hake ----
 # Make mesh object with matrices
@@ -173,7 +171,7 @@ tiff(here('results/hindcast_output/yoy_hake',
      width = 38,
      height = 12,
      res = 200)
-plot_variables(hake_model_small$sdm_iso26, hake_data)
+plot_variables(hake_model_small$sdm_v_cu, hake_data)
 dev.off()
 
 tiff(here('results/hindcast_output/yoy_hake',
@@ -317,7 +315,7 @@ tiff(here('results/hindcast_output/yoy_anchovy',
      width = 38,
      height = 12,
      res = 200)
-plot_variables(anchovy_model_small$sdm_vgeo, anchovy_data)
+plot_variables(anchovy_model_small$sdm_uvint100m, anchovy_data)
 dev.off()
 
 tiff(here('results/hindcast_output/yoy_anchovy',
@@ -419,7 +417,7 @@ tiff(here('results/hindcast_output/yoy_sanddab',
      width = 38,
      height = 12,
      res = 200)
-plot_variables(sdab_model_small$sdm_uvint50m, sdab_data)
+plot_variables(sdab_model_small$sdm_uvint100m, sdab_data)
 dev.off()
 
 tiff(here('results/hindcast_output/yoy_sanddab',
@@ -428,7 +426,7 @@ tiff(here('results/hindcast_output/yoy_sanddab',
      width = 38,
      height = 12,
      res = 200)
-plot_variables(sdab_model_large$sdm_uvint100m, sdab_data)
+plot_variables(sdab_model_large$sdm_spice, sdab_data)
 dev.off()
 
 
@@ -623,7 +621,7 @@ tiff(here('results/hindcast_output/yoy_widow',
      width = 38,
      height = 12,
      res = 200)
-plot_variables(widow_model_small$sdm_iso26, widow_data)
+plot_variables(widow_model_small$sdm_vmax_cu, widow_data)
 dev.off()
 
 tiff(here('results/hindcast_output/yoy_widow',
