@@ -232,7 +232,7 @@ ggplot(yoy_hake, aes(X, Y)) +
 # Make mesh object with matrices
 yoy_anchovy_mesh <- make_mesh(yoy_anchovy, 
                               xy_cols = c("X", "Y"),
-                              cutoff = 18)
+                              cutoff = 15)
 plot(yoy_anchovy_mesh) 
 
 # Select models
