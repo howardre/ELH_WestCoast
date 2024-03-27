@@ -44,8 +44,8 @@ base_dir <- getwd()
 
 ### Pacific Hake ---------------------------------------------------------------------------------------------------------------------------------
 yoy_hake <- filter(read_data('yoy_hake.Rdata'), year > 2002) 
-hake_model_small <- readRDS(here('data', 'hake_models_small.Rdata'))
-hake_model_large <- readRDS(here('data', 'hake_models_large.Rdata'))
+hake_model_small <- readRDS(here('data', 'hake_models_small'))
+hake_model_large <- readRDS(here('data', 'hake_models_large'))
 
 hake_small <- hake_model_small$sdm_v_cu
 hake_large <- hake_model_large$sdm_iso26
@@ -128,7 +128,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
 dev.off()
 
 # Overlap
-mean(as.numeric(hake_ipsl1[[3]]))
+mean(as.numeric(hake_ipsl1[[3]])) # 0.60
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl2 <- sdm_cells(yoy_hake, hake_small, hake_large,
@@ -158,7 +158,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
 dev.off()
 
 # Overlap
-mean(as.numeric(hake_ipsl2[[3]]))
+mean(as.numeric(hake_ipsl2[[3]])) #0.60
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 hake_ipsl3 <- sdm_cells(yoy_hake, hake_small, hake_large,
@@ -188,7 +188,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_hake',
 dev.off()
 
 # Overlap
-mean(as.numeric(hake_ipsl3[[3]]))
+mean(as.numeric(hake_ipsl3[[3]])) #0.59
 
 ##### GIFs -------------------------------------------------------------------------------------------------------------------------
 hake_dir_out <- file.path(base_dir, 'results', 'forecast_output', 'yoy_hake')
@@ -209,8 +209,8 @@ rm(hake_hindcast, hake_ipsl1, hake_ipsl2,
 
 # Northern Anchovy --------------------------------------------------------------------------------------------------------------------------------
 yoy_anchovy <- filter(read_data('yoy_anch.Rdata'), latitude < 42, year > 2013)
-anchovy_model_small <- readRDS(here('data', 'anchovy_models_small.Rdata'))
-anchovy_model_large <- readRDS(here('data', 'anchovy_models_large.Rdata'))
+anchovy_model_small <- readRDS(here('data', 'anchovy_models_small'))
+anchovy_model_large <- readRDS(here('data', 'anchovy_models_large'))
 
 anchovy_small <- anchovy_model_small$sdm_uvint100m
 anchovy_large <- anchovy_model_large$sdm_uvint100m
@@ -218,7 +218,7 @@ anchovy_large <- anchovy_model_large$sdm_uvint100m
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 anchovy_hindcast <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
                               hindcast_means, hindcast_ss, 2014:2019,
-                              "zeta_s_u_vint100m", "zeta_s_u_vint100m")
+                              "zeta_s_u_vint_100m", "zeta_s_u_vint_100m")
 saveRDS(anchovy_hindcast, file = here("data", "anchovy_hindcast.rds"))
 
 # anchovy_hindcast <- readRDS(here("data", "anchovy_hindcast.rds"))
@@ -262,13 +262,13 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy',
 dev.off()
 
 # Overlap
-mean(as.numeric(anchovy_hindcast[[3]]))
+mean(as.numeric(anchovy_hindcast[[3]])) # 0.79
 
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl1 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
-                        roms_means, roms_ss, 2020:2040,
-                        "zeta_s_u_vint100m", "zeta_s_u_vint100m")
+                           roms_means, roms_ss, 2020:2040,
+                           "zeta_s_u_vint_100m", "zeta_s_u_vint_100m")
 saveRDS(anchovy_ipsl1, file = here("data", "anchovy_ipsl1.rds"))
 
 # anchovy_ipsl1 <- readRDS(here("data", "anchovy_ipsl1.rds"))
@@ -298,7 +298,7 @@ mean(as.numeric(anchovy_ipsl1[[3]]))
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl2 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
                         roms_means, roms_ss, 2050:2070,
-                        "zeta_s_u_vint100m", "zeta_s_u_vint100m")
+                        "zeta_s_u_vint_100m", "zeta_s_u_vint_100m")
 saveRDS(anchovy_ipsl2, file = here("data", "anchovy_ipsl2.rds"))
 
 # anchovy_ipsl2 <- readRDS(here("data", "anchovy_ipsl2.rds"))
@@ -328,7 +328,7 @@ mean(as.numeric(anchovy_ipsl2[[3]]))
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl3 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
                         roms_means, roms_ss, 2080:2100,
-                        "zeta_s_u_vint100m", "zeta_s_u_vint100m")
+                        "zeta_s_u_vint_100m", "zeta_s_u_vint_100m")
 saveRDS(anchovy_ipsl3, file = here("data", "anchovy_ipsl3.rds"))
 
 # anchovy_ipsl3 <- readRDS(here("data", "anchovy_ipsl3.rds"))
@@ -374,16 +374,16 @@ rm(anchovy_hindcast, anchovy_ipsl1, anchovy_ipsl2,
 
 # Pacific Sanddab ---------------------------------------------------------------------------------------------------------------------------------
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2012)
-sdab_model_small <- readRDS(here('data', 'sdab_models_small.Rdata'))
-sdab_model_large <- readRDS(here('data', 'sdab_models_large.Rdata'))
+sdab_model_small <- readRDS(here('data', 'sdab_models_small'))
+sdab_model_large <- readRDS(here('data', 'sdab_models_large'))
 
-sdab_small <- sdab_model_small$sdm_u_vint
-sdab_large <- sdab_model_large$sdm_iso26
+sdab_small <- sdab_model_small$sdm_uvint100m
+sdab_large <- sdab_model_large$sdm_spice
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 sdab_hindcast <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
                            hindcast_means, hindcast_ss, 2013:2019,
-                           "zeta_s_u_vint50m", "zeta_s_u_vint50m")
+                           "zeta_s_u_vint_100m", "zeta_s_spice_iso26")
 saveRDS(sdab_hindcast, file = here("data", "sdab_hindcast.rds"))
 
 # sdab_hindcast <- readRDS(here("data", "sdab_hindcast.rds"))
@@ -395,8 +395,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdab_map_project(sdab_hindcast[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-sdab_map_project(sdab_hindcast[[2]], "Large (26-55 mm)", "")
+map_project(sdab_hindcast[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+map_project(sdab_hindcast[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("Hindcast"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
@@ -415,11 +415,11 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 svc_hindcast(sdab_hindcast[[1]], "Small (16-25 mm)", 
-             "Latitude \u00B0N", "Eastward u vertically \n integrated 0-50m Effect")
+             "Latitude \u00B0N", "Eastward u vertically \n integrated 0-100m Effect")
 svc_hindcast(sdab_hindcast[[2]], "Large (26-55 mm)", " ",
-             "Eastward u vertically \n integrated 0-50m Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_sdab', 
-                    'sanddab_SVC_sdmtmb.jpg'), 
+             "Spiciness Effect")
+dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
+                    'sdab_SVC_sdmtmb.jpg'), 
          height = 15, 
          width = 16, 
          units = 'in', 
@@ -427,13 +427,13 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_sdab',
 dev.off()
 
 # Overlap
-mean(as.numeric(sdab_hindcast[[3]]))
+mean(as.numeric(sdab_hindcast[[3]])) 0.60
 
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl1 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
-                           roms_means, roms_ss, 2020:2040,
-                        "zeta_s_u_vint50m", "zeta_s_u_vint50m")
+                        roms_means, roms_ss, 2020:2040,
+                        "zeta_s_u_vint_100m", "zeta_s_spice_iso26")
 saveRDS(sdab_ipsl1, file = here("data", "sdab_ipsl1.rds"))
 
 # sdab_ipsl1 <- readRDS(here("data", "sdab_ipsl1.rds"))
@@ -445,8 +445,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdab_map_project(sdab_ipsl1[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-sdab_map_project(sdab_ipsl1[[2]], "Large (26-55 mm)", "")
+map_project(sdab_ipsl1[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+map_project(sdab_ipsl1[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("2020-2040"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
@@ -462,8 +462,8 @@ mean(as.numeric(sdab_ipsl1[[3]]))
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl2 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
-                           roms_means, roms_ss, 2050:2070,
-                        "zeta_s_u_vint50m", "zeta_s_u_vint50m")
+                        roms_means, roms_ss, 2050:2070,
+                        "zeta_s_u_vint_100m", "zeta_s_spice_iso26")
 saveRDS(sdab_ipsl2, file = here("data", "sdab_ipsl2.rds"))
 
 # sdab_ipsl2 <- readRDS(here("data", "sdab_ipsl2.rds"))
@@ -475,8 +475,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdab_map_project(sdab_ipsl2[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-sdab_map_project(sdab_ipsl2[[2]], "Large (26-55 mm)", "")
+map_project(sdab_ipsl2[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+map_project(sdab_ipsl2[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("2050-2070"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
@@ -492,8 +492,8 @@ mean(as.numeric(sdab_ipsl2[[3]]))
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl3 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
-                           roms_means, roms_ss, 2080:2100,
-                        "zeta_s_u_vint50m", "zeta_s_u_vint50m")
+                        roms_means, roms_ss, 2080:2100,
+                        "zeta_s_u_vint_100m", "zeta_s_spice_iso26")
 saveRDS(sdab_ipsl3, file = here("data", "sdab_ipsl3.rds"))
 
 # sdab_ipsl3 <- readRDS(here("data", "sdab_ipsl3.rds"))
@@ -505,8 +505,8 @@ par(mfrow = c(1, 2),
     oma = c(1, 1, 3.5, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdab_map_project(sdab_ipsl3[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
-sdab_map_project(sdab_ipsl3[[2]], "Large (26-55 mm)", "")
+map_project(sdab_ipsl3[[1]], "Small (16-25 mm)", "Latitude \u00B0N")
+map_project(sdab_ipsl3[[2]], "Large (26-55 mm)", "")
 mtext(substitute(paste(bold("2080-2100"))), 
       line = 0, side = 3, outer = TRUE, cex = 4, family = "serif")
 dev.copy(jpeg, here('results/forecast_output/yoy_sanddab', 
@@ -539,8 +539,8 @@ rm(sdab_hindcast, sdab_ipsl1, sdab_ipsl2,
 
 # Shortbelly Rockfish ---------------------------------------------------------------------------------------------------------------------------------
 yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
-shortbelly_model_small <- readRDS(here('data', 'shortbelly_models_small.Rdata'))
-shortbelly_model_large <- readRDS(here('data', 'shortbelly_models_large.Rdata'))
+shortbelly_model_small <- readRDS(here('data', 'shortbelly_models_small'))
+shortbelly_model_large <- readRDS(here('data', 'shortbelly_models_large'))
 
 shortbelly_small <- shortbelly_model_small$sdm_iso26
 shortbelly_large <- shortbelly_model_large$sdm_vgeo
@@ -592,7 +592,7 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_shortbelly',
 dev.off()
 
 # Overlap
-mean(as.numeric(shortbelly_hindcast[[3]]))
+mean(as.numeric(shortbelly_hindcast[[3]])) #0.62
 
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
@@ -623,7 +623,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_shortbelly',
 dev.off()
 
 # Overlap
-mean(as.numeric(shortbelly_ipsl1[[3]]))
+mean(as.numeric(shortbelly_ipsl1[[3]])) #0.62
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 shortbelly_ipsl2 <- sdm_cells(yoy_shortbelly, shortbelly_small, shortbelly_large,
@@ -653,7 +653,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_shortbelly',
 dev.off()
 
 # Overlap
-mean(as.numeric(shortbelly_ipsl2[[3]]))
+mean(as.numeric(shortbelly_ipsl2[[3]])) #0.61
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 shortbelly_ipsl3 <- sdm_cells(yoy_shortbelly, shortbelly_small, shortbelly_large,
@@ -683,7 +683,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_shortbelly',
 dev.off()
 
 # Overlap
-mean(as.numeric(shortbelly_ipsl3[[3]]))
+mean(as.numeric(shortbelly_ipsl3[[3]])) #0.63
 
 ##### GIFs -------------------------------------------------------------------------------------------------------------------------
 shortbelly_dir_out <- file.path(base_dir, 'results', 'forecast_output', 'yoy_shortbelly')
@@ -704,15 +704,15 @@ rm(shortbelly_hindcast, shortbelly_ipsl1, shortbelly_ipsl2,
 
 # Widow Rockfish ---------------------------------------------------------------------------------------------------------------------------------
 yoy_widow <- filter(read_data('yoy_widw.Rdata'), year > 2000) 
-widow_model_small <- readRDS(here('data', 'widow_models_small.Rdata'))
-widow_model_large <- readRDS(here('data', 'widow_models_large.Rdata'))
+widow_model_small <- readRDS(here('data', 'widow_models_small'))
+widow_model_large <- readRDS(here('data', 'widow_models_large'))
 
 widow_small <- widow_model_small$sdm_vmax_cu
 widow_large <- widow_model_large$sdm_spice
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 widow_hindcast <- sdm_cells(yoy_widow, widow_small, widow_large,
-                           hindcast_means, hindcast_ss, 1995:2019,
+                           hindcast_means, hindcast_ss, 2001:2019,
                            "zeta_s_vmax_cu", "zeta_s_spice_iso26")
 saveRDS(widow_hindcast, file = here("data", "widow_hindcast.rds"))
 
@@ -757,7 +757,7 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_widow',
 dev.off()
 
 # Overlap
-mean(as.numeric(widow_hindcast[[3]]))
+mean(as.numeric(widow_hindcast[[3]])) #0.53
 
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
@@ -788,7 +788,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_widow',
 dev.off()
 
 # Overlap
-mean(as.numeric(widow_ipsl1[[3]]))
+mean(as.numeric(widow_ipsl1[[3]])) #0.54
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 widow_ipsl2 <- sdm_cells(yoy_widow, widow_small, widow_large,
@@ -818,7 +818,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_widow',
 dev.off()
 
 # Overlap
-mean(as.numeric(widow_ipsl2[[3]]))
+mean(as.numeric(widow_ipsl2[[3]])) #0.55
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 widow_ipsl3 <- sdm_cells(yoy_widow, widow_small, widow_large,
@@ -848,7 +848,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_widow',
 dev.off()
 
 # Overlap
-mean(as.numeric(widow_ipsl3[[3]]))
+mean(as.numeric(widow_ipsl3[[3]])) #0.55
 
 ##### GIFs -------------------------------------------------------------------------------------------------------------------------
 widow_dir_out <- file.path(base_dir, 'results', 'forecast_output', 'yoy_widow')
@@ -869,8 +869,8 @@ rm(widow_hindcast, widow_ipsl1, widow_ipsl2,
 
 # Market Squid ------------------------------------------------------------------------------------------------------------------------------------
 yoy_squid <- read_data('yoy_squid.Rdata')
-squid_model_small <- readRDS(here('data', 'squid_models_small.Rdata'))
-squid_model_large <- readRDS(here('data', 'squid_models_large.Rdata'))
+squid_model_small <- readRDS(here('data', 'squid_models_small'))
+squid_model_large <- readRDS(here('data', 'squid_models_large'))
 
 squid_small <- squid_model_small$sdm_iso26
 squid_large <- squid_model_large$sdm_spice
@@ -922,7 +922,7 @@ dev.copy(jpeg, here('results/hindcast_output/yoy_squid',
 dev.off()
 
 # Overlap
-mean(as.numeric(squid_hindcast[[3]]))
+mean(as.numeric(squid_hindcast[[3]])) #0.64
 
 #### IPSL------------------------------------------------------------------------------------------------------------------------------------------
 ##### 2020-2040------------------------------------------------------------------------------------------------------------------------------------
@@ -953,7 +953,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_squid',
 dev.off()
 
 # Overlap
-mean(as.numeric(squid_ipsl1[[3]]))
+mean(as.numeric(squid_ipsl1[[3]])) #0.62
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 squid_ipsl2 <- sdm_cells(yoy_squid, squid_small, squid_large,
@@ -983,7 +983,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_squid',
 dev.off()
 
 # Overlap
-mean(as.numeric(squid_ipsl2[[3]]))
+mean(as.numeric(squid_ipsl2[[3]])) #0.65
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 squid_ipsl3 <- sdm_cells(yoy_squid, squid_small, squid_large,
@@ -1013,7 +1013,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_squid',
 dev.off()
 
 # Overlap
-mean(as.numeric(squid_ipsl3[[3]]))
+mean(as.numeric(squid_ipsl3[[3]])) #0.63
 
 ##### GIFs -------------------------------------------------------------------------------------------------------------------------
 squid_dir_out <- file.path(base_dir, 'results', 'forecast_output', 'yoy_squid')
