@@ -54,11 +54,11 @@ plot_term2 <- function(roms, variable, ylab){
           axis.line = element_blank(),
           axis.ticks = element_blank(),
           plot.margin = unit(c(6, 6, 6, 6), "mm"),
-          plot.title = element_text(size = 24, family = "serif", face = "bold"),
-          axis.text = element_text(family = "serif", size = 16),
-          axis.title = element_text(family = "serif", size = 20),
-          legend.text = element_text(family = "serif", size = 17),
-          legend.title = element_text(family = "serif", size = 20))
+          plot.title = element_text(size = 30, family = "serif", face = "bold"),
+          axis.text = element_text(family = "serif", size = 22),
+          axis.title = element_text(family = "serif", size = 26),
+          legend.text = element_text(family = "serif", size = 23),
+          legend.title = element_text(family = "serif", size = 26))
 }
 
 # Plot SVC variables ----
