@@ -293,7 +293,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_anchovy',
 dev.off()
 
 # Overlap
-mean(as.numeric(anchovy_ipsl1[[3]]))
+mean(as.numeric(anchovy_ipsl1[[3]])) #0.67
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl2 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
@@ -323,7 +323,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_anchovy',
 dev.off()
 
 # Overlap
-mean(as.numeric(anchovy_ipsl2[[3]]))
+mean(as.numeric(anchovy_ipsl2[[3]])) #0.65
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 anchovy_ipsl3 <- sdm_cells(yoy_anchovy, anchovy_small, anchovy_large,
@@ -458,7 +458,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_sanddab',
 dev.off()
 
 # Overlap
-mean(as.numeric(sdab_ipsl1[[3]]))
+mean(as.numeric(sdab_ipsl1[[3]])) #0.59
 
 ##### 2050-2070------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl2 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
@@ -488,7 +488,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_sanddab',
 dev.off()
 
 # Overlap
-mean(as.numeric(sdab_ipsl2[[3]]))
+mean(as.numeric(sdab_ipsl2[[3]])) # 0.60
 
 ##### 2080-2100------------------------------------------------------------------------------------------------------------------------------------
 sdab_ipsl3 <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
@@ -518,7 +518,7 @@ dev.copy(jpeg, here('results/forecast_output/yoy_sanddab',
 dev.off()
 
 # Overlap
-mean(as.numeric(sdab_ipsl3[[3]]))
+mean(as.numeric(sdab_ipsl3[[3]])) # 0.61
 
 ##### GIFs -------------------------------------------------------------------------------------------------------------------------
 sdab_dir_out <- file.path(base_dir, 'results', 'forecast_output', 'yoy_sanddab')
