@@ -1,4 +1,4 @@
-sdmTMB_grid <- function(df, model, roms_large, roms_small){
+sdmTMB_grid <- function(df, model, roms_large, roms_small, year){
   nlat = 40
   nlon = 60
   latd = seq(min(df$latitude), max(df$latitude), length.out = nlat)
@@ -13,7 +13,7 @@ sdmTMB_grid <- function(df, model, roms_large, roms_small){
                                df$longitude)
     spatial_grid$dist[k] <- min(dist)
   }
-  spatial_grid$year <- 2017
+  spatial_grid$year <- year
   spatial_grid$depth_scaled <- median(df$depth_scaled, na.rm = TRUE)
   spatial_grid$sst_scaled <- median(df$sst_scaled, na.rm = TRUE)
   spatial_grid$sss_scaled <- median(df$sss_scaled, na.rm = TRUE)

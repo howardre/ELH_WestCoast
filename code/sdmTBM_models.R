@@ -28,6 +28,7 @@ source(here('code/functions', 'sdmTMB_select_cv.R'))
 source(here('code/functions', 'read_data.R'))
 source(here('code/functions', 'plot_variables.R'))
 source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & spatial
+source(here('code/functions', 'sdmTMB_map.R'))
 
 # Data
 # Removing years with just the core area and no PWCC
@@ -37,6 +38,18 @@ yoy_widow <- filter(read_data('yoy_widw.Rdata'), year > 2000)
 yoy_shortbelly <- filter(read_data('yoy_sbly.Rdata'), year > 2000)
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2012) # doesn't work otherwise
 yoy_squid <- read_data('yoy_squid.Rdata')
+
+nep_avgs <- readRDS(here('data', 'nep_avgs.Rdata'))
+nep_avgs$large_grp <- findInterval(nep_avgs$latitude,
+                                   c(32, 36, 40, 44, 48))
+nep_avgs$small_grp <- findInterval(nep_avgs$latitude,
+                                   c(32, 34, 36, 38, 40, 42, 44, 48))
+nep_large <- nep_avgs %>% 
+  group_by(years, large_grp) %>%
+  summarize(across(c(vgeo, v_cu, vmax_cu), mean))
+nep_small <- nep_avgs %>%
+  group_by(years, small_grp) %>%
+  summarize(across(c(u_vint_50m, u_vint_100m, depth_iso26, spice_iso26), mean))
 
 state_labels <- data.frame(name = c("Washington", "Oregon", "California"),
                            lat = c(47, 44.0, 37.0),
@@ -187,10 +200,27 @@ dev.off()
 latd = seq(min(yoy_hake$latitude), max(yoy_hake$latitude), length.out = nlat)
 lond = seq(min(yoy_hake$longitude), max(yoy_hake$longitude), length.out = nlon)
 
-hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small)
+hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small, 2010)
 hake_pred_small$zeta_s_v_cu[hake_pred_small$dist > 60000] <- NA 
-hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26, nep_large, nep_small)
-hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
+hake_pred_small1 <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small, 2018)
+hake_pred_small1$zeta_s_v_cu[hake_pred_small1$dist > 60000] <- NA 
+
+# Small Predictions
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_map(yoy_hake, hake_pred_small1, "High CU Velocity", "Latitude \u00B0N")
+sdmTMB_map(yoy_hake, hake_pred_small, "Low CU Velocity", " ")
+dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
+                    'small_hake_distributions.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
+dev.off()
 
 # SVC maps
 windows(height = 15, width = 18)
