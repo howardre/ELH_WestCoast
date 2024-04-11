@@ -12,8 +12,8 @@ library(viridis)
 library(ggpubr)
 
 # Data ----
-roms_means <- readRDS(here('data', 'nep_ipsl_means.Rdata'))
-hindcast_means <- readRDS(here('data', 'nep_avgs.Rdata'))
+roms_means <- filter(readRDS(here('data', 'nep_ipsl_means.Rdata')), years > 2000)
+hindcast_means <- filter(readRDS(here('data', 'nep_avgs.Rdata')), years > 2000)
 
 # Functions ----
 plot_term1 <- function(roms, variable, ylab){
