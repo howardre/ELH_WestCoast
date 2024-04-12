@@ -374,16 +374,16 @@ rm(anchovy_hindcast, anchovy_ipsl1, anchovy_ipsl2,
 
 # Pacific Sanddab ---------------------------------------------------------------------------------------------------------------------------------
 yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2012)
-sdab_model_small <- readRDS(here('data', 'sdab_models_small'))
+sdab_model_small <- readRDS(here('data', 'sdab_models'))
 sdab_model_large <- readRDS(here('data', 'sdab_models_large'))
 
-sdab_small <- sdab_model_small$sdm_uvint100m
+sdab_small <- sdab_model_small$sdm_spice
 sdab_large <- sdab_model_large$sdm_spice
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 sdab_hindcast <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
                            hindcast_means, hindcast_ss, 2013:2019,
-                           "zeta_s_u_vint_100m", "zeta_s_spice_iso26")
+                           "zeta_s_spice_iso26", "zeta_s_spice_iso26")
 saveRDS(sdab_hindcast, file = here("data", "sdab_hindcast.rds"))
 
 # sdab_hindcast <- readRDS(here("data", "sdab_hindcast.rds"))

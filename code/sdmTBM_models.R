@@ -19,6 +19,7 @@ library(fields)
 library(ggpubr)
 library(future)
 library(scales)
+library(fmesher)
 
 # Load data and functions ----
 # Functions
@@ -29,6 +30,25 @@ source(here('code/functions', 'read_data.R'))
 source(here('code/functions', 'plot_variables.R'))
 source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & spatial
 source(here('code/functions', 'sdmTMB_map.R'))
+
+# New mesh function
+get_mesh <- function(data) {
+  # Coastline mesh
+  # Calculate max edge. The spatial range is about 1/3 of the study area;
+  # the max.edge is about 1/5 of that. 
+  spatial_range = diff(range(data$Y)) / 3
+  max_edge = spatial_range / 5
+  
+  mesh <- make_mesh(data, 
+                    xy_cols = c("X", "Y"), 
+                    fmesher_func = fmesher::fm_mesh_2d_inla,
+                    max_edge = c(1, 2) * max_edge, # inner and outer max triangle lengths
+                    offset = c(1, 2) * max_edge,  # inner and outer border widths
+                    cutoff = max_edge / 5 # shortest allowed distance between points
+  )
+  
+  return(mesh)
+}
 
 # Data
 # Removing years with just the core area and no PWCC
@@ -360,9 +380,7 @@ dev.off()
 
 # Pacific Sanddab ----
 # Make mesh object with matrices
-yoy_sdab_mesh <- make_mesh(yoy_sdab, 
-                           xy_cols = c("X", "Y"),
-                           cutoff = 16)
+yoy_sdab_mesh <- get_mesh(yoy_sdab)
 plot(yoy_sdab_mesh) 
 
 # Select models
@@ -374,6 +392,10 @@ saveRDS(sdab_model_small, here('data', 'sdab_models_small'))
 sdab_model_large <- sdmTMB_select_large(yoy_sdab, yoy_sdab_mesh) 
 sdab_large_stat <- calc_stat_large(sdab_model_large, yoy_sdab_mesh, yoy_sdab)
 saveRDS(sdab_model_large, here('data', 'sdab_models_large'))
+
+sdab_model <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh) 
+sdab_stat <- calc_stat(sdab_model, yoy_sdab_mesh, yoy_sdab)
+saveRDS(sdab_model_large, here('data', 'sdab_models'))
 
 # Load models
 sdab_model_small <- readRDS(here('data', 'sdab_models_small'))
@@ -457,6 +479,32 @@ tiff(here('results/hindcast_output/yoy_sanddab',
      height = 12,
      res = 200)
 plot_variables(sdab_model_large$sdm_spice, sdab_data)
+dev.off()
+
+# Predict and plot
+latd = seq(min(yoy_sdab$latitude), max(yoy_sdab$latitude), length.out = nlat)
+lond = seq(min(yoy_sdab$longitude), max(yoy_sdab$longitude), length.out = nlon)
+
+sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint100m, nep_large, nep_small, 2014)
+sdab_pred_small$zeta_s_u_vint_100m[sdab_pred_small$dist > 60000] <- NA 
+sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_spice, nep_large, nep_small, 2018)
+sdab_pred_large$zeta_s_spice_iso26[sdab_pred_large$dist > 60000] <- NA 
+
+# Predictions
+windows(height = 15, width = 18)
+par(mfrow = c(1, 2),
+    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
+    oma = c(1, 1, 1, 1),
+    mgp = c(5, 2, 0),
+    family = "serif")
+sdmTMB_map(yoy_sdab, sdab_pred_small, "Small", "Latitude \u00B0N")
+sdmTMB_map(yoy_sdab, sdab_pred_large, "Large", " ")
+dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
+                    'sdab_distributions.jpg'), 
+         height = 15, 
+         width = 16, 
+         units = 'in', 
+         res = 200)
 dev.off()
 
 
