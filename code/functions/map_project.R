@@ -131,7 +131,7 @@ svc_hindcast <- function(grid, title, latitude_label, legend){
                       max(grid$avg_zeta, na.rm = T)),
              legend.args = list(legend,
                                 side = 2, 
-                                cex = 2.2,
+                                cex = 1.7,
                                 family = "serif",
                                 line = 1))
 }

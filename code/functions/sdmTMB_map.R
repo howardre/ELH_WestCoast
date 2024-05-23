@@ -136,7 +136,7 @@ sdmTMB_SVC <- function(df, preds, title, lat_label, var, variable){
                       max(var, na.rm = T)),
              legend.args = list(variable,
                                 side = 2, 
-                                cex = 1.8,
+                                cex = 1.6,
                                 family = "serif",
                                 line = 1))
 }

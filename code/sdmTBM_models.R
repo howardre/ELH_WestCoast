@@ -30,6 +30,7 @@ source(here('code/functions', 'read_data.R'))
 source(here('code/functions', 'plot_variables.R'))
 source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & spatial
 source(here('code/functions', 'sdmTMB_map.R'))
+source(here('code/functions', 'sdmTMB_grid.R'))
 
 # New mesh function
 get_mesh <- function(data) {
@@ -222,8 +223,8 @@ lond = seq(min(yoy_hake$longitude), max(yoy_hake$longitude), length.out = nlon)
 
 hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small, 2010)
 hake_pred_small$zeta_s_v_cu[hake_pred_small$dist > 60000] <- NA 
-hake_pred_small1 <- sdmTMB_grid(yoy_hake, hake_model_small$sdm_v_cu, nep_large, nep_small, 2018)
-hake_pred_small1$zeta_s_v_cu[hake_pred_small1$dist > 60000] <- NA 
+hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large$sdm_iso26, nep_large, nep_small, 2018)
+hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
 
 # Small Predictions
 windows(height = 15, width = 18)

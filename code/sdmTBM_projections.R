@@ -250,9 +250,9 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 svc_hindcast(anchovy_hindcast[[1]], "Small (15-35 mm)", 
-             "Latitude \u00B0N", "Eastward u vertically \n integrated 0-100m Effect")
+             "Latitude \u00B0N", "Eastward u \n 0-100 m Effect")
 svc_hindcast(anchovy_hindcast[[2]], "Large (36-85 mm)", " ",
-             "Eastward u vertically \n integrated 0-100m Effect")
+             "Eastward u \n 0-100 m Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
                     'anchovy_SVC_sdmtmb.jpg'), 
          height = 15, 
@@ -377,13 +377,13 @@ yoy_sdab <- filter(read_data('yoy_dab.Rdata'), year > 2012)
 sdab_model_small <- readRDS(here('data', 'sdab_models'))
 sdab_model_large <- readRDS(here('data', 'sdab_models_large'))
 
-sdab_small <- sdab_model_small$sdm_spice
+sdab_small <- sdab_model_small$sdm_uvint100m
 sdab_large <- sdab_model_large$sdm_spice
 
 #### Hindcast--------------------------------------------------------------------------------------------------------------------------------------
 sdab_hindcast <- sdm_cells(yoy_sdab, sdab_small, sdab_large,
                            hindcast_means, hindcast_ss, 2013:2019,
-                           "zeta_s_spice_iso26", "zeta_s_spice_iso26")
+                           "zeta_s_u_vint_100m", "zeta_s_spice_iso26")
 saveRDS(sdab_hindcast, file = here("data", "sdab_hindcast.rds"))
 
 # sdab_hindcast <- readRDS(here("data", "sdab_hindcast.rds"))
@@ -415,7 +415,7 @@ par(mfrow = c(1, 2),
     mgp = c(5, 2, 0),
     family = "serif")
 svc_hindcast(sdab_hindcast[[1]], "Small (16-25 mm)", 
-             "Latitude \u00B0N", "Eastward u vertically \n integrated 0-100m Effect")
+             "Latitude \u00B0N", "Eastward u \n 0-100 m Effect")
 svc_hindcast(sdab_hindcast[[2]], "Large (26-55 mm)", " ",
              "Spiciness Effect")
 dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
