@@ -155,6 +155,25 @@ ggplot(hake_data,
   geom_point() +
   coord_fixed()
 
+# Plot covariates
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence_small_sdmtmb.jpg'),
+     units = "in",
+     width = 38,
+     height = 12,
+     res = 200)
+plot_variables(hake_model_small$sdm_v_cu, hake_data)
+dev.off()
+
+tiff(here('results/hindcast_output/yoy_hake',
+          'hake_partial_dependence_large_sdmtmb.jpg'),
+     units = "in",
+     width = 38,
+     height = 12,
+     res = 200)
+plot_variables(hake_model_large$sdm_iso26, hake_data)
+dev.off()
+
 # Use 5-fold cross validation to calculate log likelihood
 # Tried LFO, LOYO, 10%, and 10-fold - none worked
 hake_train <- filter(yoy_hake, year < 2017)
