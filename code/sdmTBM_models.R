@@ -32,6 +32,8 @@ source(here('code/functions', 'sdmTMB_select.R')) # cannot be spatiotemporal & s
 source(here('code/functions', 'sdmTMB_map.R'))
 source(here('code/functions', 'sdmTMB_grid.R'))
 
+options(future.globals.maxSize = 8000 * 1024^2) # required for CV
+
 # New mesh function
 get_mesh <- function(data) {
   # Coastline mesh
@@ -89,12 +91,12 @@ plot(yoy_hake_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-hake_model_small <- sdmTMB_select_small(yoy_hake, yoy_hake_mesh) 
-hake_small_stat <- calc_stat_small(hake_model_small, yoy_hake_mesh, yoy_hake)
+hake_model_small <- sdmTMB_select(yoy_hake, yoy_hake_mesh, "small") 
+hake_small_stat <- calc_stat(hake_model_small, yoy_hake_mesh, yoy_hake, "small")
 saveRDS(hake_model_small, here('data', 'hake_models_small'))
 
-hake_model_large <- sdmTMB_select_large(yoy_hake, yoy_hake_mesh) 
-hake_large_stat <- calc_stat_large(hake_model_large, yoy_hake_mesh, yoy_hake)
+hake_model_large <- sdmTMB_select(yoy_hake, yoy_hake_mesh, "large") 
+hake_large_stat <- calc_stat(hake_model_large, yoy_hake_mesh, yoy_hak, "large")
 saveRDS(hake_model_large, here('data', 'hake_models_large'))
 
 # Load models
@@ -182,18 +184,23 @@ hake_train_mesh <- make_mesh(hake_train,
                              xy_cols = c("X", "Y"),
                              cutoff = 18)
 test_years <- c(2017:2019)
-hake_small_v_cu <- sdmTMB_cv(small ~ 0 + v_cu +
-                                s(jday_scaled, k = 3) +
-                                s(sst_scaled, k = 3) +
-                               s(sss_scaled, k = 3),
-                             spatial_varying = ~ 0 + v_cu,
+hake_small_v_cu <- sdmTMB_cv(small ~ 0 + vgeo +
+                               s(jday_scaled, k = 3) +
+                               s(sst_scaled, k = 3),
+                             spatial_varying = ~ 0 + vgeo,
                              data = yoy_hake,
                              mesh = yoy_hake_mesh,
                              family = tweedie(link = "log"),
-                             lfo = TRUE,
-                             lfo_forecast = 2,
-                             lfo_validations = 1,
-                             time = "year")
+                             k_folds = 5) # had issues with lower values
+
+test_formula <- as.formula(small ~ 0 + s(jday_scaled, k = 3) + s(sst_scaled, k = 3))
+
+hake_small_cv <- sdmTMB_cv(small ~ s(jday_scaled, k = 3) + s(sst_scaled, k = 3) + vmax_cu - 1, 
+                           spatial_varying = ~ 0 + vmax_cu, 
+                           data = yoy_hake, 
+                           mesh = yoy_hake_mesh, 
+                           family = tweedie(link = "log"), 
+                           k_folds = 10) 
 
 hake_small_v_cu$fold_loglik # fold log-likelihood
 hake_small_v_cu$sum_loglik # total log-likelihood
@@ -211,7 +218,10 @@ small_sp <- cor.test(test$larvalcatchper10m2,
 plot(yoy_hake_mesh) 
 
 
-hake_model_small_cv <- sdmTMB_cv_small(yoy_hake, yoy_hake_mesh) 
+hake_model_small_cv <- sdmTMB_compare(yoy_hake, yoy_hake_mesh, "small")
+hake_small_best <- hake_model_small_cv[[which.min(sapply(1:length(hake_model_small_cv), 
+                                       function(x) (hake_model_small_cv[[x]])))]]
+
 saveRDS(hake_model_small_cv, here('data', 'hake_models_small_cv'))
 
 hake_model_large_cv <- sdmTMB_cv_large(yoy_hake, yoy_hake_mesh) 
