@@ -1,6 +1,6 @@
 # Projecting Species Distributions Using Size-Structured and Size-Aggregated Models
 
-The is part of an NSF funded project that will create species distribution maps using all life stages of West Coast fishes. Portions of this work will comprise a chapter in my PhD dissertation.
+The is part of an NSF funded project that will create species distribution maps using all life stages of West Coast fishes. Portions of this work are found in Chapter 4 of my PhD [dissertation](https://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/j9602847p).
 
 ### Data
 Multiple data sources have potential applications to this project. Currently we are using:
