@@ -96,7 +96,7 @@ hake_small_stat <- calc_stat(hake_model_small, yoy_hake_mesh, yoy_hake, "small")
 saveRDS(hake_model_small, here('data', 'hake_models_small'))
 
 hake_model_large <- sdmTMB_select(yoy_hake, yoy_hake_mesh, "large") 
-hake_large_stat <- calc_stat(hake_model_large, yoy_hake_mesh, yoy_hak, "large")
+hake_large_stat <- calc_stat(hake_model_large, yoy_hake_mesh, yoy_hake, "large")
 saveRDS(hake_model_large, here('data', 'hake_models_large'))
 
 # Load models
@@ -180,27 +180,6 @@ dev.off()
 # Tried LFO, LOYO, 10%, and 10-fold - none worked
 hake_train <- filter(yoy_hake, year < 2017)
 hake_test <- filter(yoy_hake, year >= 2017)
-hake_train_mesh <- make_mesh(hake_train, 
-                             xy_cols = c("X", "Y"),
-                             cutoff = 18)
-test_years <- c(2017:2019)
-hake_small_v_cu <- sdmTMB_cv(small ~ 0 + vgeo +
-                               s(jday_scaled, k = 3) +
-                               s(sst_scaled, k = 3),
-                             spatial_varying = ~ 0 + vgeo,
-                             data = yoy_hake,
-                             mesh = yoy_hake_mesh,
-                             family = tweedie(link = "log"),
-                             k_folds = 5) # had issues with lower values
-
-test_formula <- as.formula(small ~ 0 + s(jday_scaled, k = 3) + s(sst_scaled, k = 3))
-
-hake_small_cv <- sdmTMB_cv(small ~ s(jday_scaled, k = 3) + s(sst_scaled, k = 3) + vmax_cu - 1, 
-                           spatial_varying = ~ 0 + vmax_cu, 
-                           data = yoy_hake, 
-                           mesh = yoy_hake_mesh, 
-                           family = tweedie(link = "log"), 
-                           k_folds = 10) 
 
 hake_small_v_cu$fold_loglik # fold log-likelihood
 hake_small_v_cu$sum_loglik # total log-likelihood
@@ -215,16 +194,15 @@ small_sp <- cor.test(test$larvalcatchper10m2,
                      method = 'spearman',
                      exact = FALSE)
 
-plot(yoy_hake_mesh) 
-
-
 hake_model_small_cv <- sdmTMB_compare(yoy_hake, yoy_hake_mesh, "small")
-hake_small_best <- hake_model_small_cv[[which.min(sapply(1:length(hake_model_small_cv), 
-                                       function(x) (hake_model_small_cv[[x]])))]]
+hake_model_large_cv <- sdmTMB_compare(yoy_hake, yoy_hake_mesh, "large")
+
+hake_small_best <- hake_model_small_cv[[which.max(sapply(1:length(hake_model_small_cv), 
+                                                         function(x) (hake_model_small_cv[[x]]$sum_loglik)))]]
+hake_large_best <- hake_model_large_cv[[which.max(sapply(1:length(hake_model_large_cv), 
+                                                         function(x) (hake_model_large_cv[[x]]$sum_loglik)))]]
 
 saveRDS(hake_model_small_cv, here('data', 'hake_models_small_cv'))
-
-hake_model_large_cv <- sdmTMB_cv_large(yoy_hake, yoy_hake_mesh) 
 saveRDS(hake_model_large_cv, here('data', 'hake_models_large_cv'))
 
 # Plot covariates

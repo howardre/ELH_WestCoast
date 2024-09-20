@@ -1,4 +1,4 @@
-sdmTMB_select_small <- function(df, fish_mesh, size){
+sdmTMB_select <- function(df, fish_mesh, size){
   set.seed(1993)
   if(size == "small"){
     sdm_formula = as.formula(small ~ 0 +
