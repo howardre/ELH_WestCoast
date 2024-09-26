@@ -293,12 +293,12 @@ plot(yoy_anchovy_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-anchovy_model_small <- sdmTMB_select_small(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_small_stat <- calc_stat_small(anchovy_model_small, yoy_anchovy_mesh, yoy_anchovy)
+anchovy_model_small <- sdmTMB_select(yoy_anchovy, yoy_anchovy_mesh, "small") 
+anchovy_small_stat <- calc_stat(anchovy_model_small, yoy_anchovy_mesh, yoy_anchovy, "small")
 saveRDS(anchovy_model_small, here('data', 'anchovy_models_small'))
 
-anchovy_model_large <- sdmTMB_select_large(yoy_anchovy, yoy_anchovy_mesh) 
-anchovy_large_stat <- calc_stat_large(anchovy_model_large, yoy_anchovy_mesh, yoy_anchovy)
+anchovy_model_large <- sdmTMB_select(yoy_anchovy, yoy_anchovy_mesh, "large") 
+anchovy_large_stat <- calc_stat(anchovy_model_large, yoy_anchovy_mesh, yoy_anchovy, "large")
 saveRDS(anchovy_model_large, here('data', 'anchovy_models_large'))
 
 # Load models
@@ -360,11 +360,17 @@ ggplot(anchovy_data,
   coord_fixed()
 
 # Cross validation
-anchovy_model_small_cv <- sdmTMB_cv_small(yoy_anchovy, yoy_anchovy_mesh) 
-saveRDS(anchovy_model_small_cv, here('data', 'anchovy_models_small_cv'))
+anchovy_model_small_cv <- sdmTMB_compare(yoy_anchovy, yoy_anchovy_mesh, "small")
+anchovy_model_large_cv <- sdmTMB_compare(yoy_anchovy, yoy_anchovy_mesh, "large")
 
-anchovy_model_large_cv <- sdmTMB_cv_large(yoy_anchovy, yoy_anchovy_mesh) 
+anchovy_small_best <- anchovy_model_small_cv[[which.max(sapply(1:length(anchovy_model_small_cv), 
+                                                         function(x) (anchovy_model_small_cv[[x]]$sum_loglik)))]]
+anchovy_large_best <- anchovy_model_large_cv[[which.max(sapply(1:length(anchovy_model_large_cv), 
+                                                         function(x) (anchovy_model_large_cv[[x]]$sum_loglik)))]]
+
+saveRDS(anchovy_model_small_cv, here('data', 'anchovy_models_small_cv'))
 saveRDS(anchovy_model_large_cv, here('data', 'anchovy_models_large_cv'))
+
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_anchovy',
@@ -393,17 +399,13 @@ plot(yoy_sdab_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-sdab_model_small <- sdmTMB_select_small(yoy_sdab, yoy_sdab_mesh) 
-sdab_small_stat <- calc_stat_small(sdab_model_small, yoy_sdab_mesh, yoy_sdab)
+sdab_model_small <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh, "small") 
+sdab_small_stat <- calc_stat(sdab_model_small, yoy_sdab_mesh, yoy_sdab, "small")
 saveRDS(sdab_model_small, here('data', 'sdab_models_small'))
 
-sdab_model_large <- sdmTMB_select_large(yoy_sdab, yoy_sdab_mesh) 
-sdab_large_stat <- calc_stat_large(sdab_model_large, yoy_sdab_mesh, yoy_sdab)
+sdab_model_large <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh, "large") 
+sdab_large_stat <- calc_stat(sdab_model_large, yoy_sdab_mesh, yoy_sdab, "large")
 saveRDS(sdab_model_large, here('data', 'sdab_models_large'))
-
-sdab_model <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh) 
-sdab_stat <- calc_stat(sdab_model, yoy_sdab_mesh, yoy_sdab)
-saveRDS(sdab_model_large, here('data', 'sdab_models'))
 
 # Load models
 sdab_model_small <- readRDS(here('data', 'sdab_models_small'))
@@ -464,11 +466,17 @@ ggplot(sdab_data,
   coord_fixed()
 
 # Cross validation
-sdab_model_small_cv <- sdmTMB_cv_small(yoy_sdab, yoy_sdab_mesh) 
-saveRDS(sdab_model_small_cv, here('data', 'sdab_models_small_cv'))
+sdab_model_small_cv <- sdmTMB_compare(yoy_sdab, yoy_sdab_mesh, "small")
+sdab_model_large_cv <- sdmTMB_compare(yoy_sdab, yoy_sdab_mesh, "large")
 
-sdab_model_large_cv <- sdmTMB_cv_large(yoy_sdab, yoy_sdab_mesh) 
+sdab_small_best <- sdab_model_small_cv[[which.max(sapply(1:length(sdab_model_small_cv), 
+                                                         function(x) (sdab_model_small_cv[[x]]$sum_loglik)))]]
+sdab_large_best <- sdab_model_large_cv[[which.max(sapply(1:length(sdab_model_large_cv), 
+                                                         function(x) (sdab_model_large_cv[[x]]$sum_loglik)))]]
+
+saveRDS(sdab_model_small_cv, here('data', 'sdab_models_small_cv'))
 saveRDS(sdab_model_large_cv, here('data', 'sdab_models_large_cv'))
+
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_sanddab',
@@ -525,12 +533,12 @@ plot(yoy_shortbelly_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-shortbelly_model_small <- sdmTMB_select_small(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_small_stat <- calc_stat_small(shortbelly_model_small, yoy_shortbelly_mesh, yoy_shortbelly)
+shortbelly_model_small <- sdmTMB_select(yoy_shortbelly, yoy_shortbelly_mesh, "small") 
+shortbelly_small_stat <- calc_stat(shortbelly_model_small, yoy_shortbelly_mesh, yoy_shortbelly, "small")
 saveRDS(shortbelly_model_small, here('data', 'shortbelly_models_small'))
 
-shortbelly_model_large <- sdmTMB_select_large(yoy_shortbelly, yoy_shortbelly_mesh) 
-shortbelly_large_stat <- calc_stat_large(shortbelly_model_large, yoy_shortbelly_mesh, yoy_shortbelly)
+shortbelly_model_large <- sdmTMB_select(yoy_shortbelly, yoy_shortbelly_mesh, "large") 
+shortbelly_large_stat <- calc_stat(shortbelly_model_large, yoy_shortbelly_mesh, yoy_shortbelly, "large")
 saveRDS(shortbelly_model_large, here('data', 'shortbelly_models_large'))
 
 # Load models
@@ -592,10 +600,15 @@ ggplot(shortbelly_data,
   coord_fixed()
 
 # Cross validation
-shortbelly_model_small_cv <- sdmTMB_cv_small(yoy_shortbelly, yoy_shortbelly_mesh) 
-saveRDS(shortbelly_model_small_cv, here('data', 'shortbelly_models_small_cv'))
+shortbelly_model_small_cv <- sdmTMB_compare(yoy_shortbelly, yoy_shortbelly_mesh, "small")
+shortbelly_model_large_cv <- sdmTMB_compare(yoy_shortbelly, yoy_shortbelly_mesh, "large")
 
-shortbelly_model_large_cv <- sdmTMB_cv_large(yoy_shortbelly, yoy_shortbelly_mesh) 
+shortbelly_small_best <- shortbelly_model_small_cv[[which.max(sapply(1:length(shortbelly_model_small_cv), 
+                                                         function(x) (shortbelly_model_small_cv[[x]]$sum_loglik)))]]
+shortbelly_large_best <- shortbelly_model_large_cv[[which.max(sapply(1:length(shortbelly_model_large_cv), 
+                                                         function(x) (shortbelly_model_large_cv[[x]]$sum_loglik)))]]
+
+saveRDS(shortbelly_model_small_cv, here('data', 'shortbelly_models_small_cv'))
 saveRDS(shortbelly_model_large_cv, here('data', 'shortbelly_models_large_cv'))
 
 # Plot covariates
@@ -627,12 +640,12 @@ plot(yoy_widow_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-widow_model_small <- sdmTMB_select_small(yoy_widow, yoy_widow_mesh) 
-widow_small_stat <- calc_stat_small(widow_model_small, yoy_widow_mesh, yoy_widow)
+widow_model_small <- sdmTMB_select(yoy_widow, yoy_widow_mesh, "small") 
+widow_small_stat <- calc_stat(widow_model_small, yoy_widow_mesh, yoy_widow, "small")
 saveRDS(widow_model_small, here('data', 'widow_models_small'))
 
-widow_model_large <- sdmTMB_select_large(yoy_widow, yoy_widow_mesh) 
-widow_large_stat <- calc_stat_large(widow_model_large, yoy_widow_mesh, yoy_widow)
+widow_model_large <- sdmTMB_select(yoy_widow, yoy_widow_mesh, "large") 
+widow_large_stat <- calc_stat(widow_model_large, yoy_widow_mesh, yoy_widow, "large")
 saveRDS(widow_model_large, here('data', 'widow_models_large'))
 
 # Load models
@@ -694,11 +707,17 @@ ggplot(widow_data,
   coord_fixed()
 
 # Cross validation
-widow_model_small_cv <- sdmTMB_cv_small(yoy_widow, yoy_widow_mesh) 
-saveRDS(widow_model_small_cv, here('data', 'widow_models_small_cv'))
+widow_model_small_cv <- sdmTMB_compare(yoy_widow, yoy_widow_mesh, "small")
+widow_model_large_cv <- sdmTMB_compare(yoy_widow, yoy_widow_mesh, "large")
 
-widow_model_large_cv <- sdmTMB_cv_large(yoy_widow, yoy_widow_mesh) 
+widow_small_best <- widow_model_small_cv[[which.max(sapply(1:length(widow_model_small_cv), 
+                                                         function(x) (widow_model_small_cv[[x]]$sum_loglik)))]]
+widow_large_best <- widow_model_large_cv[[which.max(sapply(1:length(widow_model_large_cv), 
+                                                         function(x) (widow_model_large_cv[[x]]$sum_loglik)))]]
+
+saveRDS(widow_model_small_cv, here('data', 'widow_models_small_cv'))
 saveRDS(widow_model_large_cv, here('data', 'widow_models_large_cv'))
+
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_widow',
@@ -729,12 +748,12 @@ plot(yoy_squid_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-squid_model_small <- sdmTMB_select_small(yoy_squid, yoy_squid_mesh) 
-squid_small_stat <- calc_stat_small(squid_model_small, yoy_squid_mesh, yoy_squid)
+squid_model_small <- sdmTMB_select(yoy_squid, yoy_squid_mesh, "small") 
+squid_small_stat <- calc_stat(squid_model_small, yoy_squid_mesh, yoy_squid, "small")
 saveRDS(squid_model_small, here('data', 'squid_models_small'))
 
-squid_model_large <- sdmTMB_select_large(yoy_squid, yoy_squid_mesh) 
-squid_large_stat <- calc_stat_large(squid_model_large, yoy_squid_mesh, yoy_squid)
+squid_model_large <- sdmTMB_select(yoy_squid, yoy_squid_mesh, "large") 
+squid_large_stat <- calc_stat(squid_model_large, yoy_squid_mesh, yoy_squid, "large")
 saveRDS(squid_model_large, here('data', 'squid_models_large'))
 
 # Load models
@@ -796,11 +815,17 @@ ggplot(squid_data,
   coord_fixed()
 
 # Cross validation
-squid_model_small_cv <- sdmTMB_cv_small(yoy_squid, yoy_squid_mesh) 
-saveRDS(squid_model_small_cv, here('data', 'squid_models_small_cv'))
+squid_model_small_cv <- sdmTMB_compare(yoy_squid, yoy_squid_mesh, "small")
+squid_model_large_cv <- sdmTMB_compare(yoy_squid, yoy_squid_mesh, "large")
 
-squid_model_large_cv <- sdmTMB_cv_large(yoy_squid, yoy_squid_mesh) 
+squid_small_best <- squid_model_small_cv[[which.max(sapply(1:length(squid_model_small_cv), 
+                                                         function(x) (squid_model_small_cv[[x]]$sum_loglik)))]]
+squid_large_best <- squid_model_large_cv[[which.max(sapply(1:length(squid_model_large_cv), 
+                                                         function(x) (squid_model_large_cv[[x]]$sum_loglik)))]]
+
+saveRDS(squid_model_small_cv, here('data', 'squid_models_small_cv'))
 saveRDS(squid_model_large_cv, here('data', 'squid_models_large_cv'))
+
 
 # Plot covariates
 tiff(here('results/hindcast_output/yoy_squid',
