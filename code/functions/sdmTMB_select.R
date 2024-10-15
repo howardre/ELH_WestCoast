@@ -3,13 +3,11 @@ sdmTMB_select <- function(df, fish_mesh, size){
   if(size == "small"){
     sdm_formula = as.formula(small ~ 0 +
                                s(jday_scaled, k = 3) +
-                               s(sst_scaled, k = 3) +
-                               s(sss_scaled, k = 3))}
+                               s(sst_scaled, k = 3))}
   if(size == "large"){
     sdm_formula = as.formula(large ~ 0 +
                                s(jday_scaled, k = 3) +
-                               s(sst_scaled, k = 3) +
-                               s(sss_scaled, k = 3))}
+                               s(sst_scaled, k = 3))}
   sdm_base <- try(sdmTMB(formula = sdm_formula,
                          extra_time = extra_years,
                          data = df,

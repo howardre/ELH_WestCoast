@@ -21,27 +21,27 @@ plot_variables <- function(model, data){
           axis.text.x = element_text(angle = 0, vjust = 0.7),
           plot.margin = margin(2, 2, 2, 2, "cm")) 
   
-  salt <- visreg(model,
-                 data = data,
-                 xvar = "sss_scaled",
-                 plot = FALSE)
-  salt_plot <- ggplot(salt$fit, aes(x = sss_scaled, y = visregFit)) +
-    geom_line(color = "black",
-              linewidth = 1,
-              show.legend = FALSE) +
-    geom_ribbon(aes(ymin = visregLwr, 
-                    ymax = visregUpr,
-                    fill = "coral2"),
-                alpha = 0.5,
-                show.legend = FALSE) +
-    labs(x = 'Salinity',
-         y = "") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_text(family = "serif", size = 60),
-          axis.title = element_text(family = "serif", size = 65),
-          axis.text.x = element_text(angle = 0, vjust = 0.7),
-          plot.margin = margin(2, 2, 2, 2, "cm")) 
+  # salt <- visreg(model,
+  #                data = data,
+  #                xvar = "sss_scaled",
+  #                plot = FALSE)
+  # salt_plot <- ggplot(salt$fit, aes(x = sss_scaled, y = visregFit)) +
+  #   geom_line(color = "black",
+  #             linewidth = 1,
+  #             show.legend = FALSE) +
+  #   geom_ribbon(aes(ymin = visregLwr, 
+  #                   ymax = visregUpr,
+  #                   fill = "coral2"),
+  #               alpha = 0.5,
+  #               show.legend = FALSE) +
+  #   labs(x = 'Salinity',
+  #        y = "") +
+  #   theme_classic() +
+  #   theme(axis.ticks = element_blank(),
+  #         axis.text = element_text(family = "serif", size = 60),
+  #         axis.title = element_text(family = "serif", size = 65),
+  #         axis.text.x = element_text(angle = 0, vjust = 0.7),
+  #         plot.margin = margin(2, 2, 2, 2, "cm")) 
   doy <- visreg(model,
                 data = data,
                 xvar = "jday_scaled",
@@ -64,7 +64,7 @@ plot_variables <- function(model, data){
           axis.text.x = element_text(angle = 0, vjust = 0.7),
           plot.margin = margin(2, 2, 2, 2, "cm"))
   
-  ggarrange(temp_plot, salt_plot, doy_plot, ncol = 3, nrow = 1)
+  ggarrange(temp_plot, doy_plot, ncol = 2, nrow = 1)
 } 
 
 # works only if all variables retained
