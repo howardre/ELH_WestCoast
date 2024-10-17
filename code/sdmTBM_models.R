@@ -227,34 +227,6 @@ small_sp <- cor.test(hake_small_pred$small,
 small_sp
 
 
-# Predict and plot
-latd = seq(min(yoy_hake$latitude), max(yoy_hake$latitude), length.out = nlat)
-lond = seq(min(yoy_hake$longitude), max(yoy_hake$longitude), length.out = nlon)
-
-hake_pred_small <- sdmTMB_grid(yoy_hake, hake_model_small, nep_large, nep_small, 2010)
-hake_pred_small$zeta_s_depth_iso26[hake_pred_small$dist > 60000] <- NA 
-hake_pred_large <- sdmTMB_grid(yoy_hake, hake_model_large, nep_large, nep_small, 2018)
-hake_pred_large$zeta_s_depth_iso26[hake_pred_large$dist > 60000] <- NA 
-
-# SVC maps
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_SVC(yoy_hake, hake_pred_small, "Small (15-35 mm)", "Latitude \u00B0N", 
-           hake_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
-sdmTMB_SVC(yoy_hake, hake_pred_large, "Large (36-81 mm)", " ",
-           hake_pred_large$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_hake', 
-                    'hake_SVC_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
 # Alternate SVC calculation
 zeta_s <- predict(hake_model_small$sdm_vgeo, 
                   newdata = yoy_hake, 
@@ -304,7 +276,7 @@ saveRDS(anchovy_model_large_cv, here('data', 'anchovy_models_large_cv'))
 
 # Load models
 anchovy_model_small <- sdmTMB(small ~ s(jday_scaled, k = 3) +
-                             s(sst_scaled, k = 3) ,
+                             s(sst_scaled, k = 3),
                            extra_time = extra_years,
                            data = yoy_anchovy,
                            mesh = yoy_anchovy_mesh,
@@ -413,33 +385,6 @@ small_sp <- cor.test(anchovy_small_pred$small,
 small_sp
 
 
-# Predict and plot
-latd = seq(min(yoy_anchovy$latitude), max(yoy_anchovy$latitude), length.out = nlat)
-lond = seq(min(yoy_anchovy$longitude), max(yoy_anchovy$longitude), length.out = nlon)
-
-anchovy_pred_small <- sdmTMB_grid(yoy_anchovy, anchovy_model_small, nep_large, nep_small, 2010)
-anchovy_pred_small$zeta_s_depth_iso26[anchovy_pred_small$dist > 60000] <- NA 
-anchovy_pred_large <- sdmTMB_grid(yoy_anchovy, anchovy_model_large, nep_large, nep_small, 2018)
-anchovy_pred_large$zeta_s_depth_iso26[anchovy_pred_large$dist > 60000] <- NA 
-
-# SVC maps
-windows(height = 15, width = 18)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-sdmTMB_SVC(yoy_anchovy, anchovy_pred_small, "Small (15-35 mm)", "Latitude \u00B0N", 
-           anchovy_pred_small$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
-sdmTMB_SVC(yoy_anchovy, anchovy_pred_large, "Large (36-81 mm)", " ",
-           anchovy_pred_large$zeta_s_depth_iso26, "26 kg/m\u00B3 Isopycnal \n Depth Effect")
-dev.copy(jpeg, here('results/hindcast_output/yoy_anchovy', 
-                    'anchovy_SVC_sdmtmb.jpg'), 
-         height = 15, 
-         width = 16, 
-         units = 'in', 
-         res = 200)
-dev.off()
 
 # Pacific Sanddab ----
 # Make mesh object with matrices
@@ -448,71 +393,13 @@ plot(yoy_sdab_mesh)
 
 # Select models
 # Calculate deviance explained compared to null model
-sdab_model_small <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh, "small") 
-sdab_small_stat <- calc_stat(sdab_model_small, yoy_sdab_mesh, yoy_sdab, "small")
-saveRDS(sdab_model_small, here('data', 'sdab_models_small'))
+sdab_model_small_select <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh, "small") 
+sdab_small_stat <- calc_stat(sdab_model_small_select, yoy_sdab_mesh, yoy_sdab, "small")
+saveRDS(sdab_model_small_select, here('data', 'sdab_models_small'))
 
-sdab_model_large <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh, "large") 
-sdab_large_stat <- calc_stat(sdab_model_large, yoy_sdab_mesh, yoy_sdab, "large")
-saveRDS(sdab_model_large, here('data', 'sdab_models_large'))
-
-# Load models
-sdab_model_small <- readRDS(here('data', 'sdab_models_small'))
-sdab_model_large <- readRDS(here('data', 'sdab_models_large'))
-
-# Error checks
-sdab_small_stat
-rownames(sdab_small_stat)[which.max(sdab_small_stat$log_likelihood)]
-sanity(sdab_model_small$sdm_uvint100m)
-tidy(sdab_model_small$sdm_uvint100m, 
-     conf.int = TRUE,
-     conf.level = 0.95) # 0.05
-
-sdab_large_stat
-rownames(sdab_large_stat)[which.max(sdab_large_stat$log_likelihood)]
-sanity(sdab_model_large$sdm_spice)
-tidy(sdab_model_large$sdm_spice, 
-     conf.int = TRUE,
-     conf.level = 0.999) # 0.001
-
-# Get residuals
-sdab_data <- sdab_model_small$sdm_uvint100m$data
-sdab_data$small_resid <- residuals(sdab_model_small$sdm_uvint100m)
-sdab_data$large_resid <- residuals(sdab_model_large$sdm_spice)
-
-# Normal QQ plots
-windows(height = 8, width = 15)
-par(mfrow = c(1, 2),
-    mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
-    oma = c(1, 1, 1, 1),
-    mgp = c(5, 2, 0),
-    family = "serif")
-qqnorm(sdab_data$small_resid, main = "Small Sizes Q-Q Plot")
-qqline(sdab_data$small_resid)
-
-qqnorm(sdab_data$large_resid, main = "Large Sizes Q-Q Plot")
-qqline(sdab_data$large_resid)
-
-dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
-                    'sdab_qq.jpg'), 
-         height = 8, 
-         width = 15, 
-         units = 'in', 
-         res = 200)
-dev.off()
-
-# Spatial residuals
-ggplot(sdab_data, 
-       aes(X, Y, col = small_resid)) +
-  scale_color_gradient2() +
-  geom_point() +
-  coord_fixed()
-
-ggplot(sdab_data, 
-       aes(X, Y, col = large_resid)) +
-  scale_color_gradient2() +
-  geom_point() +
-  coord_fixed()
+sdab_model_large_select <- sdmTMB_select(yoy_sdab, yoy_sdab_mesh, "large") 
+sdab_large_stat <- calc_stat(sdab_model_large_select, yoy_sdab_mesh, yoy_sdab, "large")
+saveRDS(sdab_model_large_select, here('data', 'sdab_models_large'))
 
 # Cross validation
 sdab_model_small_cv <- sdmTMB_compare(yoy_sdab, yoy_sdab_mesh, "small")
@@ -523,54 +410,123 @@ sdab_small_best <- sdab_model_small_cv[[which.max(sapply(1:length(sdab_model_sma
 sdab_large_best <- sdab_model_large_cv[[which.max(sapply(1:length(sdab_model_large_cv), 
                                                          function(x) (sdab_model_large_cv[[x]]$sum_loglik)))]]
 
+sdab_small_best$models[[1]]$formula
+sdab_large_best$models[[1]]$formula
+
 saveRDS(sdab_model_small_cv, here('data', 'sdab_models_small_cv'))
 saveRDS(sdab_model_large_cv, here('data', 'sdab_models_large_cv'))
 
+# Load models
+sdab_model_small <- sdmTMB(small ~ s(jday_scaled, k = 3) +
+                             s(sst_scaled, k = 3) +
+                             depth_iso26 - 1,
+                           extra_time = extra_years,
+                           spatial_varying = ~ 0 + depth_iso26,
+                           data = yoy_sdab,
+                           mesh = yoy_sdab_mesh,
+                           spatial = "on",
+                           time = "year",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "off",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
+sdab_model_large <- sdmTMB(large ~ s(jday_scaled, k = 3) +
+                             s(sst_scaled, k = 3) +
+                             depth_iso26 - 1,
+                           extra_time = extra_years,
+                           spatial_varying = ~ 0 + depth_iso26,
+                           data = yoy_sdab,
+                           mesh = yoy_sdab_mesh,
+                           spatial = "on",
+                           time = "year",
+                           family = tweedie(link = "log"),
+                           spatiotemporal = "off",
+                           control = sdmTMBcontrol(newton_loops = 1,
+                                                   nlminb_loops = 2))
 
-# Plot covariates
-tiff(here('results/hindcast_output/yoy_sanddab',
-          'sdab_partial_dependence_small_sdmtmb.jpg'),
-     units = "in",
-     width = 38,
-     height = 12,
-     res = 200)
-plot_variables(sdab_model_small$sdm_uvint100m, sdab_data)
-dev.off()
+# Error checks
+sdab_small_stat
+rownames(sdab_small_stat)[which.max(sdab_small_stat$log_likelihood)]
+sanity(sdab_model_small)
+tidy(sdab_model_small, 
+     conf.int = TRUE,
+     conf.level = 0.95) 
 
-tiff(here('results/hindcast_output/yoy_sanddab',
-          'sdab_partial_dependence_large_sdmtmb.jpg'),
-     units = "in",
-     width = 38,
-     height = 12,
-     res = 200)
-plot_variables(sdab_model_large$sdm_spice, sdab_data)
-dev.off()
+sdab_large_stat
+rownames(sdab_large_stat)[which.max(sdab_large_stat$log_likelihood)]
+sanity(sdab_model_large)
+tidy(sdab_model_large, 
+     conf.int = TRUE,
+     conf.level = 0.99) # 0.01
 
-# Predict and plot
-latd = seq(min(yoy_sdab$latitude), max(yoy_sdab$latitude), length.out = nlat)
-lond = seq(min(yoy_sdab$longitude), max(yoy_sdab$longitude), length.out = nlon)
+# Get residuals
+yoy_sdab$small_resid <- residuals(sdab_model_small,
+                                  type = "mle-mvn")
+yoy_sdab$large_resid <- residuals(sdab_model_large,
+                                  type = "mle-mvn")
 
-sdab_pred_small <- sdmTMB_grid(yoy_sdab, sdab_model_small$sdm_uvint100m, nep_large, nep_small, 2014)
-sdab_pred_small$zeta_s_u_vint_100m[sdab_pred_small$dist > 60000] <- NA 
-sdab_pred_large <- sdmTMB_grid(yoy_sdab, sdab_model_large$sdm_spice, nep_large, nep_small, 2018)
-sdab_pred_large$zeta_s_spice_iso26[sdab_pred_large$dist > 60000] <- NA 
-
-# Predictions
-windows(height = 15, width = 18)
+# Normal QQ plots
+windows(height = 8, width = 15)
 par(mfrow = c(1, 2),
     mar = c(6.6, 7.6, 3.5, 0.6) + 0.1,
     oma = c(1, 1, 1, 1),
     mgp = c(5, 2, 0),
     family = "serif")
-sdmTMB_map(yoy_sdab, sdab_pred_small, "Small", "Latitude \u00B0N")
-sdmTMB_map(yoy_sdab, sdab_pred_large, "Large", " ")
-dev.copy(jpeg, here('results/hindcast_output/yoy_sanddab', 
-                    'sdab_distributions.jpg'), 
-         height = 15, 
-         width = 16, 
+qqnorm(yoy_sdab$small_resid, main = "Small Sizes Q-Q Plot")
+qqline(yoy_sdab$small_resid)
+
+qqnorm(yoy_sdab$large_resid, main = "Large Sizes Q-Q Plot")
+qqline(yoy_sdab$large_resid)
+
+dev.copy(jpeg, here('results/hindcast_output/yoy_sdab', 
+                    'sdab_qq.jpg'), 
+         height = 8, 
+         width = 15, 
          units = 'in', 
          res = 200)
 dev.off()
+
+# Spatial residuals
+ggplot(yoy_sdab, 
+       aes(X, Y, col = small_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+ggplot(yoy_sdab, 
+       aes(X, Y, col = large_resid)) +
+  scale_color_gradient2() +
+  geom_point() +
+  coord_fixed()
+
+# Plot covariates
+tiff(here('results/hindcast_output/yoy_sdab',
+          'sdab_partial_dependence_small_sdmtmb.jpg'),
+     units = "in",
+     width = 30,
+     height = 12,
+     res = 200)
+plot_variables(sdab_model_small, yoy_sdab)
+dev.off()
+
+tiff(here('results/hindcast_output/yoy_sdab',
+          'sdab_partial_dependence_large_sdmtmb.jpg'),
+     units = "in",
+     width = 30,
+     height = 12,
+     res = 200)
+plot_variables(sdab_model_large, yoy_sdab)
+dev.off()
+
+# Get correlation coefficient
+sdab_small_pred <- predict(sdab_model_small,
+                           newdata = yoy_sdab,
+                           type = "response")
+small_sp <- cor.test(sdab_small_pred$small, 
+                     sdab_small_pred$est, 
+                     method = 'spearman',
+                     exact = FALSE)
+small_sp
 
 
 # Shortbelly Rockfish ----
